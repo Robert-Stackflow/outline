@@ -3,15 +3,19 @@ import { observer } from "mobx-react";
 import { MenuIcon } from "outline-icons";
 import { transparentize } from "polished";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { mergeRefs } from "react-merge-refs";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import useMeasure from "react-use-measure";
 import { depths, s } from "@shared/styles";
+import { metaDisplay } from "@shared/utils/keyboard";
 import { supportsPassiveListener } from "@shared/utils/browser";
 import Button from "~/components/Button";
 import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
+import NudeButton from "~/components/NudeButton";
+import Tooltip from "~/components/Tooltip";
 import useEventListener from "~/hooks/useEventListener";
 import useMobile from "~/hooks/useMobile";
 import useStores from "~/hooks/useStores";
@@ -36,6 +40,7 @@ function Header(
   ref: React.RefObject<HTMLDivElement> | null
 ) {
   const { ui } = useStores();
+  const { t } = useTranslation();
   const isMobile = useMobile();
   const hasMobileSidebar = hasSidebar && isMobile;
   const [internalMeasureRef, size] = useMeasure();
@@ -81,10 +86,13 @@ function Header(
         align="center"
         shrink={false}
         className={className}
+        data-page-header=""
         $passThrough={passThrough}
         $insetTitleAdjust={ui.sidebarIsClosed && Desktop.hasInsetTitlebar()}
       >
-        {left || hasMobileSidebar ? (
+        {left ||
+        hasMobileSidebar ||
+        (hasSidebar && !isMobile && ui.sidebarIsClosed) ? (
           <Breadcrumbs ref={setBreadcrumbRef}>
             {hasMobileSidebar && (
               <MobileMenuButton
@@ -93,6 +101,26 @@ function Header(
                 icon={<MenuIcon />}
                 neutral
               />
+            )}
+            {hasSidebar && !isMobile && ui.sidebarIsClosed && (
+              <>
+                <Tooltip
+                  content={t("Toggle sidebar")}
+                  shortcut={`${metaDisplay}+.`}
+                  placement="bottom"
+                >
+                  <ExpandSidebarButton
+                    aria-label={t("Expand sidebar")}
+                    onClick={() => {
+                      ui.toggleCollapsedSidebar();
+                      (document.activeElement as HTMLElement)?.blur();
+                    }}
+                  >
+                    <MenuIcon />
+                  </ExpandSidebarButton>
+                </Tooltip>
+                {left && <ExpandDivider aria-hidden />}
+              </>
             )}
             {left}
           </Breadcrumbs>
@@ -119,6 +147,7 @@ const Breadcrumbs = styled("div")`
   min-width: 0;
   align-items: center;
   padding-inline: 0 8px;
+  margin-inline-start: -4px;
   display: flex;
 
   ${breakpoint("tablet")`
@@ -131,8 +160,47 @@ const Actions = styled(Flex)`
   flex-basis: 0;
   min-width: auto;
   padding-inline: 8px 0;
-  gap: 12px;
+  gap: 6px;
   margin-inline-start: 8px;
+
+  /* Unify every button in the actions row to a flat, borderless icon-button
+     style that matches the breadcrumb on the left. The Outline default
+     "neutral" Button paints a 1px inset border + chrome that visually
+     clashes with the bare icon controls living right next to it. */
+  button {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    min-height: 30px;
+    height: 30px;
+    border-radius: 6px;
+    color: ${s("textSecondary")};
+    font-weight: 500;
+    transition:
+      background 120ms ease,
+      color 120ms ease;
+
+    &:hover:not(:disabled),
+    &:active:not(:disabled),
+    &:focus-visible:not(:disabled),
+    &[aria-expanded="true"] {
+      background: ${s("listItemHoverBackground")} !important;
+      color: ${s("text")};
+    }
+
+    &:disabled {
+      color: ${s("textTertiary")};
+      opacity: 0.6;
+    }
+  }
+
+  /* Slightly more breathing room around the divider that separates the
+     avatar facepile from the action buttons. */
+  hr,
+  & > div[role="separator"],
+  > .separator {
+    margin-inline: 4px;
+  }
 
   ${breakpoint("tablet")`
     position: unset;
@@ -189,8 +257,9 @@ const Wrapper = styled(Flex)<WrapperProps>`
 
 const Title = styled("div")`
   display: none;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
+  color: ${s("text")};
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
@@ -215,6 +284,47 @@ const Title = styled("div")`
 const MobileMenuButton = styled(Button)`
   margin-right: 8px;
   pointer-events: auto;
+
+  @media print {
+    display: none;
+  }
+`;
+
+const ExpandSidebarButton = styled(NudeButton)`
+  pointer-events: auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: ${s("textTertiary")};
+  transition: background 120ms ease, color 120ms ease;
+
+  &:hover,
+  &:active,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background: ${s("listItemHoverBackground")};
+    color: ${s("text")};
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  @media print {
+    display: none;
+  }
+`;
+
+const ExpandDivider = styled.span`
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  margin: 0 10px 0 8px;
+  background: ${s("divider")};
 
   @media print {
     display: none;

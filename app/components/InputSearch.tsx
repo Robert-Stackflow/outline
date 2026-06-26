@@ -50,9 +50,7 @@ function InputSearch(
       type="search"
       placeholder={placeholder}
       icon={
-        <SearchIcon
-          color={isFocused ? theme.inputBorderFocused : theme.inputBorder}
-        />
+        <SearchIcon color={isFocused ? theme.accent : theme.textTertiary} />
       }
       onKeyDown={onKeyDown}
       onFocus={handleFocus}

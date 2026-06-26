@@ -2,9 +2,12 @@ import { observer } from "mobx-react";
 import { EditIcon, PlusIcon } from "outline-icons";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import styled from "styled-components";
+import { s } from "@shared/styles";
 import type Collection from "~/models/Collection";
 import { Action, Separator } from "~/components/Actions";
 import Button from "~/components/Button";
+import NudeButton from "~/components/NudeButton";
 import Tooltip from "~/components/Tooltip";
 import usePolicy from "~/hooks/usePolicy";
 import CollectionMenu from "~/menus/CollectionMenu";
@@ -66,14 +69,9 @@ function Actions({ collection, isEditing, sidebarContext }: Props) {
             shortcut="e"
             placement="bottom"
           >
-            <Button
-              icon={<EditIcon />}
-              onClick={goToEdit}
-              haptic="light"
-              neutral
-            >
-              {t("Edit")}
-            </Button>
+            <IconButton onClick={goToEdit} aria-label={t("Edit collection")}>
+              <EditIcon />
+            </IconButton>
           </Tooltip>
         </Action>
       )}
@@ -93,25 +91,47 @@ function Actions({ collection, isEditing, sidebarContext }: Props) {
               shortcut="n"
               placement="bottom"
             >
-              <Button
+              <IconButton
                 as={Link}
                 to={collection ? newDocumentPath(collection.id) : ""}
-                disabled={!collection}
-                icon={<PlusIcon />}
-                neutral={isEditing}
+                aria-label={t("New document")}
               >
-                {t("New doc")}
-              </Button>
+                <PlusIcon />
+              </IconButton>
             </Tooltip>
           </Action>
           <Separator />
         </>
       )}
       <Action>
-        <CollectionMenu collection={collection} align="end" neutral />
+        <CollectionMenu collection={collection} align="end" />
       </Action>
     </>
   );
 }
+
+const IconButton = styled(NudeButton)`
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: ${s("textSecondary")};
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover,
+  &[data-state="open"] {
+    background: ${s("listItemHoverBackground")};
+    color: ${s("text")};
+  }
+`;
 
 export default observer(Actions);

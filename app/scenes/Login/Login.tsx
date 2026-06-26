@@ -80,7 +80,7 @@ function Login({ children, onBack }: Props) {
     !auth.authenticated &&
     !auth.isFetching &&
     config?.providers.length === 1 &&
-    config.providers[0].id === "oidc" &&
+    config.providers[0].id.startsWith("oidc") &&
     !env.OIDC_DISABLE_REDIRECT &&
     !query.get("notice") &&
     !query.get("logout");

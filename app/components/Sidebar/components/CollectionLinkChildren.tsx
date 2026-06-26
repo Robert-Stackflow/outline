@@ -80,6 +80,19 @@ function CollectionLinkChildren({
 
   useSidebarDisclosure(handleCascadeExpand, handleCascadeCollapse);
 
+  // Listen for global expand-all / collapse-all broadcasts emitted from the
+  // Collections section header.
+  useEffect(() => {
+    const onExpand = () => handleCascadeExpand();
+    const onCollapse = () => handleCascadeCollapse();
+    window.addEventListener("sidebar:expand-all", onExpand);
+    window.addEventListener("sidebar:collapse-all", onCollapse);
+    return () => {
+      window.removeEventListener("sidebar:expand-all", onExpand);
+      window.removeEventListener("sidebar:collapse-all", onCollapse);
+    };
+  }, [handleCascadeExpand, handleCascadeCollapse]);
+
   return (
     <SidebarExpansionContext.Provider value={expansion}>
       <Folder expanded={expanded}>

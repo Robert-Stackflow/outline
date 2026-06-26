@@ -147,7 +147,7 @@ function Features() {
         )}
         border={false}
       >
-        <Switch disabled />
+        <Switch />
       </SettingRow>
     </Scene>
   );

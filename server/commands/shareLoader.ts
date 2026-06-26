@@ -7,7 +7,6 @@ import {
   AuthorizationError,
   InvalidRequestError,
   NotFoundError,
-  PaymentRequiredError,
 } from "@server/errors";
 import type { User } from "@server/models";
 import { Collection, Document, Share } from "@server/models";
@@ -125,9 +124,8 @@ export async function loadPublicShare({
     document = share.document;
   }
 
-  if (document?.isTrialImport) {
-    throw PaymentRequiredError();
-  }
+  // Self-hosted override: trial-import gate removed so shared documents are
+  // always viewable regardless of source metadata.
 
   return {
     share,

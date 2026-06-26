@@ -1,9 +1,12 @@
 import { observer } from "mobx-react";
-import { GlobeIcon } from "outline-icons";
+import { GlobeIcon, ShareIcon } from "outline-icons";
 import { Suspense, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import styled from "styled-components";
+import { s } from "@shared/styles";
 import type Document from "~/models/Document";
-import Button from "~/components/Button";
+import NudeButton from "~/components/NudeButton";
+import Tooltip from "~/components/Tooltip";
 import {
   Popover,
   PopoverTrigger,
@@ -54,15 +57,18 @@ function ShareButton({ document }: Props) {
     return null;
   }
 
-  const icon = document.isPubliclyShared ? <GlobeIcon /> : undefined;
+  const isShared = document.isPubliclyShared;
+  const label = domain ? `${t("Share")} · ${domain}` : t("Share");
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger>
-        <Button icon={icon} neutral onMouseEnter={preload}>
-          {t("Share")} {domain && <>&middot; {domain}</>}
-        </Button>
-      </PopoverTrigger>
+      <Tooltip content={label} placement="bottom">
+        <PopoverTrigger>
+          <IconTrigger aria-label={label} onMouseEnter={preload}>
+            {isShared ? <GlobeIcon /> : <ShareIcon />}
+          </IconTrigger>
+        </PopoverTrigger>
+      </Tooltip>
       <PopoverContent
         aria-label={t("Share")}
         width={400}
@@ -83,5 +89,27 @@ function ShareButton({ document }: Props) {
     </Popover>
   );
 }
+
+const IconTrigger = styled(NudeButton)`
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: ${s("textSecondary")};
+  transition: background 120ms ease, color 120ms ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover,
+  &[data-state="open"] {
+    background: ${s("listItemHoverBackground")};
+    color: ${s("text")};
+  }
+`;
 
 export default observer(ShareButton);

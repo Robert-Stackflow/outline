@@ -9,6 +9,11 @@ type Props = {
   /** Unique header id – if passed the header will become toggleable */
   id?: string;
   title: React.ReactNode;
+  /**
+   * Optional inline action controls (e.g. "+ new") rendered on the right of
+   * the section header. They are revealed on hover/focus.
+   */
+  actions?: React.ReactNode;
   children?: React.ReactNode;
 };
 
@@ -19,11 +24,16 @@ export function getHeaderExpandedKey(id: string) {
 /**
  * Toggleable sidebar header
  */
-export const Header: React.FC<Props> = ({ id, title, children }: Props) => {
+export const Header: React.FC<Props> = ({
+  id,
+  title,
+  actions,
+  children,
+}: Props) => {
   const [firstRender, setFirstRender] = React.useState(true);
   const [expanded, setExpanded] = usePersistedState<boolean>(
     getHeaderExpandedKey(id ?? ""),
-    true
+    true,
   );
 
   React.useEffect(() => {
@@ -41,8 +51,9 @@ export const Header: React.FC<Props> = ({ id, title, children }: Props) => {
       <H3>
         <Button onClick={handleClick} disabled={!id}>
           {title}
-          {id && <Disclosure $expanded={expanded} size={20} />}
+          {id && <Disclosure $expanded={expanded} size={16} />}
         </Button>
+        {actions && <Actions>{actions}</Actions>}
       </H3>
       {expanded && (firstRender ? children : <Fade>{children}</Fade>)}
     </>
@@ -66,51 +77,70 @@ const Fade = styled.span`
 `;
 
 const Button = styled.button`
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   user-select: none;
   color: ${s("sidebarText")};
   position: relative;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   margin: 0;
-  padding-block: 4px;
-  padding-inline: 12px 2px;
+  padding: 6px 4px 6px 16px;
   border: 0;
   background: none;
-  border-radius: 4px;
   -webkit-appearance: none;
-  transition: all 100ms ease;
+  transition: color 120ms ease;
   ${undraggableOnDesktop()}
   ${extraArea(4)}
 
   &:not(:disabled):hover,
   &:not(:disabled):active {
-    color: ${s("textSecondary")};
+    color: ${s("sidebarText")};
     cursor: var(--pointer);
   }
 `;
 
 const Disclosure = styled(CollapsedIcon)<{ $expanded?: boolean }>`
   transition:
-    opacity 100ms ease,
-    transform 100ms ease,
-    fill 50ms !important;
+    opacity 120ms ease,
+    transform 180ms ease;
   ${(props) => !props.$expanded && "transform: rotate(-90deg);"};
   opacity: 0;
+  margin-inline-start: 2px;
 
   [dir="rtl"] & {
     ${(props) => !props.$expanded && "transform: rotate(90deg);"};
   }
 `;
 
+const Actions = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: auto;
+  padding-inline-end: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+`;
+
 const H3 = styled.h3`
-  margin: 0;
+  margin: 0 0 2px;
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 4px;
+  cursor: var(--pointer);
+  transition: background 120ms ease;
 
   &:hover,
   &:focus-within {
-    ${Disclosure} {
+    background: ${s("sidebarHoverBackground")};
+
+    ${Disclosure},
+    ${Actions} {
       opacity: 1;
     }
   }

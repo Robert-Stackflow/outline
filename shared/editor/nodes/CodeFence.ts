@@ -1,5 +1,6 @@
 import copy from "copy-to-clipboard";
 import { t } from "i18next";
+import type { PluginSimple } from "markdown-it";
 import type Token from "markdown-it/lib/token.mjs";
 import { textblockTypeInputRule } from "prosemirror-inputrules";
 import type {
@@ -42,6 +43,7 @@ import {
   setRecentlyUsedCodeLanguage,
 } from "../lib/code";
 import { isCode, isMermaid } from "../lib/isCode";
+import frontmatter from "../rules/frontmatter";
 import { isRemoteTransaction } from "../lib/multiplayer";
 import { findBlockNodes } from "../queries/findChildren";
 import type { MarkdownSerializerState } from "../lib/markdown/serializer";
@@ -178,6 +180,10 @@ export default class CodeFence extends Node<CodeFenceOptions> {
 
   get name() {
     return "code_fence";
+  }
+
+  get rulePlugins(): PluginSimple[] {
+    return [frontmatter];
   }
 
   get schema(): NodeSpec {

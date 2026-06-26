@@ -6,6 +6,7 @@ import {
   EmailDisplay,
   CommentingAccess,
   NotificationBadgeType,
+  DocumentFontFamily,
 } from "./types";
 
 export const MAX_AVATAR_DISPLAY = 6;
@@ -47,4 +48,6 @@ export const UserPreferenceDefaults: UserPreferences = {
   [UserPreference.SortCommentsByOrderInDocument]: true,
   [UserPreference.EnableSmartText]: true,
   [UserPreference.NotificationBadge]: NotificationBadgeType.Count,
+  [UserPreference.SmallerText]: false,
+  [UserPreference.FontFamily]: DocumentFontFamily.Default,
 };

@@ -1,73 +1,71 @@
 import Router from "koa-router";
 import { toError } from "@shared/utils/error";
 import Logger from "@server/logging/Logger";
-import env from "../env";
 import { fetchOIDCConfiguration } from "../oidcDiscovery";
+import type { OIDCProviderConfig } from "../providers";
 import { createOIDCRouter } from "./oidcRouter";
 
-const router = new Router();
-let routerPromise = Promise.resolve(router);
+/**
+ * Builds a koa router exposing the auth routes for a single OIDC provider.
+ *
+ * When manual endpoints are configured they are mounted immediately, otherwise
+ * the issuer's well-known configuration is discovered asynchronously and the
+ * endpoints mounted once available.
+ *
+ * @param provider the resolved OIDC provider configuration.
+ * @returns a promise resolving to the provider's router.
+ */
+export function buildOIDCRouter(provider: OIDCProviderConfig): Promise<Router> {
+  const router = new Router();
 
-// Check if we have manual configuration
-const hasManualConfig = !!(
-  env.OIDC_CLIENT_ID &&
-  env.OIDC_CLIENT_SECRET &&
-  env.OIDC_AUTH_URI &&
-  env.OIDC_TOKEN_URI &&
-  env.OIDC_USERINFO_URI
-);
+  const hasManualConfig = !!(
+    provider.authUri &&
+    provider.tokenUri &&
+    provider.userInfoUri
+  );
 
-// Check if we have issuer configuration for discovery
-const hasIssuerConfig = !!(
-  env.OIDC_CLIENT_ID &&
-  env.OIDC_CLIENT_SECRET &&
-  env.OIDC_ISSUER_URL
-);
+  if (hasManualConfig) {
+    createOIDCRouter(router, provider, {
+      authorizationURL: provider.authUri!,
+      tokenURL: provider.tokenUri!,
+      userInfoURL: provider.userInfoUri!,
+      logoutURL: provider.logoutUri,
+    });
+    Logger.info("plugins", "OIDC endpoints mounted with manual configuration", {
+      id: provider.id,
+    });
+    return Promise.resolve(router);
+  }
 
-if (hasManualConfig) {
-  // Mount endpoints immediately with manual configuration
-  createOIDCRouter(router, {
-    authorizationURL: env.OIDC_AUTH_URI!,
-    tokenURL: env.OIDC_TOKEN_URI!,
-    userInfoURL: env.OIDC_USERINFO_URI!,
-    logoutURL: env.OIDC_LOGOUT_URI,
-  });
-  Logger.info("plugins", "OIDC endpoints mounted with manual configuration");
-} else if (hasIssuerConfig) {
-  // Asynchronously discover configuration and mount endpoints
-  routerPromise = (async () => {
-    try {
-      Logger.debug("plugins", "Starting OIDC configuration discovery");
+  if (provider.issuerUrl) {
+    return (async () => {
+      try {
+        Logger.debug("plugins", "Starting OIDC configuration discovery", {
+          id: provider.id,
+        });
 
-      const oidcConfig = await fetchOIDCConfiguration(env.OIDC_ISSUER_URL!);
+        const oidcConfig = await fetchOIDCConfiguration(provider.issuerUrl!);
 
-      // Set environment variables for OIDC endpoints so they can be read by OIDC OAuth class
-      env.OIDC_AUTH_URI = oidcConfig.authorization_endpoint;
-      env.OIDC_TOKEN_URI = oidcConfig.token_endpoint;
-      env.OIDC_USERINFO_URI = oidcConfig.userinfo_endpoint;
+        createOIDCRouter(router, provider, {
+          authorizationURL: oidcConfig.authorization_endpoint,
+          tokenURL: oidcConfig.token_endpoint,
+          userInfoURL: oidcConfig.userinfo_endpoint,
+          logoutURL: oidcConfig.end_session_endpoint ?? provider.logoutUri,
+          pkce: oidcConfig.code_challenge_methods_supported?.includes("S256"),
+        });
 
-      // Mount endpoints into the existing router
-      createOIDCRouter(router, {
-        authorizationURL: oidcConfig.authorization_endpoint,
-        tokenURL: oidcConfig.token_endpoint,
-        userInfoURL: oidcConfig.userinfo_endpoint,
-        logoutURL: oidcConfig.end_session_endpoint,
-        pkce: oidcConfig.code_challenge_methods_supported?.includes("S256"),
-      });
+        Logger.info("plugins", "OIDC endpoints mounted after discovery", {
+          id: provider.id,
+          issuer: oidcConfig.issuer,
+        });
 
-      Logger.info("plugins", "OIDC endpoints mounted after discovery", {
-        issuer: oidcConfig.issuer,
-        authorization_endpoint: oidcConfig.authorization_endpoint,
-        token_endpoint: oidcConfig.token_endpoint,
-        userinfo_endpoint: oidcConfig.userinfo_endpoint,
-      });
+        return router;
+      } catch (error) {
+        Logger.fatal("Failed to discover OIDC configuration", toError(error));
+        throw error;
+      }
+    })();
+  }
 
-      return router;
-    } catch (error) {
-      Logger.fatal("Failed to discover OIDC configuration", toError(error));
-      throw error;
-    }
-  })();
+  return Promise.resolve(router);
 }
-
-export default routerPromise;

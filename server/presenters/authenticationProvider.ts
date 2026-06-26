@@ -1,4 +1,5 @@
 import type { AuthenticationProvider } from "@server/models";
+import AuthenticationHelper from "@server/models/helpers/AuthenticationHelper";
 
 /**
  * Presents an AuthenticationProvider model for API responses.
@@ -12,6 +13,7 @@ export default function presentAuthenticationProvider(
   return {
     id: authenticationProvider.id,
     name: authenticationProvider.name,
+    icon: AuthenticationHelper.getProviderIcon(authenticationProvider.name),
     providerId: authenticationProvider.providerId,
     createdAt: authenticationProvider.createdAt,
     isEnabled: authenticationProvider.enabled,

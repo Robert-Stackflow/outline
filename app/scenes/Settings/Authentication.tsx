@@ -10,7 +10,7 @@ import Heading from "~/components/Heading";
 import Input from "~/components/Input";
 import { InputSelect } from "~/components/InputSelect";
 import type AuthenticationProvider from "~/models/AuthenticationProvider";
-import PluginIcon from "~/components/PluginIcon";
+import AuthProviderIcon from "~/components/AuthProviderIcon";
 import Scene from "~/components/Scene";
 import Switch from "~/components/Switch";
 import Text from "~/components/Text";
@@ -172,7 +172,8 @@ function Authentication() {
           <SettingRow
             label={
               <Flex gap={8} align="center">
-                <PluginIcon id={provider.name} /> {provider.displayName}
+                <AuthProviderIcon id={provider.name} brand={provider.icon} />{" "}
+                {provider.displayName}
               </Flex>
             }
             name={provider.name}

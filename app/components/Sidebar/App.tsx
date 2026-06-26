@@ -1,38 +1,49 @@
 import { observer } from "mobx-react";
-import { SearchIcon, HomeIcon, SidebarIcon } from "outline-icons";
-import { useEffect, useState, useCallback, useRef } from "react";
+import {
+  ArchiveIcon,
+  DraftsIcon,
+  HomeIcon,
+  SidebarIcon,
+  SidebarReverseIcon,
+} from "outline-icons";
+import { useEffect, useState, useRef } from "react";
 import {
   DragActiveProvider,
   SidebarScrollProvider,
 } from "./components/DragActiveContext";
 import { useTranslation } from "react-i18next";
-import { useHistory } from "react-router-dom";
 import styled from "styled-components";
+import { s } from "@shared/styles";
 import { metaDisplay } from "@shared/utils/keyboard";
+import { undraggableOnDesktop } from "~/styles";
 import Scrollable from "~/components/Scrollable";
-import { inviteUser } from "~/actions/definitions/users";
+import Notifications from "~/components/Notifications/Notifications";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
 import useCurrentUser from "~/hooks/useCurrentUser";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
 import TeamMenu from "~/menus/TeamMenu";
-import { homePath, searchPath } from "~/utils/routeHelpers";
+import {
+  archivePath,
+  draftsPath,
+  homePath,
+} from "~/utils/routeHelpers";
 import TeamLogo from "../TeamLogo";
 import Tooltip from "../Tooltip";
 import Sidebar from "./Sidebar";
-import ArchiveLink from "./components/ArchiveLink";
 import Collections from "./components/Collections";
-import { DraftsLink } from "./components/DraftsLink";
+import CompactNav from "./components/CompactNav";
 import DragPlaceholder from "./components/DragPlaceholder";
 import HistoryNavigation from "./components/HistoryNavigation";
 import Section from "./components/Section";
 import SharedWithMe from "./components/SharedWithMe";
-import SidebarAction from "./components/SidebarAction";
-import SidebarButton from "./components/SidebarButton";
 import SidebarLink from "./components/SidebarLink";
+import {
+  SidebarPanelProvider,
+  useSidebarPanel,
+} from "./components/SidebarPanelContext";
 import Starred from "./components/Starred";
-import ToggleButton from "./components/ToggleButton";
-import TrashLink from "./components/TrashLink";
+import TrashEntry from "./components/TrashEntry";
 import useMobile from "~/hooks/useMobile";
 
 function AppSidebar() {
@@ -41,16 +52,7 @@ function AppSidebar() {
   const team = useCurrentTeam();
   const user = useCurrentUser();
   const can = usePolicy(team);
-  const history = useHistory();
   const isMobile = useMobile();
-
-  const handleSearchClick = useCallback(() => {
-    const basePath = searchPath();
-    const { pathname, search } = history.location;
-    if (pathname.startsWith(basePath) && (search || pathname !== basePath)) {
-      history.push(basePath);
-    }
-  }, [history]);
 
   useEffect(() => {
     void collections.fetchAll();
@@ -72,86 +74,225 @@ function AppSidebar() {
 
   return (
     <Sidebar hidden={!ui.readyToShow}>
-      <DragActiveProvider>
-        <DragPlaceholder />
+      <SidebarPanelProvider>
+        <DragActiveProvider>
+          <DragPlaceholder />
 
-        <TeamMenu>
-          <SidebarButton
-            title={team.name}
-            image={<TeamLogo model={team} size={24} alt={t("Logo")} />}
-          >
-            {isMobile ? null : (
-              <Tooltip
-                content={t("Toggle sidebar")}
-                shortcut={`${metaDisplay}+.`}
-              >
-                <ToggleButton
-                  position="bottom"
-                  image={<SidebarIcon />}
-                  aria-label={
-                    ui.sidebarCollapsed
-                      ? t("Expand sidebar")
-                      : t("Collapse sidebar")
-                  }
-                  style={{ paddingInline: 4 }}
-                  onClick={() => {
-                    ui.toggleCollapsedSidebar();
-                    (document.activeElement as HTMLElement)?.blur();
-                  }}
-                />
-              </Tooltip>
-            )}
-          </SidebarButton>
-        </TeamMenu>
-        <Overflow>
-          <Section>
-            <SidebarLink
-              to={homePath()}
-              icon={<HomeIcon />}
-              exact={false}
-              label={t("Home")}
-            />
-            <SidebarLink
-              to={searchPath()}
-              icon={<SearchIcon />}
-              label={t("Search")}
-              exact={false}
-              onClick={handleSearchClick}
-            />
-            {can.createDocument && <DraftsLink />}
-          </Section>
-        </Overflow>
-        <Scrollable flex shadow ref={scrollRef}>
-          <SidebarScrollProvider value={scrollArea}>
-            <Section>
-              <Starred />
-            </Section>
-            <Section>
-              <SharedWithMe />
-            </Section>
-            <Section>
-              <Collections />
-            </Section>
-            {can.createDocument && (
-              <Section auto>
-                <ArchiveLink />
-              </Section>
-            )}
-            <Section>
-              {can.createDocument && <TrashLink />}
-              <SidebarAction action={inviteUser} />
-            </Section>
-          </SidebarScrollProvider>
-        </Scrollable>
-      </DragActiveProvider>
+          <WorkspaceRow>
+          <TeamMenu>
+            <WorkspaceTrigger type="button" aria-label={team.name}>
+              <TeamLogo model={team} size={22} alt={t("Logo")} />
+              <WorkspaceName>{team.name}</WorkspaceName>
+              {!isMobile && (
+                <Tooltip
+                  content={t("Toggle sidebar")}
+                  shortcut={`${metaDisplay}+.`}
+                >
+                  <CollapseSlot
+                    onPointerDown={(event: React.PointerEvent) => {
+                      // Radix DropdownMenu opens on pointerdown; stop here so
+                      // the trigger doesn't see the event.
+                      event.stopPropagation();
+                    }}
+                    onMouseDown={(event: React.MouseEvent) => {
+                      event.stopPropagation();
+                    }}
+                    onClick={(event: React.MouseEvent) => {
+                      event.stopPropagation();
+                      ui.toggleCollapsedSidebar();
+                      (document.activeElement as HTMLElement)?.blur();
+                    }}
+                    aria-label={
+                      ui.sidebarCollapsed
+                        ? t("Expand sidebar")
+                        : t("Collapse sidebar")
+                    }
+                  >
+                    {ui.sidebarIsClosed ? (
+                      <SidebarReverseIcon />
+                    ) : (
+                      <SidebarIcon />
+                    )}
+                  </CollapseSlot>
+                </Tooltip>
+              )}
+            </WorkspaceTrigger>
+          </TeamMenu>
+        </WorkspaceRow>
+          <Overflow>
+            <CompactNav />
+          </Overflow>
+          <PanelBody scrollRef={scrollRef} scrollArea={scrollArea} />
+        </DragActiveProvider>
+      </SidebarPanelProvider>
       <HistoryNavigation />
     </Sidebar>
   );
 }
 
+/** Renders the sidebar body matching the active CompactNav panel. */
+const PanelBody = observer(function PanelBody_({
+  scrollRef,
+  scrollArea,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollArea: HTMLElement | null;
+}) {
+  const { t } = useTranslation();
+  const { panel, setPanel } = useSidebarPanel();
+  const { auth, documents } = useStores();
+  const can = usePolicy(auth.team?.id);
+
+  if (panel === "notifications") {
+    return (
+      <Scrollable flex shadow ref={scrollRef}>
+        <Notifications onRequestClose={() => setPanel("home")} />
+      </Scrollable>
+    );
+  }
+
+  return (
+    <Scrollable flex shadow ref={scrollRef}>
+      <SidebarScrollProvider value={scrollArea}>
+        <Section>
+          <SidebarLink to={homePath()} icon={<HomeIcon />} label={t("Home")} />
+          {can.createDocument && (
+            <SidebarLink
+              to={draftsPath()}
+              icon={<DraftsIcon />}
+              label={
+                <DraftLabel>
+                  <span>{t("Drafts")}</span>
+                  {documents.totalDrafts > 0 && (
+                    <DraftBadge>
+                      {documents.totalDrafts > 25
+                        ? "25+"
+                        : documents.totalDrafts}
+                    </DraftBadge>
+                  )}
+                </DraftLabel>
+              }
+            />
+          )}
+          {can.createDocument && (
+            <SidebarLink
+              to={archivePath()}
+              icon={<ArchiveIcon />}
+              label={t("Archive")}
+            />
+          )}
+          {can.createDocument && <TrashEntry />}
+        </Section>
+        <Section>
+          <Starred />
+        </Section>
+        <Section>
+          <SharedWithMe />
+        </Section>
+        <Section auto>
+          <Collections />
+        </Section>
+      </SidebarScrollProvider>
+    </Scrollable>
+  );
+});
+
 const Overflow = styled.div`
   overflow: hidden;
   flex-shrink: 0;
+`;
+
+/**
+ * Notion-style hover-revealed slot for the collapse button. Hidden by default
+ * so the workspace header stays clean; reveals when the user hovers anywhere
+ * in the workspace row.
+ */
+const CollapseSlot = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-inline-start: auto;
+  border-radius: 4px;
+  color: ${s("textTertiary")};
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background 120ms ease,
+    color 120ms ease;
+  cursor: var(--pointer);
+
+  &:hover {
+    background: ${s("sidebarHoverBackground")};
+    color: ${s("text")};
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+`;
+
+const WorkspaceTrigger = styled.button`
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  margin: 8px;
+  padding: 4px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: ${s("text")};
+  cursor: var(--pointer);
+  text-align: start;
+  user-select: none;
+  ${undraggableOnDesktop()}
+  transition: background 120ms ease;
+
+  &:hover,
+  &[aria-expanded="true"] {
+    background: ${s("sidebarHoverBackground")};
+  }
+`;
+
+const WorkspaceName = styled.span`
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  color: ${s("text")};
+`;
+
+const WorkspaceRow = styled.div`
+  &:hover ${CollapseSlot},
+  &:focus-within ${CollapseSlot} {
+    opacity: 1;
+  }
+`;
+
+const DraftLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+`;
+
+const DraftBadge = styled.span`
+  font-size: 11px;
+  line-height: 16px;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: ${s("sidebarHoverBackground")};
+  color: ${s("textTertiary")};
+  text-align: center;
 `;
 
 export default observer(AppSidebar);

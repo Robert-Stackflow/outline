@@ -1,12 +1,14 @@
-import { subHours, subMinutes } from "date-fns";
+import { subHours, subMinutes, addMonths } from "date-fns";
 import Router from "koa-router";
 import { uniqBy } from "es-toolkit/compat";
 import { TeamPreference } from "@shared/types";
-import { parseDomain } from "@shared/utils/domains";
+import { parseDomain, getCookieDomain } from "@shared/utils/domains";
 import env from "@server/env";
 import auth from "@server/middlewares/authentication";
 import { transaction } from "@server/middlewares/transaction";
-import { Event, Team } from "@server/models";
+import validate from "@server/middlewares/validate";
+import { ValidationError } from "@server/errors";
+import { Event, Team, User } from "@server/models";
 import AuthenticationHelper from "@server/models/helpers/AuthenticationHelper";
 import {
   presentUser,
@@ -21,7 +23,7 @@ import ValidateSSOAccessTask from "@server/queues/tasks/ValidateSSOAccessTask";
 import type { APIContext } from "@server/types";
 import { getSessionsInCookie } from "@server/utils/authentication";
 import RateLimiter from "@server/utils/RateLimiter";
-import type * as T from "./schema";
+import * as T from "./schema";
 
 const router = new Router();
 
@@ -208,6 +210,71 @@ router.post(
 
     ctx.body = {
       success: true,
+    };
+  }
+);
+
+router.post(
+  "auth.switch",
+  auth(),
+  validate(T.AuthSwitchSchema),
+  transaction(),
+  async (ctx: APIContext<T.AuthSwitchReq>) => {
+    const { user } = ctx.state.auth;
+    const { teamId } = ctx.input.body;
+
+    // Locate the account that shares this email in the target workspace. This
+    // mirrors the availableTeams logic (identity is keyed on email) and lets a
+    // single browser session hop between every workspace the person belongs to
+    // without a fresh SSO round-trip.
+    const [targetUser, targetTeam] = await Promise.all([
+      User.findOne({
+        where: {
+          teamId,
+          email: user.email,
+        },
+      }),
+      Team.findByPk(teamId),
+    ]);
+
+    if (!targetUser || !targetTeam || targetUser.isSuspended) {
+      throw ValidationError("You do not have access to that workspace");
+    }
+
+    const expires = addMonths(new Date(), 3);
+    const domain = getCookieDomain(ctx.request.hostname, env.isCloudHosted);
+
+    // Record the workspace in the apex "sessions" cookie so the UI can list
+    // every signed-in workspace, matching the cloud-hosted multi-session UX.
+    const existing = getSessionsInCookie(ctx);
+    const sessions = encodeURIComponent(
+      JSON.stringify({
+        ...existing,
+        [targetTeam.id]: {
+          name: targetTeam.name,
+          logoUrl: targetTeam.avatarUrl,
+          url: targetTeam.url,
+        },
+      })
+    );
+    ctx.cookies.set("sessions", sessions, {
+      httpOnly: false,
+      expires,
+      domain,
+    });
+
+    // Swap the active access token to the target user's session.
+    await targetUser.updateActiveAt(ctx, true);
+    ctx.cookies.set("accessToken", targetUser.getSessionToken(expires), {
+      sameSite: "lax",
+      expires,
+    });
+
+    ctx.body = {
+      success: true,
+      data: {
+        team: presentTeam(targetTeam),
+      },
     };
   }
 );

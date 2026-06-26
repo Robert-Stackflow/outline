@@ -172,8 +172,8 @@ const FlexibleWrapper = styled.div`
   color: ${s("textSecondary")};
   overflow: hidden;
   display: flex;
-  gap: 6px;
-  padding: 6px;
+  gap: 2px;
+  padding: 4px;
 
   ${breakpoint("mobile", "tablet")`
     justify-content: space-evenly;
@@ -186,7 +186,7 @@ const FlexibleWrapper = styled.div`
 `;
 
 const Label = styled.span`
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   color: ${s("text")};
 `;

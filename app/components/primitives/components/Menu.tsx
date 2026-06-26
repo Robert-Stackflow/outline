@@ -49,17 +49,27 @@ const BaseMenuItemCSS = css<BaseMenuItemProps>`
     props.$active &&
     !props.disabled &&
     `
-    color: ${props.theme.accentText};
-    background: ${props.$dangerous ? props.theme.danger : props.theme.accent};
+    color: ${props.$dangerous ? props.theme.accentText : props.theme.text};
+    background: ${
+      props.$dangerous
+        ? props.theme.danger
+        : props.theme.listItemHoverBackground
+    };
     outline-color: ${
-      props.$dangerous ? props.theme.danger : props.theme.accent
+      props.$dangerous ? props.theme.danger : "transparent"
     };
     box-shadow: none;
     cursor: var(--pointer);
 
     svg:not([data-fixed-color]) {
-      color: ${props.theme.accentText};
-      fill: ${props.theme.accentText};
+      color: ${
+        props.$dangerous ? props.theme.accentText : props.theme.textSecondary
+      };
+      ${
+        props.$dangerous
+          ? `fill: ${props.theme.accentText};`
+          : "fill: none;"
+      }
     }
   `}
 
@@ -69,17 +79,29 @@ const BaseMenuItemCSS = css<BaseMenuItemProps>`
       &[data-highlighted],
       &[data-state="open"],
       &:focus-visible {
-        color: ${props.theme.accentText};
-        background: ${props.$dangerous ? props.theme.danger : props.theme.accent};
+        color: ${
+          props.$dangerous ? props.theme.accentText : props.theme.text
+        };
+        background: ${
+          props.$dangerous
+            ? props.theme.danger
+            : props.theme.listItemHoverBackground
+        };
         outline-color: ${
-          props.$dangerous ? props.theme.danger : props.theme.accent
+          props.$dangerous ? props.theme.danger : "transparent"
         };
         box-shadow: none;
         cursor: var(--pointer);
 
         svg:not([data-fixed-color]) {
-          color: ${props.theme.accentText};
-          fill: ${props.theme.accentText};
+          color: ${
+            props.$dangerous ? props.theme.accentText : props.theme.textSecondary
+          };
+          ${
+            props.$dangerous
+              ? `fill: ${props.theme.accentText};`
+              : "fill: none;"
+          }
         }
       }
   `}

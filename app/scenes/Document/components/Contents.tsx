@@ -1,19 +1,19 @@
 import { observer } from "mobx-react";
-import { transparentize } from "polished";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { EmojiText } from "@shared/components/EmojiText";
-import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
 import { depths, hideScrollbars, s } from "@shared/styles";
 import { useDocumentContext } from "~/components/DocumentContext";
+import { Portal } from "~/components/Portal";
 import useWindowScrollPosition from "~/hooks/useWindowScrollPosition";
 import { patchLocation } from "~/utils/history";
 import { decodeURIComponentSafe } from "~/utils/urls";
 
 const HEADING_OFFSET = 20;
+const PANEL_WIDTH = 280;
 
 function Contents() {
   const history = useHistory();
@@ -37,12 +37,21 @@ function Contents() {
       ) {
         return;
       }
-      // Navigate via history so the location state (active sidebar context) is
-      // retained rather than dropped by a native hash navigation.
       event.preventDefault();
-      history.push(patchLocation(history.location, { hash: `#${id}` }));
+
+      // Smoothly scroll the heading into view rather than jumping abruptly.
+      const element = window.document.getElementById(
+        decodeURIComponentSafe(id),
+      );
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      // Update the location hash (without a hard navigation) so the URL stays
+      // shareable and the active sidebar context is retained.
+      history.replace(patchLocation(history.location, { hash: `#${id}` }));
     },
-    [history]
+    [history],
   );
 
   useEffect(() => {
@@ -51,7 +60,7 @@ function Contents() {
     for (let key = 0; key < headings.length; key++) {
       const heading = headings[key];
       const element = window.document.getElementById(
-        decodeURIComponentSafe(heading.id)
+        decodeURIComponentSafe(heading.id),
       );
 
       if (element) {
@@ -83,96 +92,226 @@ function Contents() {
   // if all of the headings in the document start at level 3, for example.
   const minHeading = headings.reduce(
     (memo, heading) => (heading.level < memo ? heading.level : memo),
-    Infinity
+    Infinity,
   );
   const headingAdjustment = minHeading - 1;
   const { t } = useTranslation();
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>();
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Position the expanded panel as a viewport-clamped popover anchored to the
+  // minimap, so it is never clipped on narrow layouts or by ancestor overflow.
+  const openPanel = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    const el = wrapperRef.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const margin = 12;
+      // Open to the left of the right-aligned minimap, clamped to the viewport.
+      const left = Math.min(
+        Math.max(margin, rect.right - PANEL_WIDTH),
+        window.innerWidth - PANEL_WIDTH - margin,
+      );
+      const top = Math.max(margin, rect.top - 10);
+      const maxHeight = window.innerHeight - top - margin;
+      setPanelStyle({ left, top, maxHeight });
+    }
+    setOpen(true);
+  }, []);
+
+  // Small delay so the cursor can travel from the minimap to the (portaled)
+  // panel without it closing in between.
+  const scheduleClose = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+    }
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+      }
+    },
+    [],
+  );
+
   if (headings.length === 0) {
-    return <StickyWrapper />;
+    return <Outer />;
   }
 
+  const items = headings.filter((heading) => heading.level < 4);
+
   return (
-    <StickyWrapper>
-      <Heading>{t("Contents")}</Heading>
-      <List>
-        {headings
-          .filter((heading) => heading.level < 4)
-          .map((heading) => (
-            <ListItem
+    <Outer>
+      <Inner
+        ref={wrapperRef}
+        onMouseEnter={openPanel}
+        onMouseLeave={scheduleClose}
+      >
+        {/* Collapsed Notion-style minimap of lines, always visible. */}
+        <Minimap aria-hidden $hidden={open}>
+          {items.map((heading) => (
+            <Line
               key={heading.id}
-              ref={(el) => (itemRefs.current[heading.id] = el)}
               level={heading.level - headingAdjustment}
               active={activeSlug === heading.id}
-            >
-              <Link
-                href={`#${heading.id}`}
-                onClick={(event) => handleClick(event, heading.id)}
-              >
-                <EmojiText>{heading.title}</EmojiText>
-              </Link>
-            </ListItem>
+            />
           ))}
-      </List>
-    </StickyWrapper>
+        </Minimap>
+      </Inner>
+
+      {/* Portaled so it escapes editor stacking contexts (images, etc.) and is
+          never covered by document content. */}
+      <Portal>
+        <Panel
+          aria-label={t("Contents")}
+          style={panelStyle}
+          $open={open}
+          onMouseEnter={openPanel}
+          onMouseLeave={scheduleClose}
+        >
+          <Heading>{t("Contents")}</Heading>
+          <List>
+            {items.map((heading) => (
+              <ListItem
+                key={heading.id}
+                ref={(el) => (itemRefs.current[heading.id] = el)}
+                level={heading.level - headingAdjustment}
+              >
+                <Link
+                  href={`#${heading.id}`}
+                  $active={activeSlug === heading.id}
+                  onClick={(event) => handleClick(event, heading.id)}
+                >
+                  <EmojiText>{heading.title}</EmojiText>
+                </Link>
+              </ListItem>
+            ))}
+          </List>
+        </Panel>
+      </Portal>
+    </Outer>
   );
 }
 
-const StickyWrapper = styled.div`
+const Outer = styled.div`
   display: none;
-  position: sticky;
-  top: 90px;
-  max-height: calc(100vh - 90px);
-  width: ${EditorStyleHelper.tocWidth}px;
-
-  ${hideScrollbars()}
-
-  padding: 0 16px;
-  overflow-y: auto;
-  border-radius: 8px;
-  background: ${s("background")};
-
-  @supports (backdrop-filter: blur(20px)) {
-    backdrop-filter: blur(20px);
-    background: ${(props) => transparentize(0.2, props.theme.background)};
-  }
+  position: absolute;
+  inset-inline-end: 24px;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
 
   ${breakpoint("tablet")`
     display: block;
-    z-index: ${depths.toc};
   `};
 `;
 
+// Only this narrow group captures hover, so the popup opens just on the TOC.
+// Sticky keeps it in view while scrolling, sitting slightly above the vertical
+// center of the viewport.
+const Inner = styled.div`
+  position: sticky;
+  top: 36vh;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  ${hideScrollbars()}
+`;
+
+const Minimap = styled.div<{ $hidden?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 9px;
+  padding: 10px 0;
+  transition: opacity 180ms ease;
+  opacity: ${(props) => (props.$hidden ? 0 : 1)};
+  pointer-events: ${(props) => (props.$hidden ? "none" : "auto")};
+`;
+
+const Line = styled.div<{ level: number; active?: boolean }>`
+  height: ${(props) => (props.active ? 3 : 2)}px;
+  width: ${(props) => Math.max(10, 24 - (props.level - 1) * 5)}px;
+  border-radius: 2px;
+  background: ${(props) =>
+    props.active ? props.theme.text : props.theme.divider};
+  transition:
+    background 150ms ease,
+    height 150ms ease;
+`;
+
+const Panel = styled.nav<{ $open?: boolean }>`
+  position: fixed;
+  z-index: ${depths.menu};
+  width: ${PANEL_WIDTH}px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px 14px;
+  border-radius: 12px;
+  background: ${s("menuBackground")};
+  box-shadow: ${s("menuShadow")};
+
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+
+  ${hideScrollbars()}
+
+  opacity: ${(props) => (props.$open ? 1 : 0)};
+  transform: translateX(${(props) => (props.$open ? 0 : "-6px")});
+  pointer-events: ${(props) => (props.$open ? "auto" : "none")};
+`;
+
 const Heading = styled.h3`
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
   color: ${s("textTertiary")};
-  letter-spacing: 0.03em;
-  margin-top: 10px;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
 `;
 
-const ListItem = styled.li<{ level: number; active?: boolean }>`
-  margin-left: ${(props) => (props.level - 1) * 10}px;
-  margin-bottom: 8px;
-  line-height: 1.3;
+const ListItem = styled.li<{ level: number }>`
+  position: relative;
+  margin: 0;
+  padding-inline-start: ${(props) => (props.level - 1) * 14}px;
   word-break: break-word;
-
-  a {
-    font-weight: ${(props) => (props.active ? "600" : "inherit")};
-    color: ${(props) => (props.active ? props.theme.accent : props.theme.text)};
-  }
 `;
 
-const Link = styled.a`
-  color: ${s("text")};
-  font-size: 14px;
+const Link = styled.a<{ $active?: boolean }>`
+  display: block;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: ${(props) => (props.$active ? 500 : 400)};
+  color: ${(props) =>
+    props.$active ? props.theme.accent : props.theme.textTertiary};
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+  cursor: var(--pointer);
 
   &:hover {
-    color: ${s("accent")};
+    background: ${(props) => props.theme.listItemHoverBackground};
+    color: ${(props) =>
+      props.$active ? props.theme.accent : props.theme.text};
   }
 `;
 
 const List = styled.ol`
+  margin: 0;
   padding: 0;
   list-style: none;
 `;

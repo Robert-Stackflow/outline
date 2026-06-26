@@ -154,7 +154,7 @@ export class EditorStyleHelper {
   static readonly tocWidth = 256;
 
   /** Width of the document content area */
-  static readonly documentWidth = "52em";
+  static readonly documentWidth = "46em";
 
   /** Gutter width for the document (for decorations, etc) */
   static readonly documentGutter = "88px";

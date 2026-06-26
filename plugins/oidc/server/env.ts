@@ -105,6 +105,16 @@ class OIDCPluginEnvironment extends Environment {
     allow_underscores: true,
   })
   public OIDC_LOGOUT_URI = this.toOptionalString(environment.OIDC_LOGOUT_URI);
+
+  /**
+   * A JSON array of additional OIDC providers to enable simultaneously. Each
+   * entry supports: id, name, clientId, clientSecret, and either issuerUrl (for
+   * discovery) or authUri/tokenUri/userInfoUri (manual), plus optional
+   * logoutUri, scopes and usernameClaim. The legacy single-provider OIDC_*
+   * variables continue to work as an additional "oidc" provider.
+   */
+  @IsOptional()
+  public OIDC_PROVIDERS = this.toOptionalString(environment.OIDC_PROVIDERS);
 }
 
 export default new OIDCPluginEnvironment();

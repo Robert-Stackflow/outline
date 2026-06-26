@@ -460,7 +460,9 @@ export class Editor extends React.PureComponent<
         ...this.keymaps,
         anchorPlugin(),
         dropCursor({
-          color: this.props.theme.cursor,
+          color: this.props.theme.accent,
+          width: 3,
+          class: "block-drop-cursor",
         }),
         gapCursor(),
         inputRules({
@@ -591,7 +593,7 @@ export class Editor extends React.PureComponent<
           }
 
           if (isVisible(element)) {
-            element.scrollIntoView();
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
           }
         },
         this.elementRef.current || undefined

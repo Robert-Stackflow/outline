@@ -1,7 +1,6 @@
 import { observer } from "mobx-react";
 import { getLuminance } from "polished";
 import styled from "styled-components";
-import breakpoint from "styled-components-breakpoint";
 import useStores from "../hooks/useStores";
 import { IconType } from "../types";
 import { IconLibrary } from "../utils/IconLibrary";
@@ -114,18 +113,14 @@ export const IconTitleWrapper = styled(Flex)<{ dir?: string }>`
   align-items: center;
   justify-content: center;
   position: absolute;
+  // Position the icon above the title, left-aligned with it.
   top: -44px;
+  inset-inline-start: 0;
   height: 40px;
   width: 40px;
 
   // Always move above TOC
   z-index: 1;
-
-  ${breakpoint("tablet")`
-    top: 3px;
-    ${(props: { dir?: string }) =>
-      props.dir === "rtl" ? "right: -44px" : "left: -44px"};
-  `}
 `;
 
 const Span = styled(Flex)<{ size: number }>`

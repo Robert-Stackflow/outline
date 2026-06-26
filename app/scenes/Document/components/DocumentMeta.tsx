@@ -45,6 +45,7 @@ function TitleDocumentMeta({ to, document, revision, rtl, ...rest }: Props) {
 
   return (
     <Meta
+      className="document-meta-line"
       document={document as Document}
       revision={revision}
       to={to}

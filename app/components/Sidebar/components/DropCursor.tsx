@@ -17,7 +17,7 @@ const Cursor = styled.div<{
   position?: "top";
 }>`
   opacity: ${(props) => (props.isOver ? 1 : 0)};
-  transition: opacity 150ms;
+  transition: opacity 150ms ease;
   position: absolute;
   z-index: 1;
 
@@ -26,14 +26,30 @@ const Cursor = styled.div<{
   background: transparent;
   ${(props) => (props.position === "top" ? "top: -7px;" : "bottom: -7px;")}
 
+  /* Notion-style drop indicator: an accent line with a leading dot, both
+     vertically centered on the same axis (line center = 7px). */
   ::after {
-    background: ${(props) => props.theme.slateDark};
+    background: ${(props) => props.theme.accent};
     position: absolute;
     top: 6px;
     content: "";
     height: 2px;
     border-radius: 2px;
     width: 100%;
+  }
+
+  ::before {
+    content: "";
+    box-sizing: border-box;
+    position: absolute;
+    top: 3px;
+    inset-inline-start: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: ${(props) => props.theme.background};
+    border: 2px solid ${(props) => props.theme.accent};
+    z-index: 1;
   }
 `;
 

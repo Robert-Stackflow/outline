@@ -614,7 +614,7 @@ const StickySearch = styled.div`
   z-index: 1;
   padding: 16px;
   margin: -16px;
-  background: ${s("background")};
+  background: ${s("sidebarBackground")};
   border-radius: 8px;
 `;
 

@@ -16,7 +16,7 @@ import { InputSelect, type Option } from "../InputSelect";
 import NudeButton from "../NudeButton";
 import PaginatedList from "../PaginatedList";
 import Scrollable from "../Scrollable";
-import Text from "../Text";
+import Text from "../Text"; // eslint-disable-line @typescript-eslint/no-unused-vars
 import Tooltip from "../Tooltip";
 import NotificationListItem from "./NotificationListItem";
 import { HStack } from "../primitives/HStack";
@@ -118,10 +118,7 @@ function Notifications(
         }}
         column
       >
-        <Header justify="space-between">
-          <Text weight="bold" as="span">
-            {t("Notifications")}
-          </Text>
+        <Header justify="flex-start">
           <HStack>
             <StyledInputSelect
               label={t("Filter")}

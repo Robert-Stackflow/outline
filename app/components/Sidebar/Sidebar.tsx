@@ -6,24 +6,17 @@ import { useLocation } from "react-router-dom";
 import styled, { css, useTheme } from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { depths, s } from "@shared/styles";
-import { Avatar } from "~/components/Avatar";
 import Flex from "~/components/Flex";
-import useCurrentUser from "~/hooks/useCurrentUser";
 import useMobile from "~/hooks/useMobile";
 import usePrevious from "~/hooks/usePrevious";
 import useStores from "~/hooks/useStores";
-import AccountMenu from "~/menus/AccountMenu";
 import { fadeOnDesktopBackgrounded } from "~/styles";
 import { fadeIn } from "~/styles/animations";
-import Desktop from "~/utils/Desktop";
-import NotificationIcon from "../Notifications/NotificationIcon";
-import NotificationsPopover from "../Notifications/NotificationsPopover";
 import { TooltipProvider } from "../TooltipContext";
 import ResizeBorder from "./components/ResizeBorder";
-import SidebarButton from "./components/SidebarButton";
 import ToggleButton from "./components/ToggleButton";
-import { useTranslation } from "react-i18next";
 import { useDirection } from "@radix-ui/react-direction";
+import { HEADER_HEIGHT } from "~/components/Header";
 
 const ANIMATION_MS = 250;
 
@@ -42,13 +35,10 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
   { children, hidden = false, canCollapse = true, className }: Props,
   ref: React.RefObject<HTMLDivElement>
 ) {
-  const [isCollapsing, setCollapsing] = React.useState(false);
-  const { t } = useTranslation();
   const theme = useTheme();
   const { ui } = useStores();
   const location = useLocation();
   const previousLocation = usePrevious(location);
-  const user = useCurrentUser({ rejectOnEmpty: false });
   const isMobile = useMobile();
   const width = ui.sidebarWidth;
   const collapsed = ui.sidebarIsClosed && canCollapse;
@@ -73,20 +63,12 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
       event.preventDefault();
       const rawWidth =
         direction === "rtl" ? offset - event.pageX : event.pageX - offset;
-      const newWidth = Math.min(rawWidth, maxWidth);
-      const isSmallerThanCollapsePoint = newWidth < minWidth / 2;
-
-      if (canCollapse) {
-        ui.set({
-          sidebarWidth: isSmallerThanCollapsePoint
-            ? theme.sidebarCollapsedWidth
-            : newWidth,
-        });
-      } else {
-        ui.set({ sidebarWidth: Math.max(newWidth, minWidth) });
-      }
+      // Clamp between the minimum and maximum widths. Dragging no longer
+      // collapses the sidebar — it simply stops at the minimum width.
+      const newWidth = Math.min(Math.max(rawWidth, minWidth), maxWidth);
+      ui.set({ sidebarWidth: newWidth });
     },
-    [ui, theme, offset, minWidth, maxWidth, direction, canCollapse]
+    [ui, offset, minWidth, maxWidth, direction]
   );
 
   const handleStopDrag = React.useCallback(() => {
@@ -96,21 +78,8 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
       document.activeElement.blur();
     }
 
-    if (isSmallerThanMinimum) {
-      const isSmallerThanCollapsePoint = width < minWidth / 2;
-
-      if (isSmallerThanCollapsePoint && canCollapse) {
-        setAnimating(false);
-        setCollapsing(true);
-        ui.collapseSidebar();
-      } else {
-        ui.set({ sidebarWidth: minWidth });
-        setAnimating(true);
-      }
-    } else {
-      ui.set({ sidebarWidth: width });
-    }
-  }, [ui, isSmallerThanMinimum, minWidth, width, canCollapse]);
+    ui.set({ sidebarWidth: width });
+  }, [ui, width]);
 
   const handleBlur = React.useCallback(() => {
     setHovering(false);
@@ -133,6 +102,9 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
   );
 
   const handlePointerActivity = React.useCallback(() => {
+    if (ui.isReadingMode) {
+      return;
+    }
     if (ui.sidebarIsClosed) {
       // clear the timeout when mouse exits
       if (hoverTimeoutRef.current) {
@@ -141,7 +113,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
       setHovering(document.hasFocus());
       setPointerMoved(true);
     }
-  }, [ui.sidebarIsClosed]);
+  }, [ui.sidebarIsClosed, ui.isReadingMode]);
 
   const handlePointerLeave = React.useCallback(
     (ev) => {
@@ -151,7 +123,8 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
           clearTimeout(hoverTimeoutRef.current);
         }
 
-        // add a short delay when mouse exits the sidebar before closing
+        // a short delay when the mouse exits the sidebar before closing, so a
+        // brief overshoot does not collapse it, but it stays responsive.
         hoverTimeoutRef.current = setTimeout(() => {
           const withinSidebar =
             direction === "rtl"
@@ -164,7 +137,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
               ev.pageY < window.innerHeight &&
               ev.pageY > 0
           );
-        }, 500);
+        }, 120);
       }
     },
     [width, direction, hasPointerMoved]
@@ -176,6 +149,14 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
       setPointerMoved(false);
     }
   }, [ui.sidebarIsClosed]);
+
+  // Reading mode forces the drawer to stay closed regardless of pointer.
+  React.useEffect(() => {
+    if (ui.isReadingMode) {
+      setHovering(false);
+      setPointerMoved(false);
+    }
+  }, [ui.isReadingMode]);
 
   // Reset stale hover state when the sidebar becomes visible after being
   // hidden via display:none (e.g. returning from settings). Without this, a
@@ -207,15 +188,6 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
       setTimeout(() => setAnimating(false), ANIMATION_MS);
     }
   }, [isAnimating]);
-
-  React.useEffect(() => {
-    if (isCollapsing) {
-      setTimeout(() => {
-        ui.set({ sidebarWidth: minWidth });
-        setCollapsing(false);
-      }, ANIMATION_MS);
-    }
-  }, [ui, minWidth, isCollapsing]);
 
   React.useEffect(() => {
     if (isResizing) {
@@ -282,40 +254,37 @@ const Sidebar = React.forwardRef<HTMLDivElement, Props>(function Sidebar_(
       >
         {children}
 
-        {user && (
-          <AccountMenu>
-            <SidebarButton
-              showMoreMenu
-              title={user.name}
-              position="bottom"
-              image={
-                <Avatar
-                  alt={t("Avatar of {{ name }}", { name: user.name })}
-                  model={user}
-                  size={24}
-                />
-              }
-            >
-              <NotificationsPopover>
-                <SidebarButton
-                  position="bottom"
-                  image={<NotificationIcon />}
-                  aria-label={t("Notifications")}
-                  style={{ paddingInline: 4 }}
-                />
-              </NotificationsPopover>
-            </SidebarButton>
-          </AccountMenu>
-        )}
         <ResizeBorder
           onMouseDown={handleMouseDown}
           onDoubleClick={ui.sidebarIsClosed ? undefined : handleReset}
         />
       </Container>
       {ui.mobileSidebarVisible && <Backdrop onClick={handleCloseSidebar} />}
+      {collapsed && !isMobile && !ui.isReadingMode && (
+        <EdgeTrigger
+          aria-hidden
+          onMouseEnter={() => setHovering(true)}
+        />
+      )}
     </TooltipProvider>
   );
 });
+
+// A wide invisible zone along the start edge that reveals the collapsed sidebar
+// on hover. Starts below the header so hovering near the header controls does
+// not pop the drawer, and is wide enough to be easy to trigger.
+const EdgeTrigger = styled.div`
+  position: fixed;
+  top: ${HEADER_HEIGHT}px;
+  bottom: 0;
+  inset-inline-start: 0;
+  width: 40px;
+  z-index: ${depths.sidebar + 1};
+
+  @media print {
+    display: none;
+  }
+`;
 
 const Backdrop = styled.a`
   animation: ${fadeIn} 250ms ease-in-out;
@@ -343,9 +312,9 @@ const hoverStyles = (props: ContainerProps) => `
   transform: none !important;
   box-shadow: ${
     props.$collapsed
-      ? "rgba(0, 0, 0, 0.2) 1px 0 4px"
+      ? "0 0 0 1px rgba(0, 0, 0, 0.04), 8px 0 28px rgba(0, 0, 0, 0.14)"
       : props.$isSmallerThanMinimum
-        ? "rgba(0, 0, 0, 0.1) inset -1px 0 2px"
+        ? "rgba(0, 0, 0, 0.08) inset -1px 0 2px"
         : "none"
   };
 
@@ -404,7 +373,8 @@ const Container = styled(Flex)<ContainerProps>`
   }
 
   ${breakpoint("tablet")`
-    z-index: ${depths.sidebar};
+    z-index: ${(props: ContainerProps) =>
+      props.$isHovering ? depths.sidebar + 5 : depths.sidebar};
     margin: 0;
     min-width: 0;
     transition:
@@ -412,13 +382,11 @@ const Container = styled(Flex)<ContainerProps>`
       transform 150ms ease-out${(props: ContainerProps) =>
         props.$isAnimating ? `, width ${ANIMATION_MS}ms ease-out` : ""};
     transform: translateX(${(props: ContainerProps) =>
-      props.$collapsed
-        ? `calc(-100% + ${Desktop.hasInsetTitlebar() ? 8 : 16}px)`
-        : 0});
+      props.$collapsed ? `-100%` : 0});
 
     [dir="rtl"] & {
       transform: translateX(${(props: ContainerProps) =>
-        props.$collapsed ? `calc(100% - 8px)` : 0});
+        props.$collapsed ? `100%` : 0});
     }
 
     ${(props: ContainerProps) => props.$isHovering && css(hoverStyles)}

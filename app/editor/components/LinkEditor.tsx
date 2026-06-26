@@ -297,7 +297,7 @@ const SearchResults = styled(Scrollable)<{ $hasResults: boolean }>`
   height: auto;
   left: 0;
   margin-top: -6px;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 8px 8px;
   padding: ${(props) => (props.$hasResults ? "6px" : "0")};
   max-height: 240px;
   pointer-events: all;

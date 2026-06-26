@@ -1,6 +1,5 @@
 import styled from "styled-components";
 import type Document from "~/models/Document";
-import KeyboardShortcutsButton from "./KeyboardShortcutsButton";
 import ConnectionStatus from "./ConnectionStatus";
 import { SizeWarning } from "./SizeWarning";
 
@@ -12,7 +11,6 @@ export const Footer = ({ document }: Props) => (
   <FooterWrapper>
     <ConnectionStatus />
     <SizeWarning document={document} />
-    <KeyboardShortcutsButton />
   </FooterWrapper>
 );
 

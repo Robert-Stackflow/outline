@@ -343,6 +343,16 @@ export enum UserPreference {
   EnableSmartText = "enableSmartText",
   /** The style of notification badge to display. */
   NotificationBadge = "notificationBadge",
+  /** Whether documents render with a smaller font size. */
+  SmallerText = "smallerText",
+  /** Preferred document font family. */
+  FontFamily = "fontFamily",
+}
+
+export enum DocumentFontFamily {
+  Default = "default",
+  Serif = "serif",
+  Mono = "mono",
 }
 
 export enum NotificationBadgeType {
@@ -363,6 +373,8 @@ export type UserPreferences = {
   [UserPreference.SortCommentsByOrderInDocument]?: boolean;
   [UserPreference.EnableSmartText]?: boolean;
   [UserPreference.NotificationBadge]?: NotificationBadgeType;
+  [UserPreference.SmallerText]?: boolean;
+  [UserPreference.FontFamily]?: DocumentFontFamily;
 };
 
 export type SourceMetadata = {

@@ -12,6 +12,9 @@ class AuthenticationProvider extends Model {
 
   name: string;
 
+  /** Optional brand icon key, e.g. "github", "gitlab". */
+  icon?: string;
+
   providerId: string;
 
   groupSyncSupported: boolean;

@@ -376,9 +376,11 @@ const MobileBackground = styled.div`
 const Background = styled.div<{ align: Props["align"] }>`
   position: relative;
   background-color: ${s("menuBackground")};
-  box-shadow: ${s("menuShadow")};
-  border-radius: 4px;
-  height: 36px;
+  box-shadow:
+    0 0 0 1px ${s("divider")},
+    0 4px 16px rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  height: 32px;
 
   ${(props) =>
     props.align === "start" &&

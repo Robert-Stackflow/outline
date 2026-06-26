@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import Icon from "@shared/components/Icon";
 import { ellipsis } from "@shared/styles";
+import { NavigationNode } from "@shared/types";
 import type Collection from "~/models/Collection";
 import type Document from "~/models/Document";
 import Breadcrumb from "~/components/Breadcrumb";
@@ -102,6 +103,42 @@ function DocumentBreadcrumb(
   }, [document]);
 
   const path = document.pathTo.slice(0, -1);
+
+  // Build a ladder of NavigationNodes that mirrors the visible crumbs so the
+  // chevron between each pair can expose the siblings of the next item. The
+  // first slot represents the collection root (where "siblings" of the first
+  // ancestor are the top-level docs of the collection).
+  const siblingLadder = React.useMemo(() => {
+    if (!collection?.sortedDocuments) {
+      return undefined;
+    }
+
+    // Resolve the live NavigationNode (with its children populated) for an
+    // ancestor id by walking the collection tree.
+    const findNode = (
+      nodes: NavigationNode[],
+      id: string
+    ): NavigationNode | undefined => {
+      for (const node of nodes) {
+        if (node.id === id) {
+          return node;
+        }
+        const hit = findNode(node.children, id);
+        if (hit) {
+          return hit;
+        }
+      }
+      return undefined;
+    };
+
+    const tree = collection.sortedDocuments;
+    const ladder: NavigationNode[][] = [tree];
+    for (const ancestor of path) {
+      const live = findNode(tree, ancestor.id);
+      ladder.push(live?.children ?? ancestor.children ?? []);
+    }
+    return ladder;
+  }, [collection, path]);
 
   const actions = React.useMemo(() => {
     if (depth === 0) {
@@ -228,7 +265,16 @@ function DocumentBreadcrumb(
   }
 
   return (
-    <Breadcrumb actions={actions} ref={ref} highlightFirstItem>
+    <Breadcrumb
+      actions={actions}
+      ref={ref}
+      highlightFirstItem
+      getChevronSiblings={
+        siblingLadder
+          ? (gapIndex) => siblingLadder[gapIndex]
+          : undefined
+      }
+    >
       {children}
     </Breadcrumb>
   );
@@ -315,13 +361,13 @@ const NameText = styled.span`
 `;
 
 const SmallSlash = styled(GoToIcon)`
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
   vertical-align: middle;
   flex-shrink: 0;
 
-  fill: ${(props) => props.theme.textTertiary};
-  opacity: 0.5;
+  color: ${(props) => props.theme.textTertiary};
+  opacity: 0.6;
 `;
 
 export default observer(React.forwardRef(DocumentBreadcrumb));

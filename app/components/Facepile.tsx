@@ -5,7 +5,7 @@ import styled from "styled-components";
 import type User from "~/models/User";
 import { Avatar, AvatarSize } from "~/components/Avatar";
 import Flex from "~/components/Flex";
-import { s } from "@shared/styles";
+import { s } from "@shared/styles"; // eslint-disable-line @typescript-eslint/no-unused-vars
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 type Props = {
@@ -118,7 +118,7 @@ const Avatars = styled(Flex)`
 
   *:hover {
     clip-path: none !important;
-    box-shadow: 0 0 0 2px ${s("background")};
+    backgroud: none !important;
   }
 `;
 

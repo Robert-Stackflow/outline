@@ -8,5 +8,6 @@ export default function presentProviderConfig(
     id: config.value.id,
     name: config.name,
     authUrl: signin(config.value.id),
+    icon: config.value.icon,
   };
 }

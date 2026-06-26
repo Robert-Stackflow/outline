@@ -42,7 +42,12 @@ export enum Hook {
  */
 type PluginValueMap = {
   [Hook.API]: Router;
-  [Hook.AuthProvider]: { router: Router | Promise<Router>; id: string };
+  [Hook.AuthProvider]: {
+    router: Router | Promise<Router>;
+    id: string;
+    /** Optional brand icon key surfaced to the client sign-in button. */
+    icon?: string;
+  };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- typeof BaseEmail<EmailProps> isn't assignable from BaseEmail<Subtype>; plugins register heterogeneous template Props.
   [Hook.EmailTemplate]: typeof BaseEmail<any>;
   [Hook.IssueProvider]: BaseIssueProvider;

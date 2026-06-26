@@ -26,12 +26,10 @@ import {
   request,
   startOAuthFlow,
 } from "@server/utils/passport";
-import config from "../../plugin.json";
 import env from "../env";
+import type { OIDCProviderConfig } from "../providers";
 import { OIDCStrategy } from "./OIDCStrategy";
 import { createContext } from "@server/context";
-
-const OIDC_LOGOUT_PATH = "/auth/oidc.logout";
 
 export interface OIDCEndpoints {
   authorizationURL: string;
@@ -42,25 +40,32 @@ export interface OIDCEndpoints {
 }
 
 /**
- * Creates OIDC routes and mounts them into the provided router
+ * Creates OIDC routes for a single provider and mounts them into the router.
+ *
+ * @param router the koa router to mount onto.
+ * @param provider the resolved OIDC provider configuration.
+ * @param endpoints the resolved OIDC endpoints for this provider.
  */
 export function createOIDCRouter(
   router: Router,
+  provider: OIDCProviderConfig,
   endpoints: OIDCEndpoints
 ): void {
-  const scopes = env.OIDC_SCOPES.split(" ");
+  const scopes = provider.scopes.split(" ");
+  const logoutPath = `/auth/${provider.id}.logout`;
+  const idTokenCookie = `${provider.id}IdToken`;
 
   passport.use(
-    config.id,
+    provider.id,
     new OIDCStrategy(
       {
         authorizationURL: endpoints.authorizationURL,
         tokenURL: endpoints.tokenURL,
-        clientID: env.OIDC_CLIENT_ID!,
-        clientSecret: env.OIDC_CLIENT_SECRET!,
-        callbackURL: `${env.URL}/auth/${config.id}.callback`,
+        clientID: provider.clientId,
+        clientSecret: provider.clientSecret,
+        callbackURL: `${env.URL}/auth/${provider.id}.callback`,
         passReqToCallback: true,
-        scope: env.OIDC_SCOPES,
+        scope: provider.scopes,
         // @ts-expect-error custom state store
         store: new StateStore(endpoints.pkce),
         state: true,
@@ -142,18 +147,18 @@ export function createOIDCRouter(
             context.state?.auth?.user ?? (await getUserFromOAuthState(context));
           const { domain } = parseEmail(email);
 
-          // Only a single OIDC provider is supported – find the existing, if any.
+          // Find the existing authentication provider for this OIDC provider.
           const authenticationProvider = team
             ? ((await AuthenticationProvider.findOne({
                 where: {
-                  name: "oidc",
+                  name: provider.id,
                   teamId: team.id,
                   providerId: domain,
                 },
               })) ??
               (await AuthenticationProvider.findOne({
                 where: {
-                  name: "oidc",
+                  name: provider.id,
                   teamId: team.id,
                 },
               })))
@@ -175,14 +180,14 @@ export function createOIDCRouter(
           // Default is 'preferred_username' as per OIDC spec.
           // This will default to the profile.preferred_username, but will fall back to preferred_username from the id_token
           const username =
-            get(profile, env.OIDC_USERNAME_CLAIM) ??
-            get(token, env.OIDC_USERNAME_CLAIM);
+            get(profile, provider.usernameClaim) ??
+            get(token, provider.usernameClaim);
           const name = profile.name || username || profile.username;
           const profileId = profile.sub ?? token.sub ?? profile.id;
 
           if (!name) {
             throw AuthenticationError(
-              `Neither a ${env.OIDC_USERNAME_CLAIM}, "name" or "username" was returned in the profile loaded from ${endpoints.userInfoURL}, but at least one is required.`
+              `Neither a ${provider.usernameClaim}, "name" or "username" was returned in the profile loaded from ${endpoints.userInfoURL}, but at least one is required.`
             );
           }
           if (!profileId) {
@@ -224,7 +229,7 @@ export function createOIDCRouter(
               avatarUrl,
             },
             authenticationProvider: {
-              name: config.id,
+              name: provider.id,
               providerId,
             },
             authentication: {
@@ -239,11 +244,11 @@ export function createOIDCRouter(
           // the `id_token_hint`, allowing the provider to scope the logout to
           // this session rather than terminating its global SSO session.
           if (endpoints.logoutURL && params.id_token) {
-            context.cookies.set("oidcIdToken", params.id_token, {
+            context.cookies.set(idTokenCookie, params.id_token, {
               httpOnly: true,
               sameSite: "lax",
               secure: env.isProduction,
-              path: OIDC_LOGOUT_PATH,
+              path: logoutPath,
               domain: getCookieDomain(
                 context.request.hostname,
                 env.isCloudHosted
@@ -260,24 +265,24 @@ export function createOIDCRouter(
     )
   );
 
-  router.get(config.id, startOAuthFlow, passport.authenticate(config.id));
-  router.get(`${config.id}.callback`, passportMiddleware(config.id));
-  router.post(`${config.id}.callback`, passportMiddleware(config.id));
+  router.get(provider.id, startOAuthFlow, passport.authenticate(provider.id));
+  router.get(`${provider.id}.callback`, passportMiddleware(provider.id));
+  router.post(`${provider.id}.callback`, passportMiddleware(provider.id));
 
   // Performs a spec-compliant RP-initiated logout against the provider's end
   // session endpoint. Passing `id_token_hint` identifies the session being
   // ended so the provider can scope the logout and skip a confirmation prompt,
   // while `post_logout_redirect_uri` returns the user to Outline afterwards.
   // https://openid.net/specs/openid-connect-rpinitiated-1_0.html
-  router.get(`${config.id}.logout`, (ctx: Context) => {
-    const idToken = ctx.cookies.get("oidcIdToken");
+  router.get(`${provider.id}.logout`, (ctx: Context) => {
+    const idToken = ctx.cookies.get(idTokenCookie);
 
     // Always discard our copy of the id_token, regardless of where we redirect.
-    ctx.cookies.set("oidcIdToken", "", {
+    ctx.cookies.set(idTokenCookie, "", {
       httpOnly: true,
       sameSite: "lax",
       secure: env.isProduction,
-      path: OIDC_LOGOUT_PATH,
+      path: logoutPath,
       domain: getCookieDomain(ctx.request.hostname, env.isCloudHosted),
       expires: subMinutes(new Date(), 1),
     });
@@ -291,8 +296,8 @@ export function createOIDCRouter(
       if (idToken) {
         url.searchParams.set("id_token_hint", idToken);
       }
-      if (env.OIDC_CLIENT_ID) {
-        url.searchParams.set("client_id", env.OIDC_CLIENT_ID);
+      if (provider.clientId) {
+        url.searchParams.set("client_id", provider.clientId);
       }
       url.searchParams.set("post_logout_redirect_uri", env.URL);
 

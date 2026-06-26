@@ -31,6 +31,19 @@ export default class AuthenticationHelper {
   }
 
   /**
+   * Returns the brand icon key for an authentication provider, if any.
+   *
+   * @param id The authentication provider id, eg "oidc-github".
+   * @returns The brand icon key (eg "github") or undefined.
+   */
+  public static getProviderIcon(id: string): string | undefined {
+    const provider = AuthenticationHelper.providers.find(
+      (hook) => hook.value.id === id
+    );
+    return provider?.value.icon;
+  }
+
+  /**
    * Returns the enabled authentication provider configurations for a team,
    * if given otherwise all enabled providers are returned.
    *

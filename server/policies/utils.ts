@@ -1,4 +1,3 @@
-import env from "@server/env";
 import type { User } from "@server/models";
 import { Team, type Group } from "@server/models";
 import type Model from "@server/models/base/Model";
@@ -103,11 +102,12 @@ export function isTeamMutable(_actor: User, _model?: Model | null) {
 
 /**
  * Check if this instance is running in the cloud-hosted environment.
+ *
+ * Self-hosted override: always returns true so policy guards that limit
+ * features to cloud (workspace deletion/audit, API key actions, etc.) are
+ * unlocked on self-hosted deployments.
  */
 export function isCloudHosted() {
-  if (!env.isCloudHosted) {
-    return false;
-  }
   return true;
 }
 

@@ -155,6 +155,7 @@ export default () =>
       alias: {
         "~": path.resolve(__dirname, "./app"),
         "@shared": path.resolve(__dirname, "./shared"),
+        "outline-icons": path.resolve(__dirname, "./shared/icons/lucide.tsx"),
       },
     },
     build: {

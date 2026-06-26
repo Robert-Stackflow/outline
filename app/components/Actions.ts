@@ -18,7 +18,7 @@ export const Action = styled(Flex)`
 export const Separator = styled.div`
   flex-shrink: 0;
   width: 1px;
-  height: 28px;
+  height: 20px;
   background: ${s("divider")};
 `;
 

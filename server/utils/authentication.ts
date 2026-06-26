@@ -140,6 +140,27 @@ export async function signIn(
       expires,
     });
 
+    // On self-hosted (single domain, no subdomains) we still record every
+    // workspace the user signs into in the apex "sessions" cookie. This powers
+    // the multi-session workspace switcher — auth.switch reads this list and
+    // swaps the active accessToken without a fresh SSO round-trip.
+    const existing = getSessionsInCookie(ctx);
+    const sessions = encodeURIComponent(
+      JSON.stringify({
+        ...existing,
+        [team.id]: {
+          name: team.name,
+          logoUrl: team.avatarUrl,
+          url: team.url,
+        },
+      })
+    );
+    ctx.cookies.set("sessions", sessions, {
+      httpOnly: false,
+      expires,
+      domain,
+    });
+
     const defaultCollectionId = team.defaultCollectionId;
 
     if (defaultCollectionId) {

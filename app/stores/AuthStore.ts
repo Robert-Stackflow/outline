@@ -27,6 +27,8 @@ type Provider = {
   id: string;
   name: string;
   authUrl: string;
+  /** Optional brand icon key, e.g. "github", "gitlab". */
+  icon?: string;
 };
 
 export type Config = {
@@ -319,6 +321,20 @@ export default class AuthStore extends Store<Team> {
     } finally {
       this.isSaving = false;
     }
+  };
+
+  /**
+   * Switches the active workspace to another team the user belongs to. The
+   * server swaps the access token cookie in-place (single-domain, multi-session
+   * model) so a full reload lands in the target workspace.
+   *
+   * @param teamId The workspace to switch to.
+   */
+  @action
+  switchTeam = async (teamId: string) => {
+    await client.post(`/auth.switch`, { teamId });
+    // Hard reload so every store rehydrates against the new session.
+    window.location.href = "/home";
   };
 
   /**

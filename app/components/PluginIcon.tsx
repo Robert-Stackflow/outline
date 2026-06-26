@@ -16,7 +16,11 @@ type Props = {
  * Renders an icon defined in a plugin (Hook.Icon).
  */
 function PluginIcon({ id, color, size = 24 }: Props) {
-  const Icon = usePluginValue(Hook.Icon, id);
+  const exact = usePluginValue(Hook.Icon, id);
+  // Fall back to the base plugin icon for namespaced provider ids, e.g. a
+  // dynamically configured "oidc-google" provider uses the shared "oidc" icon.
+  const base = usePluginValue(Hook.Icon, id.split("-")[0]);
+  const Icon = exact ?? base;
 
   if (Icon) {
     return (

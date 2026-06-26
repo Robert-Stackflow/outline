@@ -57,6 +57,21 @@ const mathStyle = (props: Props) => css`
     white-space: pre-wrap;
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: ${props.theme.scrollbarThumb} transparent;
+  }
+
+  .math-node::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .math-node::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .math-node::-webkit-scrollbar-thumb {
+    background: ${props.theme.scrollbarThumb};
+    border-radius: 3px;
   }
 
   .math-node.empty-math .math-render::before {
@@ -81,9 +96,7 @@ const mathStyle = (props: Props) => css`
     tab-size: 4;
 
     .ProseMirror-focused {
-      border-radius: 2px;
-      outline: 2px solid
-        ${props.readOnly ? "transparent" : props.theme.selected};
+      outline: none;
     }
   }
 
@@ -109,36 +122,58 @@ const mathStyle = (props: Props) => css`
     margin: 0px 3px;
   }
 
-  math-block {
+  /* Background edit box for inline math while selected/editing.
+     Block math gets its box from math-display.ProseMirror-selectednode below. */
+  math-inline.ProseMirror-selectednode .math-src {
+    background: ${props.theme.codeBackground};
+    border-radius: 4px;
+    padding: 1px 5px;
+    outline: 1px solid ${props.theme.divider};
+  }
+
+  math-block,
+  math-display {
     display: block;
   }
 
-  math-block .math-render {
+  /* Higher specificity than ".ProseMirror > *" so the block-math margin wins */
+  .ProseMirror math-block,
+  .ProseMirror math-display {
+    margin: 1.4em 0;
+  }
+
+  math-block .math-render,
+  math-display .math-render {
     display: block;
   }
 
   math-block.ProseMirror-selectednode,
-  math-block.empty-math {
-    border-radius: 4px;
-    border: 1px solid ${props.theme.codeBorder};
+  math-block.empty-math,
+  math-display.ProseMirror-selectednode,
+  math-display.empty-math {
+    border-radius: 6px;
+    border: 1px solid ${props.theme.divider};
     background: ${props.theme.codeBackground};
-    padding: 0.75em 1em;
+    padding: 0.6em 1em;
     font-family: ${props.theme.fontFamilyMono};
     font-size: 90%;
   }
 
-  math-block.empty-math {
+  math-block.empty-math,
+  math-display.empty-math {
     text-align: center;
   }
 
-  math-block .math-src .ProseMirror {
+  math-block .math-src .ProseMirror,
+  math-display .math-src .ProseMirror {
     width: 100%;
     display: block;
     outline: none;
   }
 
-  math-block .katex-display {
-    margin: 0;
+  math-block .katex-display,
+  math-display .katex-display {
+    margin: 0.25em 0;
   }
 
   .katex-html *::selection {
@@ -527,12 +562,12 @@ const textStyle = () => css`
 
 const style = (props: Props) => css`
 --font-size-p: var(--font-size-body);
---font-size-h1: 28px;
---font-size-h2: 22px;
---font-size-h3: 18px;
---font-size-h4: 16px;
+--font-size-h1: 30px;
+--font-size-h2: 24px;
+--font-size-h3: 20px;
+--font-size-h4: 17px;
 --font-size-h5: 15px;
---font-size-h6: 15px;
+--font-size-h6: 14px;
 
 flex-grow: ${props.grow ? 1 : 0};
 justify-content: start;
@@ -607,8 +642,8 @@ width: 100%;
   }
 
   & > * {
-    margin-top: .5em;
-    margin-bottom: .5em;
+    margin-top: .8em;
+    margin-bottom: .8em;
 
     &:last-child {
       margin-bottom: 0;
@@ -626,10 +661,11 @@ width: 100%;
   h4,
   h5,
   h6 {
-    margin-top: 1em;
-    margin-bottom: 0.25em;
-    line-height: inherit;
+    margin-top: 1.4em;
+    margin-bottom: 0.4em;
+    line-height: 1.3;
     font-weight: 600;
+    letter-spacing: -0.01em;
     cursor: text;
     clear: both;
 
@@ -755,12 +791,15 @@ iframe.embed {
   clear: both;
   position: relative;
   z-index: 1;
+  margin-top: 1.4em;
+  margin-bottom: 1.4em;
 
   img,
   video {
     pointer-events: ${props.readOnly ? "initial" : "none"};
     display: inline-block;
     max-width: 100%;
+    border-radius: 6px;
   }
 
   video {
@@ -771,6 +810,18 @@ iframe.embed {
   .ProseMirror-selectednode img {
     pointer-events: initial;
   }
+}
+
+/* Softer, rounded selection ring for images/videos instead of a hard outline */
+.image.ProseMirror-selectednode,
+.video.ProseMirror-selectednode {
+  outline: none;
+}
+
+.image.ProseMirror-selectednode img,
+.video.ProseMirror-selectednode video {
+  box-shadow: 0 0 0 2px ${props.theme.accent};
+  border-radius: 6px;
 }
 
 .image.placeholder,
@@ -982,12 +1033,12 @@ img.ProseMirror-separator {
 .${EditorStyleHelper.imageCaption} {
   border: 0;
   display: block;
-  font-style: italic;
+  font-style: normal;
   font-weight: normal;
   font-size: 13px;
-  color: ${props.theme.textSecondary};
-  padding: 8px 0 4px;
-  line-height: 16px;
+  color: ${props.theme.textTertiary};
+  padding: 10px 0 4px;
+  line-height: 1.5;
   text-align: center;
   min-height: 1em;
   outline: none;
@@ -1073,10 +1124,10 @@ h6:not(.placeholder)::before {
   h5,
   h6 {
     &:not(.placeholder)::before {
-      opacity: 1;
+      opacity: 0;
     }
     &:hover:not(.placeholder)::before {
-      opacity: 0;
+      opacity: 0.5;
     }
   }
 }
@@ -1173,7 +1224,7 @@ h6:not(.placeholder)::before {
       display: inline-flex;
     }
     &:not(.placeholder)::before {
-      display: ${props.readOnly ? "none" : "inline-block"};
+      display: none;
     }
   }
 }
@@ -1424,7 +1475,8 @@ ol li {
   position: relative;
   white-space: initial;
   text-align: start;
-  margin-top: .25em;
+  margin-top: 0.15em;
+  margin-bottom: 0.15em;
 
   p {
     white-space: pre-wrap;
@@ -1432,6 +1484,17 @@ ol li {
 
   > div {
     width: 100%;
+  }
+}
+
+/* Unordered list bullets: a slightly bolder dot with more breathing room
+   between the marker and the text. */
+ul:not(.checkbox_list) > li {
+  padding-inline-start: 4px;
+
+  &::marker {
+    color: ${props.theme.text};
+    font-size: 1.25em;
   }
 }
 
@@ -1699,12 +1762,12 @@ code {
   -webkit-box-decoration-break: clone;
 
   border-radius: 4px;
-  border: 1px solid ${props.theme.codeBorder};
+  border: 0;
   background: ${props.theme.codeBackground};
-  padding: 3px 4px;
+  padding: 0.15em 0.4em;
   color: ${props.theme.code};
   font-family: ${props.theme.fontFamilyMono};
-  font-size: 90%;
+  font-size: 0.875em;
 
   &.inline {
     color: ${props.theme.codeKeyword};
@@ -1855,12 +1918,12 @@ mark {
     position: absolute;
     padding-left: 0.5em;
     left: 1px;
-    top: calc(1px + 0.75em);
+    top: 1em;
     width: calc(var(--line-number-gutter-width,0) * 1em + .25em);
     word-break: break-all;
     white-space: break-spaces;
     font-family: ${props.theme.fontFamilyMono};
-    line-height: 1.4em;
+    line-height: 1.5em;
     color: ${props.theme.textTertiary};
     background: ${props.theme.codeBackground};
     text-align: right;
@@ -1872,14 +1935,14 @@ mark {
 .${EditorStyleHelper.codeBlock}.collapsed {
   pre {
     pointer-events: none;
-    max-height: calc(10 * 1.4em + 0.75em);
+    max-height: calc(10 * 1.5em + 0.75em);
     overflow: hidden;
   }
 
   &::after {
-    max-height: calc(10 * 1.4em + 0.75em);
+    max-height: calc(10 * 1.5em + 0.75em);
     overflow: hidden;
-    clip-path: inset(0 0 calc(100% - 10 * 1.4em - 0.75em) 0);
+    clip-path: inset(0 0 calc(100% - 10 * 1.5em - 0.75em) 0);
   }
 
   &::before {
@@ -1984,13 +2047,13 @@ mark {
 pre {
   display: block;
   overflow-x: auto;
-  padding: 0.75em 1em;
-  line-height: 1.4em;
+  padding: 1em 1.2em;
+  line-height: 1.5em;
   position: relative;
   background: ${props.theme.codeBackground};
-  border-radius: 4px;
-  border: 1px solid ${props.theme.codeBorder};
-  margin: .5em 0;
+  border-radius: 8px;
+  border: 0;
+  margin: 1.4em 0;
 
   -webkit-font-smoothing: initial;
   font-family: ${props.theme.fontFamilyMono};
@@ -2020,7 +2083,8 @@ table {
   width: 100%;
   border-collapse: separate;
   border-radius: ${EditorStyleHelper.blockRadius};
-  margin-top: 1em;
+  margin-top: 1.4em;
+  margin-bottom: 1.4em;
   box-sizing: border-box;
   border: 1px solid ${props.theme.divider};
   border-left: 0;
@@ -2041,7 +2105,7 @@ table {
     position: relative;
     vertical-align: top;
     position: relative;
-    padding: 4px 8px;
+    padding: 6px 12px;
     text-align: start;
     font-weight: normal;
     border-left: 1px solid ${props.theme.divider};
@@ -2049,11 +2113,7 @@ table {
   }
 
   th {
-    background: ${props.theme.background};
-    background-image: linear-gradient(
-      ${transparentize(0.75, props.theme.divider)},
-      ${transparentize(0.75, props.theme.divider)}
-    );
+    background: ${props.theme.backgroundSecondary};
     color: ${props.theme.textSecondary};
     font-weight: 500;
   }
@@ -2562,6 +2622,25 @@ table {
   display: none;
   pointer-events: none;
   position: absolute;
+}
+
+/* Block drop indicator — matches the sidebar drop cursor (accent line + dot). */
+.block-drop-cursor {
+  border-radius: 2px;
+
+  &::after {
+    content: "";
+    box-sizing: border-box;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: ${props.theme.background};
+    border: 2px solid ${props.theme.accent};
+  }
 }
 
 .ProseMirror-gapcursor::after {

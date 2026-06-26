@@ -24,6 +24,13 @@ const Theme: React.FC = ({ children }: Props) => {
   const direction = isRTLLanguage(i18n.language) ? "rtl" : "ltr";
 
   React.useEffect(() => {
+    document.body.setAttribute(
+      "data-reading-mode",
+      String(ui.isReadingMode)
+    );
+  }, [ui.isReadingMode]);
+
+  React.useEffect(() => {
     window.dispatchEvent(
       new CustomEvent("theme-changed", {
         detail: { isDark: ui.resolvedTheme === "dark" },

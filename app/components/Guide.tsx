@@ -44,7 +44,9 @@ const Guide: React.FC<Props> = ({
 );
 
 const Header = styled(Dialog.Title)`
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  color: ${s("text")};
   margin-top: 0;
   margin-bottom: 1em;
 `;
@@ -55,8 +57,9 @@ const StyledOverlay = styled(Dialog.Overlay)`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: ${s("backdrop")} !important;
+  background-color: transparent;
   z-index: ${depths.overlay};
+  pointer-events: none;
 
   &[data-state="open"] {
     animation: ${fadeIn} 200ms ease;
@@ -72,14 +75,15 @@ const Scene = styled(Dialog.Content)`
   top: 0;
   right: 0;
   bottom: 0;
-  margin: 12px;
   display: flex;
   z-index: ${depths.modal};
   justify-content: center;
   align-items: flex-start;
   width: 350px;
-  background: ${s("background")};
-  border-radius: 8px;
+  background: ${s("sidebarBackground")};
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    -8px 0 28px rgba(0, 0, 0, 0.14);
   outline: none;
 
   &[data-state="open"] {

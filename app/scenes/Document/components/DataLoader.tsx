@@ -15,6 +15,7 @@ import ErrorUnknown from "~/scenes/Errors/ErrorUnknown";
 import { useDocumentContext } from "~/components/DocumentContext";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
 import useCurrentUser from "~/hooks/useCurrentUser";
+import { useDocumentDisplay } from "~/hooks/useDocumentDisplay";
 import usePolicy from "~/hooks/usePolicy";
 import useQuery from "~/hooks/useQuery";
 import useStores from "~/hooks/useStores";
@@ -75,6 +76,10 @@ function DataLoader({ match, children }: Props) {
 
   // Allows loading by /doc/slug-<urlId> or /doc/<id>
   const document = documents.get(match.params.documentSlug);
+
+  // Hook calls must happen unconditionally on every render (no early returns
+  // before hooks). Reads the per-document display preferences (font/lock/etc).
+  const { state: displayPref } = useDocumentDisplay(document?.id);
 
   if (document) {
     setDocument(document);
@@ -274,7 +279,8 @@ function DataLoader({ match, children }: Props) {
   }
 
   const canEdit = can.update && !document.isArchived && !revisionId;
-  const readOnly = !isEditing || !canEdit;
+  const readOnly =
+    !isEditing || !canEdit || displayPref.locked || ui.isReadingMode;
 
   return (
     <>

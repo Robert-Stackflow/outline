@@ -12,11 +12,11 @@ const Key = styled.kbd<Props>`
   font-family: ${(props) =>
     props.symbol ? props.theme.fontFamily : props.theme.fontFamilyMono};
   line-height: 10px;
-  color: ${(props) => props.theme.almostBlack};
+  color: ${(props) => props.theme.textSecondary};
   vertical-align: middle;
-  background-color: ${(props) => props.theme.smokeLight};
-  border: solid 1px ${(props) => props.theme.slateLight};
-  border-bottom-color: ${(props) => props.theme.slate};
+  background-color: ${(props) => props.theme.listItemHoverBackground};
+  border: solid 1px ${(props) => props.theme.divider};
+  border-bottom-color: ${(props) => props.theme.divider};
   border-radius: 3px;
 `;
 

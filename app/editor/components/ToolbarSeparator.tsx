@@ -2,12 +2,13 @@ import styled from "styled-components";
 import { s } from "@shared/styles";
 
 const Separator = styled.div`
-  height: 36px;
+  align-self: center;
+  height: 16px;
   width: 1px;
-  background: ${s("textTertiary")};
-  opacity: 0.25;
+  background: ${s("divider")};
   display: inline-block;
-  margin: -6px 2px;
+  margin: 0 2px;
+  opacity: 0.7;
 `;
 
 export default Separator;

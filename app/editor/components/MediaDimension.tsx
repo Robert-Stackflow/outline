@@ -300,6 +300,7 @@ const StyledInput = styled(Input)<{ $error?: boolean }>`
     margin: 0;
     background: transparent;
     border-color: transparent;
+    box-shadow: none;
   }
 
   ${NativeInput} {

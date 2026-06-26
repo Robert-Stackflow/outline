@@ -4,10 +4,10 @@ import { s } from "@shared/styles";
 
 const Input = styled.input`
   font-size: 15px;
-  background: ${s("inputBorder")};
+  background: ${s("inputBackground")};
   color: ${s("text")};
-  border-radius: 2px;
-  padding: 3px 8px;
+  border-radius: 6px;
+  padding: 4px 10px;
   border: 0;
   margin: 0;
   outline: none;

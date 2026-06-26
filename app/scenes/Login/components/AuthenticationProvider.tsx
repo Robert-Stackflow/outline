@@ -5,7 +5,7 @@ import styled from "styled-components";
 import { Client } from "@shared/types";
 import ButtonLarge from "~/components/ButtonLarge";
 import InputLarge from "~/components/InputLarge";
-import PluginIcon from "~/components/PluginIcon";
+import AuthProviderIcon from "~/components/AuthProviderIcon";
 import { client } from "~/utils/ApiClient";
 import Desktop from "~/utils/Desktop";
 import { getRedirectUrl } from "~/utils/urls";
@@ -15,6 +15,7 @@ type Props = React.ComponentProps<typeof ButtonLarge> & {
   id: string;
   name: string;
   authUrl: string;
+  icon?: string;
   isCreate: boolean;
   onEmailSuccess: (email: string) => void;
   preferOTP: boolean;
@@ -27,8 +28,16 @@ function AuthenticationProvider(props: Props) {
   const [authState, setAuthState] = React.useState<AuthState>("initial");
   const [isSubmitting, setSubmitting] = React.useState(false);
   const [email, setEmail] = React.useState("");
-  const { isCreate, id, name, authUrl, onEmailSuccess, preferOTP, ...rest } =
-    props;
+  const {
+    isCreate,
+    id,
+    name,
+    authUrl,
+    icon,
+    onEmailSuccess,
+    preferOTP,
+    ...rest
+  } = props;
   const clientType = Desktop.isElectron() ? Client.Desktop : Client.Web;
 
   const handleChangeEmail = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,7 +117,7 @@ function AuthenticationProvider(props: Props) {
   return (
     <ButtonLarge
       onClick={() => (window.location.href = href)}
-      icon={<PluginIcon id={id} />}
+      icon={<AuthProviderIcon id={id} brand={icon} />}
       fullwidth
       {...rest}
     >

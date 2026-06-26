@@ -1,3 +1,4 @@
+import { CloseIcon } from "outline-icons";
 import { observer } from "mobx-react";
 import { AllSelection } from "prosemirror-state";
 import { useRef, useCallback } from "react";
@@ -27,6 +28,9 @@ import type { Editor as TEditor } from "~/editor";
 import type { Properties } from "~/types";
 import { useLocationSidebarContext } from "~/hooks/useLocationSidebarContext";
 import useStores from "~/hooks/useStores";
+import { useDocumentDisplay } from "~/hooks/useDocumentDisplay";
+import Tooltip from "~/components/Tooltip";
+import { fadeAndScaleIn } from "~/styles/animations";
 import isTextInput from "~/utils/isTextInput";
 import { client } from "~/utils/ApiClient";
 import { emojiToUrl } from "~/utils/emoji";
@@ -86,6 +90,7 @@ function DocumentScene({
   const { t } = useTranslation();
   const history = useHistory();
   const location = useLocation<LocationState>();
+  const { state: displayPref } = useDocumentDisplay(document?.id);
   const sidebarContext = useLocationSidebarContext();
   const { team, user } = auth;
 
@@ -286,12 +291,9 @@ function DocumentScene({
     tocPosition ??
     ((team?.getPreference(TeamPreference.TocPosition) as TOCPosition) ||
       TOCPosition.Left);
-  const showContents =
-    tocPos && (isShare ? ui.tocVisible !== false : ui.tocVisible === true);
-  const tocOffset =
-    tocPos === TOCPosition.Left
-      ? EditorStyleHelper.tocWidth / -2
-      : EditorStyleHelper.tocWidth / 2;
+  // The table of contents is always shown (as a Notion-style minimap that
+  // expands on hover); visibility is determined solely by the TOC position.
+  const showContents = !!tocPos;
 
   const multiplayerEditor =
     !document.isArchived && !document.isDeleted && !revision && !isShare;
@@ -302,8 +304,10 @@ function DocumentScene({
     : document.titleWithDefault;
   const favicon = hasEmojiInTitle ? emojiToUrl(document.icon!) : undefined;
 
+  // The table of contents floats over the gutter and no longer occupies layout
+  // space, so full-width breakout elements need no horizontal compensation.
   const fullWidthTransformOffsetStyle = {
-    ["--full-width-transform-offset"]: `${document.fullWidth && showContents ? tocOffset : 0}px`,
+    ["--full-width-transform-offset"]: "0px",
   } as React.CSSProperties;
 
   return (
@@ -326,9 +330,26 @@ function DocumentScene({
         key={revision ? revision.id : document.id}
         column
         auto
+        data-document-display=""
+        data-font-family={displayPref.fontFamily}
+        data-smaller-text={String(displayPref.smallerText)}
+        data-document-locked={String(displayPref.locked)}
       >
         <PageTitle title={pageTitle} favicon={favicon} />
         {(isUploading || isSaving) && <LoadingIndicator />}
+        {ui.isReadingMode && (
+          <Tooltip content={t("Exit reading mode")} placement="left">
+            <ExitReadingMode
+              type="button"
+              onClick={() => {
+                ui.isReadingMode = false;
+              }}
+              aria-label={t("Exit reading mode")}
+            >
+              <CloseIcon />
+            </ExitReadingMode>
+          </Tooltip>
+        )}
         <Container column>
           {!readOnly && (
             <Prompt
@@ -357,18 +378,10 @@ function DocumentScene({
               onSave={onSave}
             />
           )}
-          <Main
-            fullWidth={document.fullWidth}
-            tocPosition={tocPos}
-            style={fullWidthTransformOffsetStyle}
-          >
+          <Main style={fullWidthTransformOffsetStyle}>
             <React.Suspense
               fallback={
-                <EditorContainer
-                  docFullWidth={document.fullWidth}
-                  showContents={showContents}
-                  tocPosition={tocPos}
-                >
+                <EditorContainer docFullWidth={document.fullWidth}>
                   <PlaceholderDocument />
                 </EditorContainer>
               }
@@ -377,8 +390,6 @@ function DocumentScene({
                 name="document"
                 as={EditorContainer}
                 docFullWidth={document.fullWidth}
-                showContents={showContents}
-                tocPosition={tocPos}
               >
                 {revision ? (
                   <RevisionViewer
@@ -427,14 +438,7 @@ function DocumentScene({
                   </>
                 )}
               </MeasuredContainer>
-              {showContents && (
-                <ContentsContainer
-                  docFullWidth={document.fullWidth}
-                  position={tocPos}
-                >
-                  <Contents />
-                </ContentsContainer>
-              )}
+              {showContents && <Contents />}
             </React.Suspense>
           </Main>
           {children}
@@ -444,61 +448,8 @@ function DocumentScene({
   );
 }
 
-type MainProps = {
-  fullWidth: boolean;
-  tocPosition: TOCPosition | false;
-};
-
-const Main = styled.div<MainProps>`
-  margin-top: 4px;
-
-  ${breakpoint("tablet")`
-    display: grid;
-    grid-template-columns: ${({ fullWidth, tocPosition }: MainProps) =>
-      fullWidth
-        ? tocPosition === TOCPosition.Left
-          ? `${EditorStyleHelper.tocWidth}px minmax(0, 1fr)`
-          : `minmax(0, 1fr) ${EditorStyleHelper.tocWidth}px`
-        : `1fr minmax(0, ${`calc(46em + ${EditorStyleHelper.documentGutter})`}) 1fr`};
-  `};
-
-  ${breakpoint("desktopLarge")`
-    grid-template-columns: ${({ fullWidth, tocPosition }: MainProps) =>
-      fullWidth
-        ? tocPosition === TOCPosition.Left
-          ? `${EditorStyleHelper.tocWidth}px minmax(0, 1fr)`
-          : `minmax(0, 1fr) ${EditorStyleHelper.tocWidth}px`
-        : `1fr minmax(0, ${`calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter})`}) 1fr`};
-  `};
-
-  @media print {
-    display: block;
-    max-width: ${({ fullWidth }: MainProps) =>
-      fullWidth
-        ? `100%`
-        : `calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter})`};
-  }
-`;
-
-type ContentsContainerProps = {
-  docFullWidth: boolean;
-  position: TOCPosition | false;
-};
-
-const ContentsContainer = styled.div<ContentsContainerProps>`
-  ${breakpoint("tablet")`
-    margin-top: calc(44px + 6vh);
-
-    grid-row: 1;
-    grid-column: ${({ docFullWidth, position }: ContentsContainerProps) =>
-      position === TOCPosition.Left ? 1 : docFullWidth ? 2 : 3};
-    justify-self: ${({ position }: ContentsContainerProps) =>
-      position === TOCPosition.Left ? "end" : "start"};
-  `};
-
-  @media print {
-    display: none;
-  }
+const Main = styled.div`
+  margin-top: 32px;
 `;
 
 const PrintContentsContainer = styled.div`
@@ -512,8 +463,6 @@ const PrintContentsContainer = styled.div`
 
 type EditorContainerProps = {
   docFullWidth: boolean;
-  showContents: boolean;
-  tocPosition: TOCPosition | false;
 };
 
 const EditorContainer = styled.div<EditorContainerProps>`
@@ -522,27 +471,70 @@ const EditorContainer = styled.div<EditorContainerProps>`
 
   ${breakpoint("tablet")`
     padding: 0 44px;
-    grid-row: 1;
 
-    // Decides the editor column position & span
-    grid-column: ${({
-      docFullWidth,
-      showContents,
-      tocPosition,
-    }: EditorContainerProps) =>
-      docFullWidth
-        ? showContents
-          ? tocPosition === TOCPosition.Left
-            ? 2
-            : 1
-          : "1 / -1"
-        : 2};
+    ${(props: EditorContainerProps) =>
+      props.docFullWidth
+        ? // Full-width docs span the available area with generous side padding.
+          `
+        padding: 0 100px;
+        max-width: 100%;
+        `
+        : // Centered, fixed-width reading column.
+          `
+        max-width: calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter});
+        margin-left: auto;
+        margin-right: auto;
+        `}
   `};
+
+  @media print {
+    padding: 0;
+    max-width: 100%;
+  }
 `;
 
 const Background = styled(Container)`
   position: relative;
   background: ${s("background")};
+`;
+
+const ExitReadingMode = styled.button`
+  appearance: none;
+  position: fixed;
+  top: 14px;
+  inset-inline-end: 16px;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  color: ${s("textTertiary")};
+  cursor: var(--pointer);
+  animation: ${fadeAndScaleIn} 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background: ${s("sidebarHoverBackground")};
+    color: ${s("text")};
+  }
+
+  &:focus-visible {
+    outline: 0;
+    background: ${s("sidebarHoverBackground")};
+  }
 `;
 
 const ReferencesWrapper = styled.div`

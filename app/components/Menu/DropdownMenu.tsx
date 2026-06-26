@@ -41,6 +41,12 @@ type Props = {
   modal?: boolean;
   /** Additional component to display at the bottom of the top-level menu */
   append?: React.ReactNode;
+  /**
+   * Additional component to display at the top of the top-level menu. May be
+   * a function receiving `{ close }` to imperatively dismiss the menu (e.g.
+   * after a custom action like "Enter reading mode" runs).
+   */
+  prepend?: React.ReactNode | ((args: { close: () => void }) => React.ReactNode);
   /** Callback when menu is opened */
   onOpen?: () => void;
   /** Callback when menu is closed */
@@ -58,6 +64,7 @@ export const DropdownMenu = observer(
         ariaLabel,
         modal = true,
         append,
+        prepend,
         onOpen,
         onClose,
         ...rest
@@ -134,6 +141,9 @@ export const DropdownMenu = observer(
               onAnimationEnd={enablePointerEvents}
               onCloseAutoFocus={preventDefault}
             >
+              {typeof prepend === "function"
+                ? prepend({ close: () => handleOpenChange(false) })
+                : prepend}
               {content}
               {append}
             </MenuContent>

@@ -142,21 +142,7 @@ const Wrapper = styled.div<{
   overflow-x: ${(props) => (props.$overflow ? props.$overflow : "hidden")};
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
-  box-shadow: ${(props) => {
-    if (props.$topShadowVisible && props.$bottomShadowVisible) {
-      return "0 1px inset rgba(0,0,0,.1), 0 -1px inset rgba(0,0,0,.1)";
-    }
-
-    if (props.$topShadowVisible) {
-      return "0 1px inset rgba(0,0,0,.1)";
-    }
-
-    if (props.$bottomShadowVisible) {
-      return "0 -1px inset rgba(0,0,0,.1)";
-    }
-
-    return "none";
-  }};
+  box-shadow: none;
   transition: box-shadow 100ms ease-in-out;
 
   ${(props) => props.$hiddenScrollbars && hideScrollbars()}

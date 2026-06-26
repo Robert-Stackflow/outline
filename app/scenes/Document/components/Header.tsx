@@ -1,5 +1,5 @@
 import { observer } from "mobx-react";
-import { TableOfContentsIcon, EditIcon } from "outline-icons";
+import { EditIcon, KeyboardIcon } from "outline-icons";
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -7,7 +7,7 @@ import useMeasure from "react-use-measure";
 import styled, { useTheme } from "styled-components";
 import Icon from "@shared/components/Icon";
 import { s } from "@shared/styles";
-import { altDisplay, metaDisplay } from "@shared/utils/keyboard";
+import { metaDisplay } from "@shared/utils/keyboard";
 import { publishDocument } from "~/actions/definitions/documents";
 import { restoreRevision } from "~/actions/definitions/revisions";
 import { Action, Separator } from "~/components/Actions";
@@ -20,6 +20,7 @@ import Flex from "~/components/Flex";
 import Header from "~/components/Header";
 import Star from "~/components/Star";
 import Tooltip from "~/components/Tooltip";
+import KeyboardShortcuts from "~/scenes/KeyboardShortcuts";
 import { type Editor } from "~/editor";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
 import useCurrentUser from "~/hooks/useCurrentUser";
@@ -30,7 +31,6 @@ import useMobile from "~/hooks/useMobile";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
 import DocumentMenu from "~/menus/DocumentMenu";
-import NewChildDocumentMenu from "~/menus/NewChildDocumentMenu";
 import TableOfContentsMenu from "~/menus/TableOfContentsMenu";
 import TemplatesMenu from "~/menus/TemplatesMenu";
 import type Document from "~/models/Document";
@@ -72,7 +72,7 @@ function DocumentHeader({
   onSave,
 }: Props) {
   const { t } = useTranslation();
-  const { ui } = useStores();
+  const { ui, dialogs } = useStores();
   const theme = useTheme();
   const team = useCurrentTeam({ rejectOnEmpty: false });
   const user = useCurrentUser({ rejectOnEmpty: false });
@@ -80,15 +80,17 @@ function DocumentHeader({
   const isRevision = !!revision;
   const isEditingFocus = useEditingFocus();
 
-  // Set CSS variable for header offset (used by sticky table headers)
+  // Set CSS variable for header offset (used by sticky table headers). When
+  // the header is hidden (editing focus or reading mode) the offset must be 0
+  // so sticky cells don't float at the previous header's old position.
   useEffect(() => {
     window.document.documentElement.style.setProperty(
       "--header-offset",
-      isEditingFocus ? "0px" : "64px"
+      isEditingFocus || ui.isReadingMode ? "0px" : "64px"
     );
-  }, [isEditingFocus]);
+  }, [isEditingFocus, ui.isReadingMode]);
 
-  const { hasHeadings, editor } = useDocumentContext();
+  const { editor } = useDocumentContext();
   const sidebarContext = useLocationSidebarContext();
   const [measureRef, size] = useMeasure();
   const isMobile = isMobileMedia || (size.width > 0 && size.width < 700);
@@ -111,35 +113,28 @@ function DocumentHeader({
   const can = usePolicy(document);
   const { isDeleted } = document;
   const canToggleEmbeds = team?.documentEmbeds;
-  const showContents = ui.tocVisible === true;
 
-  useEffect(() => {
-    if (isMobile && showContents) {
-      ui.set({ tocVisible: false });
-    }
-  }, [isMobile, showContents, ui]);
+  const handleOpenKeyboardShortcuts = useCallback(() => {
+    dialogs.openGuide({
+      title: t("Keyboard shortcuts"),
+      content: <KeyboardShortcuts />,
+    });
+  }, [dialogs, t]);
 
-  const toc = (
-    <Tooltip
-      content={
-        showContents
-          ? t("Hide contents")
-          : hasHeadings
-            ? t("Show contents")
-            : `${t("Show contents")} (${t("available when headings are added")})`
-      }
-      shortcut={`Ctrl+${altDisplay}+h`}
-      placement="bottom"
-    >
-      <TocButton
-        aria-label={t("Show contents")}
-        onClick={handleToggle}
-        icon={<TableOfContentsIcon />}
-        borderOnHover
-        neutral
-      />
-    </Tooltip>
+  const keyboardShortcutsAction = (
+    <Action>
+      <Tooltip content={t("Keyboard shortcuts")} shortcut="?" placement="bottom">
+        <Button
+          aria-label={t("Keyboard shortcuts")}
+          icon={<KeyboardIcon />}
+          onClick={handleOpenKeyboardShortcuts}
+          borderOnHover
+          neutral
+        />
+      </Tooltip>
+    </Action>
   );
+
   const editAction = (
     <Action>
       <Tooltip
@@ -182,12 +177,7 @@ function DocumentHeader({
         isMobile ? (
           <TableOfContentsMenu />
         ) : (
-          <DocumentBreadcrumb document={document}>
-            {toc}{" "}
-            <StarAction>
-              <Star document={document} color={theme.textSecondary} />
-            </StarAction>
-          </DocumentBreadcrumb>
+          <DocumentBreadcrumb document={document} />
         )
       }
       title={
@@ -209,10 +199,12 @@ function DocumentHeader({
           <ObservingBanner />
           <SearchHighlightChip />
           {!isDeleted && !isRevision && can.listViews && (
-            <Collaborators
-              document={document}
-              limit={isCompact ? 3 : undefined}
-            />
+            <>
+              <Collaborators
+                document={document}
+                limit={isCompact ? 3 : undefined}
+              />
+            </>
           )}
           {(isEditing || !user?.separateEditMode) && wasNew && can.update && (
             <Action>
@@ -252,15 +244,13 @@ function DocumentHeader({
             user?.separateEditMode &&
             !isRevision &&
             editAction}
-          {can.update &&
-            can.createChildDocument &&
-            !isRevision &&
-            !isCompact &&
-            !isMobile && (
-              <Action>
-                <NewChildDocumentMenu document={document} />
-              </Action>
-            )}
+          {!isDeleted && !isRevision && (
+            <Action>
+              <StarAction>
+                <Star document={document} color={theme.textSecondary} />
+              </StarAction>
+            </Action>
+          )}
           {revision && (
             <>
               <Action>
@@ -293,6 +283,7 @@ function DocumentHeader({
             </Action>
           )}
           {!isDeleted && <Separator />}
+          {!isMobile && keyboardShortcutsAction}
           <Action>
             <DocumentMenu
               document={document}
@@ -313,17 +304,6 @@ function DocumentHeader({
 const StyledHeader = styled(Header)<{ $hidden: boolean }>`
   transition: opacity 500ms ease-in-out;
   ${(props) => props.$hidden && "opacity: 0;"}
-`;
-
-const TocButton = styled(Button)`
-  border-radius: 4px;
-
-  &&:hover:not(:disabled),
-  &&[aria-expanded="true"] {
-    background: ${s("buttonNeutralHoverBackground")};
-    box-shadow: none;
-    transition: none;
-  }
 `;
 
 const StarAction = styled.span`

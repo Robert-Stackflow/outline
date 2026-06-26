@@ -68,6 +68,14 @@ class UiStore {
   @observable
   tocVisible: boolean | undefined;
 
+  /**
+   * Transient reading mode: when true, the document scene hides surrounding
+   * chrome (sidebar, breadcrumbs, edit affordances) for a more immersive read.
+   * Not persisted — resets on page load.
+   */
+  @observable
+  isReadingMode = false;
+
   @observable
   mobileSidebarVisible = false;
 

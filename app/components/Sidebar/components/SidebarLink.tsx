@@ -220,7 +220,11 @@ function SidebarLink(
 // accounts for whitespace around icon
 export const IconWrapper = styled.span`
   margin-inline-start: -4px;
+  width: 24px;
   height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
   transition: opacity 200ms ease-in-out;
@@ -236,28 +240,49 @@ const Content = styled.span`
 
 const Actions = styled(EventBoundary)<{ $showActions?: boolean }>`
   display: inline-flex;
+  align-items: center;
   visibility: ${(props) => (props.$showActions ? "visible" : "hidden")};
   position: absolute;
   top: 3px;
   inset-inline-end: 4px;
-  gap: 4px;
+  gap: 2px;
   color: ${s("textTertiary")};
   transition: opacity 50ms;
   height: 24px;
-  background: var(--background);
+
+  /* No shared background layer behind the group. Each action button (+, ⋯)
+     gets its own rounded highlight only when individually hovered/open. */
+  button,
+  a {
+    background: none !important;
+    box-shadow: none !important;
+    border-radius: 6px;
+    transition: background 100ms ease;
+  }
+
+  button:hover,
+  a:hover,
+  button[aria-expanded="true"],
+  button[data-state="open"] {
+    background: ${s("sidebarControlHoverBackground")} !important;
+  }
+
+  button:hover svg,
+  a:hover svg,
+  button[aria-expanded="true"] svg,
+  button[data-state="open"] svg {
+    opacity: 1;
+    color: ${s("text")};
+  }
 
   svg {
     color: ${s("textSecondary")};
     fill: currentColor;
-    opacity: 0.5;
+    opacity: 0.6;
   }
 
   &:hover {
     visibility: visible;
-
-    svg {
-      opacity: 0.75;
-    }
   }
 `;
 
@@ -291,6 +316,7 @@ const Link = styled(NavLink)<{
   text-overflow: ellipsis;
   font-weight: 475;
   padding: ${isMobile() ? 12 : 6}px 16px;
+  margin-bottom: 2px;
   border-radius: 4px;
   min-height: 30px;
   user-select: none;

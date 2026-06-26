@@ -12,27 +12,28 @@ export default styled.button.attrs((props) => ({
 }))<Props>`
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   flex: 0;
   min-width: 24px;
   height: 24px;
+  padding: 0 6px;
   cursor: var(--pointer);
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: none;
-  transition: opacity 100ms ease-in-out;
-  padding: 0;
-  opacity: 0.8;
   outline: none;
   pointer-events: all;
   position: relative;
-  transition: background 100ms ease-in-out;
+  opacity: 0.8;
   color: ${s("text")};
+  transition:
+    opacity 100ms ease-in-out,
+    background 100ms ease-in-out;
 
   &:hover {
     opacity: 1;
-
-    // extraArea overlaps slightly, this ensures the currently hovered button is on top
+    background: ${s("listItemHoverBackground")};
     z-index: 1;
   }
 
@@ -55,5 +56,9 @@ export default styled.button.attrs((props) => ({
       opacity: 1;
       color: ${s("accentText")};
       background: ${s("accent")};
+
+      &:hover {
+        background: ${s("accent")};
+      }
     `};
 `;

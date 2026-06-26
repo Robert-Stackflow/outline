@@ -34,6 +34,7 @@
       "@shared/*": ["./shared/*"],
       "~/*": ["./app/*"],
       "plugins/*": ["./plugins/*"],
+      "outline-icons": ["./shared/icons/lucide.tsx"],
       // Vite 8 and its plugins ship types only via their exports map, which
       // resolvePackageJsonExports disables; point tsc at their declaration entries.
       "vite": ["./node_modules/vite/dist/node/index.d.ts"],

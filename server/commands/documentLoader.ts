@@ -1,4 +1,4 @@
-import { NotFoundError, PaymentRequiredError } from "@server/errors";
+import { NotFoundError } from "@server/errors";
 import type { User } from "@server/models";
 import { Document } from "@server/models";
 import { authorize } from "@server/policies";
@@ -35,9 +35,9 @@ export default async function loadDocument({
     }
   }
 
-  if (document.isTrialImport) {
-    throw PaymentRequiredError();
-  }
+  // Self-hosted override: remove the paid-license gate on documents imported
+  // during a trial. The upstream check previously threw a PaymentRequiredError
+  // here, blocking self-hosters from viewing perfectly valid content.
 
   return document;
 }

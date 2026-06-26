@@ -1,4 +1,5 @@
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import { transparentize } from "polished";
 import * as React from "react";
 import { mergeRefs } from "react-merge-refs";
 import styled from "styled-components";
@@ -96,6 +97,9 @@ export const Wrapper = styled.div<{
 const IconWrapper = styled.span`
   position: relative;
   inset-inline-start: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 24px;
   height: 24px;
 `;
@@ -117,13 +121,20 @@ export const Outline = styled(Flex)<{
     props.hasError
       ? props.theme.danger
       : props.$focused
-        ? props.theme.inputBorderFocused
+        ? props.theme.accent
         : props.theme.inputBorder};
-  border-radius: ${(props) => (props.$round ? "16px" : "4px")};
+  box-shadow: ${(props) =>
+    props.$focused && !props.hasError
+      ? `0 0 0 3px ${transparentize(0.85, props.theme.accent)}`
+      : "none"};
+  border-radius: ${(props) => (props.$round ? "16px" : "8px")};
   font-weight: normal;
   align-items: center;
   overflow: hidden;
   background: ${s("background")};
+  transition:
+    border-color 100ms ease,
+    box-shadow 100ms ease;
 
   /* Prevents an issue where input placeholder appears in a selected style when double clicking title bar */
   user-select: none;

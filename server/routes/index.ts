@@ -91,6 +91,31 @@ if (env.isProduction) {
   });
 }
 
+if (!env.isProduction) {
+  // In development the frontend is served by Vite, but Vite-injected CSS
+  // rewrites url() references (e.g. KaTeX fonts) to absolute /static/node_modules/…
+  // paths that resolve against this app server rather than the Vite dev server.
+  // Serve those assets directly from disk so they render correctly on :3000.
+  router.get("/static/node_modules/:path(.*)", async (ctx) => {
+    try {
+      await send(ctx, ctx.params.path, {
+        root: path.resolve(__dirname, "../../../node_modules"),
+        maxAge: Day.ms,
+        setHeaders: (res) => {
+          res.setHeader("Access-Control-Allow-Origin", "*");
+        },
+      });
+    } catch (err) {
+      if (err instanceof Error && "status" in err && err.status === 404) {
+        ctx.status = 404;
+        return;
+      }
+      throw err;
+    }
+  });
+}
+
+
 router.get("/locales/:lng.json", async (ctx) => {
   const { lng } = ctx.params;
 

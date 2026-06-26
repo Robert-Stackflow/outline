@@ -241,6 +241,7 @@ const DocumentTitle = React.forwardRef(function DocumentTitle_(
 
   return (
     <Title
+      className="document-title"
       onClick={handleClick}
       onChange={handleChange}
       onKeyDown={handleKeyDown}

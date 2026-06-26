@@ -15,9 +15,135 @@ export default createGlobalStyle<Props>`
     box-sizing: border-box;
   }
 
+  /* Subtle, borderless scrollbars across the app — no track background, no border */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: ${(props) => props.theme.scrollbarThumb} transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+    border: 0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: ${(props) => props.theme.scrollbarThumb};
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: ${(props) => props.theme.textTertiary};
+  }
+
+  /* lucide icons are stroke-based — keep them outline-only so legacy fill-based
+     hover/selected styles (e.g. menu items) don't fill the glyph solid.
+     Color follows currentColor via stroke. vertical-align keeps them centered
+     against adjacent text in inline/baseline contexts. */
+  svg.lucide {
+    fill: none !important;
+    vertical-align: middle;
+  }
+
   html {
-    --line-height-body: 1.5;
+    --line-height-body: 1.6;
     --font-size-body: 16px;
+  }
+
+  /* Per-document display preferences applied via data attributes on the
+     document scene container. Math (KaTeX) and code blocks keep their
+     canonical fonts regardless of the document font choice. The
+     .document-title selector covers the page heading rendered by
+     ContentEditable above the editor body. Scoping to the container avoids
+     the cross-document jump that happens when attributes live on <html>. */
+  [data-document-display][data-smaller-text="true"] .ProseMirror {
+    font-size: 14px;
+  }
+
+  [data-document-display][data-font-family="serif"] .document-title,
+  [data-document-display][data-font-family="serif"] .ProseMirror,
+  [data-document-display][data-font-family="serif"]
+    .ProseMirror
+    *:not(.katex):not(.katex *):not(.math-node):not(.math-node *):not(code):not(pre):not(pre *) {
+    font-family: Georgia, "Times New Roman", "Songti SC", serif;
+  }
+
+  [data-document-display][data-font-family="mono"] .document-title,
+  [data-document-display][data-font-family="mono"] .ProseMirror,
+  [data-document-display][data-font-family="mono"]
+    .ProseMirror
+    *:not(.katex):not(.katex *):not(.math-node):not(.math-node *):not(code):not(pre):not(pre *) {
+    font-family: ${s("fontFamilyMono")};
+  }
+
+  /* Lock mode disables editing affordances and applies a subtle read-only cue. */
+  [data-document-display][data-document-locked="true"] .ProseMirror {
+    cursor: default;
+  }
+  [data-document-display][data-document-locked="true"]
+    .ProseMirror
+    [contenteditable="true"] {
+    pointer-events: none;
+  }
+
+  /* Disable drag handles in any read-only context (lock or reading mode) so
+     content blocks cannot be reordered while the editor is locked. */
+  [data-document-display][data-document-locked="true"] .ProseMirror [draggable="true"],
+  body[data-reading-mode="true"] .ProseMirror [draggable="true"] {
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+  [data-document-display][data-document-locked="true"] .ProseMirror li::before,
+  [data-document-display][data-document-locked="true"]
+    .ProseMirror
+    li[draggable="true"]::before,
+  body[data-reading-mode="true"] .ProseMirror li::before,
+  body[data-reading-mode="true"] .ProseMirror li[draggable="true"]::before {
+    display: none !important;
+  }
+
+  /* Reading mode (transient): collapses surrounding chrome (header + meta)
+     for an immersive read. Both height and opacity transition so the layout
+     adjusts smoothly without lingering blank space. The sidebar collapse is
+     handled separately by toggleCollapsedSidebar(). */
+  [data-page-header] {
+    max-height: 200px;
+    overflow: hidden;
+    transition:
+      max-height 240ms cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 200ms ease,
+      transform 200ms ease;
+  }
+
+  .document-meta-line {
+    max-height: 60px;
+    overflow: hidden;
+    transition:
+      max-height 220ms cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 200ms ease,
+      margin 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  body[data-reading-mode="true"] [data-page-header] {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+  }
+
+  body[data-reading-mode="true"] .document-meta-line {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
   }
 
   html,

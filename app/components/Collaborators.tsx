@@ -38,27 +38,27 @@ function Collaborators(props: Props) {
   const documentPresence = presence.get(document.id);
   const documentPresenceArray = useMemo(
     () => (documentPresence ? Array.from(documentPresence.values()) : []),
-    [documentPresence]
+    [documentPresence],
   );
 
   // Use Set for O(1) lookups and stable references
   const presentIds = useMemo(
     () => new Set(documentPresenceArray.map((p) => p.userId)),
-    [documentPresenceArray]
+    [documentPresenceArray],
   );
   const editingIds = useMemo(
     () =>
       new Set(
-        documentPresenceArray.filter((p) => p.isEditing).map((p) => p.userId)
+        documentPresenceArray.filter((p) => p.isEditing).map((p) => p.userId),
       ),
-    [documentPresenceArray]
+    [documentPresenceArray],
   );
 
   // ensure currently present via websocket are always ordered first
   // Memoize collaboratorIds as a Set for efficient lookup
   const collaboratorIdsSet = useMemo(
     () => new Set(document.collaboratorIds),
-    [document.collaboratorIds]
+    [document.collaboratorIds],
   );
   const collaborators = useMemo(
     () =>
@@ -67,12 +67,12 @@ function Collaborators(props: Props) {
           users.all,
           (u) =>
             (presentIds.has(u.id) || collaboratorIdsSet.has(u.id)) &&
-            !u.isSuspended
+            !u.isSuspended,
         ),
         [(u) => presentIds.has(u.id), "id"],
-        ["asc", "asc"]
+        ["asc", "asc"],
       ),
-    [collaboratorIdsSet, users.all, presentIds]
+    [collaboratorIdsSet, users.all, presentIds],
   );
 
   // load any users we don't yet have in memory
@@ -82,7 +82,7 @@ function Collaborators(props: Props) {
       uniq([...collaboratorIdsSet, ...presentIds])
         .filter((userId) => !users.get(userId))
         .sort(),
-    [collaboratorIdsSet, presentIds, users]
+    [collaboratorIdsSet, presentIds, users],
   );
 
   useEffect(() => {
@@ -101,7 +101,7 @@ function Collaborators(props: Props) {
       collaboratorId: string,
       isPresent: boolean,
       isObserving: boolean,
-      isObservable: boolean
+      isObservable: boolean,
     ) =>
       (ev: React.MouseEvent) => {
         if (isObservable && isPresent) {
@@ -110,7 +110,7 @@ function Collaborators(props: Props) {
           ui.setObservingUser(isObserving ? undefined : collaboratorId);
         }
       },
-    [ui]
+    [ui],
   );
 
   const renderAvatar = useCallback(
@@ -136,7 +136,7 @@ function Collaborators(props: Props) {
                   collaborator.id,
                   isPresent,
                   isObserving,
-                  isObservable
+                  isObservable,
                 )
               : undefined
           }
@@ -150,7 +150,7 @@ function Collaborators(props: Props) {
       currentUserId,
       handleAvatarClick,
       t,
-    ]
+    ],
   );
 
   if (!document.insightsEnabled) {
@@ -161,11 +161,11 @@ function Collaborators(props: Props) {
     <Popover>
       <PopoverTrigger>
         <NudeButton
-          width={Math.min(collaborators.length, limit) * AvatarSize.Large}
-          height={AvatarSize.Large}
+          width={Math.min(collaborators.length, limit) * AvatarSize.Medium}
+          height={AvatarSize.Medium}
         >
           <Facepile
-            size={AvatarSize.Large}
+            size={AvatarSize.Medium}
             limit={limit}
             overflow={Math.max(0, collaborators.length - limit)}
             users={collaborators}
