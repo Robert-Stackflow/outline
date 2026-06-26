@@ -1,4 +1,6 @@
 import presentApiKey from "./apiKey";
+import presentAiConversation from "./aiConversation";
+import presentAiMessage from "./aiMessage";
 import presentAttachment from "./attachment";
 import presentAuthenticationProvider from "./authenticationProvider";
 import presentAvailableTeam from "./availableTeam";
@@ -60,6 +62,8 @@ export {
   presentPublicTeam,
   presentPin,
   presentPolicies,
+  presentAiConversation,
+  presentAiMessage,
   presentProviderConfig,
   presentReaction,
   presentRelationship,

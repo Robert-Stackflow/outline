@@ -26,7 +26,7 @@ import {
 } from "sequelize-typescript";
 import { isEmail } from "validator";
 import { TeamPreferenceDefaults } from "@shared/constants";
-import type { TeamPreferences } from "@shared/types";
+import type { TeamPreferences, AiSettings } from "@shared/types";
 import { TeamPreference, UserRole } from "@shared/types";
 import { getBaseDomain, RESERVED_SUBDOMAINS } from "@shared/utils/domains";
 import { attachmentRedirectRegex } from "@shared/utils/ProsemirrorHelper";
@@ -45,6 +45,7 @@ import TeamDomain from "./TeamDomain";
 import User from "./User";
 import ParanoidModel from "./base/ParanoidModel";
 import Fix from "./decorators/Fix";
+import Encrypted from "./decorators/Encrypted";
 import IsFQDN from "./validators/IsFQDN";
 import IsUrlOrRelativePath from "./validators/IsUrlOrRelativePath";
 import Length from "./validators/Length";
@@ -235,6 +236,16 @@ class Team extends ParanoidModel<
   @AllowNull
   @Column(DataType.JSONB)
   preferences: TeamPreferences | null;
+
+  /** Non-secret AI assistant configuration for the workspace. */
+  @AllowNull
+  @Column(DataType.JSONB)
+  aiSettings: AiSettings | null;
+
+  /** Encrypted API key used to authenticate with the configured AI provider. */
+  @Column(DataType.BLOB)
+  @Encrypted
+  aiApiKey: string | null;
 
   @IsDate
   @Column

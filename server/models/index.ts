@@ -1,5 +1,9 @@
 export { default as ApiKey } from "./ApiKey";
 
+export { default as AiConversation } from "./AiConversation";
+
+export { default as AiMessage } from "./AiMessage";
+
 export { default as Attachment } from "./Attachment";
 
 export { default as AuthenticationProvider } from "./AuthenticationProvider";

@@ -733,6 +733,27 @@ export type JSONValue =
 
 export type JSONObject = { [x: string]: JSONValue };
 
+/** Configuration for the AI assistant, stored per-workspace. */
+export type AiSettings = {
+  /** Whether the AI assistant is enabled for the workspace. */
+  enabled?: boolean;
+  /** OpenAI-compatible base URL, e.g. https://api.openai.com/v1 */
+  baseUrl?: string;
+  /** The model identifier to use, e.g. gpt-4o-mini */
+  model?: string;
+  /** Sampling temperature, 0-2. */
+  temperature?: number;
+  /** A system prompt prepended to every conversation. */
+  systemPrompt?: string;
+};
+
+/** Roles for messages in an AI conversation. */
+export enum AiMessageRole {
+  User = "user",
+  Assistant = "assistant",
+  System = "system",
+}
+
 export type ProsemirrorMark = {
   type: string;
   attrs?: JSONObject;

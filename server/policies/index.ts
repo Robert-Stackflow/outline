@@ -3,6 +3,7 @@ export * from "./cancan";
 
 // Import all policies
 import "./apiKey";
+import "./aiConversation";
 import "./attachment";
 import "./authenticationProvider";
 import "./collection";
