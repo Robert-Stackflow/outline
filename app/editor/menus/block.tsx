@@ -22,6 +22,7 @@ import {
   DoneIcon,
   EmbedIcon,
   CollapseIcon,
+  TableOfContentsIcon,
 } from "outline-icons";
 import * as React from "react";
 import styled from "styled-components";
@@ -164,6 +165,12 @@ export default function blockMenuItems(
       title: t("Math block (LaTeX)"),
       icon: <MathIcon />,
       keywords: "math katex latex",
+    },
+    {
+      name: "toc",
+      title: t("Table of contents"),
+      icon: <TableOfContentsIcon />,
+      keywords: "toc table of contents outline headings index",
     },
     {
       name: "hr",
