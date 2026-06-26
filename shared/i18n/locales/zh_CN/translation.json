@@ -1,5 +1,11 @@
 {
   "New API key": "创建 API 密钥",
+  "Change cover": "更换封面",
+  "Add cover": "添加封面",
+  "Uploading…": "上传中…",
+  "Failed to upload cover image": "封面图上传失败",
+  "Add property": "添加属性",
+  "Import from frontmatter": "从 frontmatter 导入",
   "Copy": "复制",
   "API key copied": "API 密钥已复制",
   "Delete": "删除",

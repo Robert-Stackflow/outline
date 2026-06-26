@@ -156,6 +156,21 @@ export default class Document extends ArchivableModel implements Searchable {
   fullWidth: boolean;
 
   /**
+   * A URL for the document's cover image, displayed as a banner above the title.
+   */
+  @Field
+  @observable
+  coverImage?: string | null;
+
+  /**
+   * Arbitrary key-value properties for the document (e.g. parsed from
+   * frontmatter or edited via the document properties UI).
+   */
+  @Field
+  @observable
+  properties?: JSONObject | null;
+
+  /**
    * Whether team members can see who has viewed this document.
    */
   @observable

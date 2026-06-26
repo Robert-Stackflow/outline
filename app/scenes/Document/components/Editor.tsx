@@ -32,7 +32,9 @@ import {
 } from "~/utils/routeHelpers";
 import { decodeURIComponentSafe } from "~/utils/urls";
 import MultiplayerEditor from "./AsyncMultiplayerEditor";
+import DocumentCover from "./DocumentCover";
 import DocumentMeta from "./DocumentMeta";
+import DocumentProperties from "./DocumentProperties";
 import DocumentTitle from "./DocumentTitle";
 import { first } from "es-toolkit/compat";
 import { getLangFor } from "~/utils/language";
@@ -195,6 +197,7 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
 
   return (
     <Flex auto column>
+      <DocumentCover document={document as Document} readOnly={readOnly} />
       <DocumentTitle
         ref={titleRef}
         readOnly={readOnly}
@@ -231,6 +234,12 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
           rtl={direction === "rtl"}
         />
       ) : null}
+      {!rest.template && (
+        <DocumentProperties
+          document={document as Document}
+          readOnly={readOnly}
+        />
+      )}
       <EditorComponent
         ref={mergeRefs([ref, editorRef, handleRefChanged])}
         lang={getLangFor(document.language)}

@@ -278,6 +278,12 @@ export const DocumentsUpdateSchema = BaseSchema.extend({
     /** Boolean to denote if the doc should occupy full width */
     fullWidth: z.boolean().optional(),
 
+    /** A URL for the document's cover image banner */
+    coverImage: z.string().nullish(),
+
+    /** Arbitrary key-value document properties */
+    properties: z.record(z.string(), z.unknown()).nullish(),
+
     /** Boolean to denote if insights should be visible on the doc */
     insightsEnabled: z.boolean().optional(),
 

@@ -23,6 +23,10 @@ type Props = {
   templateId?: string | null;
   /** If the document should be displayed full-width on the screen */
   fullWidth?: boolean;
+  /** A URL for the document's cover image banner */
+  coverImage?: string | null;
+  /** Arbitrary key-value document properties */
+  properties?: Record<string, unknown> | null;
   /** Whether insights should be visible on the document */
   insightsEnabled?: boolean;
   /** The edit mode: "replace", "append", "prepend", or "patch" */
@@ -53,6 +57,8 @@ export default async function documentUpdater(
     editorVersion,
     templateId,
     fullWidth,
+    coverImage,
+    properties,
     insightsEnabled,
     editMode,
     findText,
@@ -82,6 +88,12 @@ export default async function documentUpdater(
   }
   if (fullWidth !== undefined) {
     document.fullWidth = fullWidth;
+  }
+  if (coverImage !== undefined) {
+    document.coverImage = coverImage;
+  }
+  if (properties !== undefined) {
+    document.properties = properties;
   }
   if (insightsEnabled !== undefined) {
     document.insightsEnabled = insightsEnabled;

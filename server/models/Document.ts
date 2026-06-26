@@ -332,6 +332,17 @@ class Document extends ArchivableModel<
   @Column
   color: string | null;
 
+  /** A URL for the document's cover image, displayed as a banner above the title. */
+  @Column(DataType.TEXT)
+  coverImage: string | null;
+
+  /**
+   * Arbitrary key-value properties for the document, e.g. parsed from
+   * frontmatter or edited via the document properties UI.
+   */
+  @Column(DataType.JSONB)
+  properties: Record<string, unknown> | null;
+
   /**
    * The content of the document as Markdown.
    *

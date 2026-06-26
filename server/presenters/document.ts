@@ -68,6 +68,8 @@ async function presentDocument(
     text,
     icon: document.icon,
     color: document.color,
+    coverImage: document.coverImage,
+    properties: document.properties,
     tasks: {
       completed: 0,
       total: 0,
