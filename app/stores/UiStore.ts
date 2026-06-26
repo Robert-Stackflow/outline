@@ -76,6 +76,10 @@ class UiStore {
   @observable
   isReadingMode = false;
 
+  /** Whether the global search dialog is currently open. */
+  @observable
+  searchDialogOpen = false;
+
   @observable
   mobileSidebarVisible = false;
 
@@ -396,6 +400,21 @@ class UiStore {
   toggleCollapsedSidebar = () => {
     sidebarHidden = false;
     this.set({ sidebarCollapsed: !this.sidebarCollapsed });
+  };
+
+  @action
+  openSearchDialog = () => {
+    this.searchDialogOpen = true;
+  };
+
+  @action
+  closeSearchDialog = () => {
+    this.searchDialogOpen = false;
+  };
+
+  @action
+  toggleSearchDialog = () => {
+    this.searchDialogOpen = !this.searchDialogOpen;
   };
 
   @action

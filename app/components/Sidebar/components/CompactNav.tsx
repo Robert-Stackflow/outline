@@ -1,5 +1,4 @@
 import { HomeIcon, SearchIcon } from "outline-icons";
-import { useKBar } from "kbar";
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -7,22 +6,24 @@ import styled from "styled-components";
 import { s } from "@shared/styles";
 import NotificationIcon from "~/components/Notifications/NotificationIcon";
 import Tooltip from "~/components/Tooltip";
+import useStores from "~/hooks/useStores";
 import { useSidebarPanel } from "./SidebarPanelContext";
 
 /**
  * Notion-style compact horizontal navigation: Home / Notifications act as
  * sidebar panel toggles (driving what renders below in the same column), while
- * Search opens the global command-palette dialog. The active toggle expands
- * into a labeled pill with a smooth icon→label animation.
+ * Search opens the dedicated global search dialog (independent from the kbar
+ * command palette). The active toggle expands into a labeled pill with a smooth
+ * icon→label animation.
  */
 function CompactNav() {
   const { t } = useTranslation();
-  const { query } = useKBar();
+  const { ui } = useStores();
   const { panel, setPanel } = useSidebarPanel();
 
   const handleSearch = React.useCallback(() => {
-    query.toggle();
-  }, [query]);
+    ui.openSearchDialog();
+  }, [ui]);
 
   return (
     <Row>
@@ -61,7 +62,7 @@ function CompactNav() {
       </Tooltip>
 
       <Spacer />
-      <Tooltip content={t("Search")} placement="bottom" shortcut="cmd+k">
+      <Tooltip content={t("Search")} placement="bottom" shortcut="/">
         <Pill
           type="button"
           $active={false}

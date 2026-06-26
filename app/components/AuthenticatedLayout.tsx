@@ -18,7 +18,6 @@ import history from "~/utils/history";
 import { isModKey } from "@shared/utils/keyboard";
 import lazyWithRetry from "~/utils/lazyWithRetry";
 import {
-  searchPath,
   newDocumentPath,
   settingsPath,
   homePath,
@@ -28,6 +27,7 @@ import Fade from "./Fade";
 import NotificationBadge from "./NotificationBadge";
 import { PortalContext } from "./Portal";
 import CommandBar from "./CommandBar";
+import SearchDialog from "./SearchDialog";
 
 const SettingsSidebar = lazyWithRetry(
   () => import("~/components/Sidebar/Settings")
@@ -55,7 +55,7 @@ const AuthenticatedLayout: React.FC = ({ children }: Props) => {
     if (!ev.metaKey && !ev.ctrlKey) {
       ev.preventDefault();
       ev.stopPropagation();
-      history.push(searchPath());
+      ui.openSearchDialog();
     }
   };
 
@@ -118,6 +118,7 @@ const AuthenticatedLayout: React.FC = ({ children }: Props) => {
               <RegisterKeyDown trigger="/" handler={goToSearch} />
               {children}
               <CommandBar />
+              <SearchDialog />
               <NotificationBadge />
             </Layout>
           </DndProvider>
