@@ -19,6 +19,10 @@ export function draftsPath(): string {
   return "/drafts";
 }
 
+export function aiPath(): string {
+  return "/ai";
+}
+
 export function archivePath(): string {
   return "/archive";
 }

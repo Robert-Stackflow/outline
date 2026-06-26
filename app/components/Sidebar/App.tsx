@@ -5,6 +5,7 @@ import {
   HomeIcon,
   SidebarIcon,
   SidebarReverseIcon,
+  SparklesIcon,
 } from "outline-icons";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -26,6 +27,7 @@ import TeamMenu from "~/menus/TeamMenu";
 import {
   archivePath,
   draftsPath,
+  aiPath,
   homePath,
 } from "~/utils/routeHelpers";
 import TeamLogo from "../TeamLogo";
@@ -156,6 +158,11 @@ const PanelBody = observer(function PanelBody_({
       <SidebarScrollProvider value={scrollArea}>
         <Section>
           <SidebarLink to={homePath()} icon={<HomeIcon />} label={t("Home")} />
+          <SidebarLink
+            to={aiPath()}
+            icon={<SparklesIcon />}
+            label={t("AI")}
+          />
           {can.createDocument && (
             <SidebarLink
               to={draftsPath()}

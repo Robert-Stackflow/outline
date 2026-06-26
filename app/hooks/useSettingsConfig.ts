@@ -31,12 +31,12 @@ import usePolicy from "./usePolicy";
 import useStores from "./useStores";
 
 const ApiKeys = lazy(() => import("~/scenes/Settings/ApiKeys"));
+const AiSettings = lazy(() => import("~/scenes/Settings/AiSettings"));
 const Applications = lazy(() => import("~/scenes/Settings/Applications"));
 const APIAndAccess = lazy(() => import("~/scenes/Settings/APIAndAccess"));
 const Authentication = lazy(() => import("~/scenes/Settings/Authentication"));
 const Details = lazy(() => import("~/scenes/Settings/Details"));
 const Export = lazy(() => import("~/scenes/Settings/Export"));
-const Features = lazy(() => import("~/scenes/Settings/Features"));
 const Groups = lazy(() => import("~/scenes/Settings/Groups"));
 const Import = lazy(() => import("~/scenes/Settings/Import"));
 const Integrations = lazy(() => import("~/scenes/Settings/Integrations"));
@@ -146,10 +146,10 @@ const useSettingsConfig = () => {
       },
       {
         name: t("AI"),
-        path: settingsPath("features"),
-        component: Features.Component,
-        preload: Features.preload,
-        enabled: can.update,
+        path: settingsPath("ai"),
+        component: AiSettings.Component,
+        preload: AiSettings.preload,
+        enabled: true,
         group: t("Workspace"),
         icon: SparklesIcon,
       },

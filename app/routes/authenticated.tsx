@@ -16,6 +16,7 @@ import lazy from "~/utils/lazyWithRetry";
 import {
   archivePath,
   draftsPath,
+  aiPath,
   homePath,
   searchPath,
   settingsPath,
@@ -31,6 +32,7 @@ const Archive = lazy(() => import("~/scenes/Archive"));
 const Collection = lazy(() => import("~/scenes/Collection"));
 const Document = lazy(() => import("~/scenes/Document"));
 const Drafts = lazy(() => import("~/scenes/Drafts"));
+const Ai = lazy(() => import("~/scenes/Ai"));
 const Home = lazy(() => import("~/scenes/Home"));
 const Search = lazy(() => import("~/scenes/Search"));
 const Trash = lazy(() => import("~/scenes/Trash"));
@@ -69,6 +71,7 @@ function AuthenticatedRoutes() {
           }
         >
           <Switch>
+            <Route exact path={aiPath()} component={Ai} />
             {can.createDocument && (
               <Route exact path={draftsPath()} component={Drafts} />
             )}

@@ -1,4 +1,4 @@
-import { CloseIcon } from "outline-icons";
+import { CloseIcon, SparklesIcon } from "outline-icons";
 import { observer } from "mobx-react";
 import { AllSelection } from "prosemirror-state";
 import { useRef, useCallback } from "react";
@@ -350,6 +350,17 @@ function DocumentScene({
             </ExitReadingMode>
           </Tooltip>
         )}
+        {!isShare && !ui.isReadingMode && ui.rightSidebar !== "ai" && (
+          <Tooltip content={t("Ask AI")} placement="left">
+            <FloatingAi
+              type="button"
+              onClick={() => ui.set({ rightSidebar: "ai" })}
+              aria-label={t("Ask AI")}
+            >
+              <SparklesIcon />
+            </FloatingAi>
+          </Tooltip>
+        )}
         <Container column>
           {!readOnly && (
             <Prompt
@@ -534,6 +545,44 @@ const ExitReadingMode = styled.button`
   &:focus-visible {
     outline: 0;
     background: ${s("sidebarHoverBackground")};
+  }
+`;
+
+const FloatingAi = styled.button`
+  appearance: none;
+  position: fixed;
+  bottom: 24px;
+  inset-inline-end: 24px;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: ${s("background")};
+  border: 1px solid ${s("divider")};
+  box-shadow: ${s("menuShadow")};
+  padding: 0;
+  color: ${s("accent")};
+  cursor: var(--pointer);
+  animation: ${fadeAndScaleIn} 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  transition:
+    transform 140ms ease,
+    background 140ms ease;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  &:hover {
+    transform: translateY(-1px) scale(1.04);
+    background: ${s("listItemHoverBackground")};
+  }
+
+  @media print {
+    display: none;
   }
 `;
 

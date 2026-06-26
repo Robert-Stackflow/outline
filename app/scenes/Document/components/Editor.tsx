@@ -32,6 +32,7 @@ import {
 } from "~/utils/routeHelpers";
 import { decodeURIComponentSafe } from "~/utils/urls";
 import MultiplayerEditor from "./AsyncMultiplayerEditor";
+import AiSummaryCard from "./AiSummaryCard";
 import DocumentCover from "./DocumentCover";
 import DocumentMeta from "./DocumentMeta";
 import DocumentProperties from "./DocumentProperties";
@@ -239,6 +240,9 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
           document={document as Document}
           readOnly={readOnly}
         />
+      )}
+      {!rest.template && !shareId && (
+        <AiSummaryCard document={document as Document} />
       )}
       <EditorComponent
         ref={mergeRefs([ref, editorRef, handleRefChanged])}
