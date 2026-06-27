@@ -1,5 +1,5 @@
 import { observer } from "mobx-react";
-import { SparklesIcon } from "outline-icons";
+import { SparklesIcon, CollapsedIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -15,12 +15,13 @@ type Props = {
 
 /**
  * A collapsible AI-generated summary card displayed at the top of a document.
- * The summary is generated on demand and cached for the session.
+ * The summary is generated on demand, streamed in, and cached for the session.
  */
 function AiSummaryCard({ document }: Props) {
   const { t } = useTranslation();
   const { ai } = useStores();
   const [loading, setLoading] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(false);
 
   React.useEffect(() => {
     if (!ai.config) {
@@ -30,34 +31,38 @@ function AiSummaryCard({ document }: Props) {
 
   const summary = ai.summaries.get(document.id);
 
-  const handleGenerate = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      await ai.summarize(document.id);
-    } catch (_err) {
-      toast.error(t("Failed to generate summary"));
-    } finally {
-      setLoading(false);
-    }
-  }, [ai, document.id, t]);
+  const handleGenerate = React.useCallback(
+    async (event: React.MouseEvent) => {
+      event.stopPropagation();
+      setCollapsed(false);
+      setLoading(true);
+      try {
+        await ai.summarize(document.id);
+      } catch (_err) {
+        toast.error(t("Failed to generate summary"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [ai, document.id, t]
+  );
 
   // Only surface the card when AI is configured for the workspace.
   if (!ai.config?.configured) {
     return null;
   }
 
+  const hasBody = !!summary || loading;
+
   return (
     <Card>
-      <Header>
+      <Header onClick={() => hasBody && setCollapsed((c) => !c)} $clickable={hasBody}>
         <Title>
+          {hasBody && <Chevron $collapsed={collapsed} size={18} />}
           <SparklesIcon size={16} />
           {t("AI summary")}
         </Title>
-        <Action
-          type="button"
-          onClick={handleGenerate}
-          disabled={loading}
-        >
+        <Action type="button" onClick={handleGenerate} disabled={loading}>
           {loading
             ? `${t("Generating")}…`
             : summary
@@ -65,43 +70,48 @@ function AiSummaryCard({ document }: Props) {
               : t("Generate")}
         </Action>
       </Header>
-      {summary ? (
-        <Body>{summary}</Body>
-      ) : (
-        <Placeholder>{t("Generate an AI summary of this document.")}</Placeholder>
+      {hasBody && !collapsed && (
+        <Body>
+          {summary || <Muted>{t("Generating")}…</Muted>}
+        </Body>
       )}
     </Card>
   );
 }
 
 const Card = styled.div`
-  margin: 8px 0 16px;
+  margin: 6px 0 18px;
   padding: 12px 16px;
   border: 1px solid ${s("divider")};
-  border-radius: 8px;
+  border-radius: 10px;
   background: ${s("backgroundSecondary")};
 `;
 
-const Header = styled.div`
+const Header = styled.div<{ $clickable?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  cursor: ${(props) => (props.$clickable ? "var(--pointer)" : "default")};
 `;
 
 const Title = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: ${s("textTertiary")};
+  color: ${s("textSecondary")};
 
-  svg {
+  > svg:last-of-type {
     color: ${s("accent")};
   }
+`;
+
+const Chevron = styled(CollapsedIcon)<{ $collapsed?: boolean }>`
+  color: ${s("textTertiary")};
+  transition: transform 150ms ease;
+  transform: rotate(${(props) => (props.$collapsed ? "-90deg" : "0deg")});
 `;
 
 const Action = styled.button`
@@ -113,6 +123,7 @@ const Action = styled.button`
   cursor: var(--pointer);
   padding: 2px 6px;
   border-radius: 6px;
+  white-space: nowrap;
 
   &:hover:not(:disabled) {
     background: ${s("listItemHoverBackground")};
@@ -124,16 +135,14 @@ const Action = styled.button`
 `;
 
 const Body = styled.div`
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: ${s("text")};
   white-space: pre-wrap;
 `;
 
-const Placeholder = styled.div`
-  margin-top: 6px;
-  font-size: 14px;
+const Muted = styled.span`
   color: ${s("textTertiary")};
 `;
 

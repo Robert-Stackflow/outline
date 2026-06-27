@@ -204,32 +204,38 @@ function DocumentProperties({ document, readOnly }: Props) {
 }
 
 const Wrapper = styled.div`
-  margin: 4px 0 12px;
+  margin: 4px 0 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 `;
 
 const PropertyRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  border-radius: 6px;
+  transition: background 100ms ease;
+
+  &:hover {
+    background: ${s("listItemHoverBackground")};
+  }
 `;
 
 const KeyInput = styled.input`
-  flex: 0 0 160px;
+  flex: 0 0 150px;
   border: 0;
   outline: none;
   background: transparent;
   font-size: 14px;
-  font-weight: 500;
-  color: ${s("textSecondary")};
-  padding: 4px 6px;
+  color: ${s("textTertiary")};
+  padding: 6px 8px;
   border-radius: 4px;
 
-  &:hover:not(:disabled),
   &:focus {
-    background: ${s("listItemHoverBackground")};
+    background: ${s("background")};
+    box-shadow: 0 0 0 1px ${s("inputBorderFocused")};
+    color: ${s("textSecondary")};
   }
   &::placeholder {
     color: ${s("placeholder")};
@@ -243,12 +249,12 @@ const ValueInput = styled.input`
   background: transparent;
   font-size: 14px;
   color: ${s("text")};
-  padding: 4px 6px;
+  padding: 6px 8px;
   border-radius: 4px;
 
-  &:hover:not(:disabled),
   &:focus {
-    background: ${s("listItemHoverBackground")};
+    background: ${s("background")};
+    box-shadow: 0 0 0 1px ${s("inputBorderFocused")};
   }
   &::placeholder {
     color: ${s("placeholder")};

@@ -556,31 +556,41 @@ const FloatingAi = styled.button`
   bottom: 24px;
   inset-inline-end: 24px;
   z-index: 100;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: ${s("background")};
-  border: 1px solid ${s("divider")};
-  box-shadow: ${s("menuShadow")};
+  background: ${s("accent")};
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    0 6px 16px rgba(0, 0, 0, 0.16);
   padding: 0;
-  color: ${s("accent")};
+  color: ${s("accentText")};
   cursor: var(--pointer);
   animation: ${fadeAndScaleIn} 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
   transition:
     transform 140ms ease,
-    background 140ms ease;
+    box-shadow 140ms ease,
+    filter 140ms ease;
 
   svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
 
   &:hover {
-    transform: translateY(-1px) scale(1.04);
-    background: ${s("listItemHoverBackground")};
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.12),
+      0 10px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   @media print {

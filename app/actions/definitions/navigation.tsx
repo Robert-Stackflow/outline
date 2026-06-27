@@ -214,6 +214,12 @@ export const openKeyboardShortcuts = createAction({
   iconInContextMenu: false,
   icon: <KeyboardIcon />,
   perform: ({ t }) => {
+    // On a document, surface shortcuts as a right-side panel (matching the AI
+    // and comments panels); elsewhere fall back to the centered guide.
+    if (window.location.pathname.startsWith("/doc/")) {
+      stores.ui.set({ rightSidebar: "shortcuts" });
+      return;
+    }
     stores.dialogs.openGuide({
       title: t("Keyboard shortcuts"),
       content: <KeyboardShortcuts />,

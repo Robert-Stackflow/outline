@@ -201,11 +201,14 @@ function DocumentCover({ document, readOnly }: Props) {
 
 const Banner = styled.div<{ $repositioning?: boolean }>`
   position: relative;
+  z-index: 2;
   width: 100%;
   height: 30vh;
   max-height: 280px;
   min-height: 160px;
-  margin-bottom: 12px;
+  /* Cancel the Main container's top margin so the cover sits flush below the
+     header, and add breathing room before the title. */
+  margin: -32px 0 16px;
   overflow: hidden;
   background: ${s("backgroundSecondary")};
 

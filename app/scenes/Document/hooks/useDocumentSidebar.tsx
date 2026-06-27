@@ -27,6 +27,9 @@ const DocumentHistory = lazyWithRetry(
 const DocumentAi = lazyWithRetry(
   () => import("~/scenes/Document/components/Ai/DocumentAi")
 );
+const KeyboardShortcutsPanel = lazyWithRetry(
+  () => import("~/scenes/Document/components/Shortcuts/KeyboardShortcutsPanel")
+);
 
 interface DocumentSidebarContentProps {
   skipInitialAnimation?: boolean;
@@ -56,6 +59,7 @@ const DocumentSidebarContent = observer(function DocumentSidebarContent({
         {ui.rightSidebar === "comments" && <DocumentComments />}
         {ui.rightSidebar === "history" && <DocumentHistory />}
         {ui.rightSidebar === "ai" && <DocumentAi />}
+        {ui.rightSidebar === "shortcuts" && <KeyboardShortcutsPanel />}
       </React.Suspense>
     </Route>
   );

@@ -19,8 +19,8 @@ function safeDecode(value: string) {
 /**
  * A live table of contents block. Reads the headings from the current document
  * and renders an indented outline (Notion-style: no border, no numbering) that
- * scrolls to each heading on click. Re-renders automatically when the document's
- * headings change (driven by a decoration plugin on the parent node).
+ * scrolls to each heading on click. Entries are rendered as spans rather than
+ * anchors so they don't inherit the editor's link color.
  */
 function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
   const { t } = useTranslation();
@@ -29,29 +29,15 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
     (heading) => heading.level <= 3
   );
 
-  const handleClick = React.useCallback(
-    (event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-      if (
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey
-      ) {
-        return;
+  const scrollTo = React.useCallback((id: string) => {
+    const element = window.document.getElementById(safeDecode(id));
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.history?.replaceState) {
+        window.history.replaceState(null, "", `#${id}`);
       }
-      event.preventDefault();
-
-      const element = window.document.getElementById(safeDecode(id));
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "start" });
-        if (window.history?.replaceState) {
-          window.history.replaceState(null, "", `#${id}`);
-        }
-      }
-    },
-    []
-  );
+    }
+  }, []);
 
   if (headings.length === 0) {
     return (
@@ -78,12 +64,19 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
       <List>
         {headings.map((heading) => (
           <Item key={heading.id} $level={heading.level - adjustment}>
-            <Anchor
-              href={`#${heading.id}`}
-              onClick={(event) => handleClick(event, heading.id)}
+            <Entry
+              role="link"
+              tabIndex={0}
+              onClick={() => scrollTo(heading.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  scrollTo(heading.id);
+                }
+              }}
             >
               {heading.title}
-            </Anchor>
+            </Entry>
           </Item>
         ))}
       </List>
@@ -92,7 +85,7 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
 }
 
 const Wrapper = styled.div`
-  margin: 0.75em 0;
+  margin: 0.5em 0;
   user-select: none;
 `;
 
@@ -112,25 +105,24 @@ const Item = styled.li<{ $level: number }>`
   padding-inline-start: ${(props) => (props.$level - 1) * 24}px;
 `;
 
-const Anchor = styled.a`
+const Entry = styled.span`
   display: inline-block;
-  padding: 3px 0;
+  padding: 4px 0;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.5;
+  color: ${s("textSecondary")};
   cursor: var(--pointer);
   border-bottom: 1px solid transparent;
+  transition: color 100ms ease;
 
-  /* Override the editor's global link color so TOC entries read as text.
-     Doubled selector beats the ".ProseMirror a" rule on specificity. */
-  &&,
-  &&:hover,
-  &&:focus {
+  &:hover {
     color: ${s("text")};
-    text-decoration: none;
+    border-bottom-color: ${s("divider")};
   }
 
-  &&:hover {
-    border-bottom-color: ${s("textTertiary")};
+  &:focus-visible {
+    outline: none;
+    color: ${s("text")};
   }
 `;
 
