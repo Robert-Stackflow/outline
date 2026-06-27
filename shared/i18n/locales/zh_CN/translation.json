@@ -1,5 +1,7 @@
 {
   "New API key": "创建 API 密钥",
+  "Chat": "对话",
+  "Summary": "摘要",
   "API format": "API 格式",
   "The request format your provider expects. Use Chat Completions for OpenAI-compatible APIs, Messages for Anthropic, or Responses for the OpenAI Responses API.": "服务商所需的请求格式，OpenAI 兼容接口用 Chat Completions，Anthropic 用 Messages，OpenAI Responses 接口用 Responses",
   "Reposition": "调整位置",

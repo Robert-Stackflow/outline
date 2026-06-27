@@ -514,8 +514,8 @@ const Background = styled(Container)`
 const ExitReadingMode = styled.button`
   appearance: none;
   position: fixed;
-  top: 16px;
-  inset-inline-end: 16px;
+  top: 20px;
+  inset-inline-end: 28px;
   z-index: 100;
   width: 36px;
   height: 36px;

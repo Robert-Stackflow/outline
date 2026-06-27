@@ -1,4 +1,5 @@
 import { createGlobalStyle } from "styled-components";
+import { transparentize } from "polished";
 import styledNormalize from "styled-normalize";
 import { breakpoints, depths, s } from ".";
 import { EditorStyleHelper } from "../editor/styles/EditorStyleHelper";
@@ -170,6 +171,14 @@ export default createGlobalStyle<Props>`
 
     --line-height-p: var(--line-height-body);
     --line-height-h: 1.25;
+  }
+
+  /* Text selection uses a translucent tint of the workspace accent color. */
+  ::selection {
+    background: ${(props) => transparentize(0.7, props.theme.accent)};
+  }
+  ::-moz-selection {
+    background: ${(props) => transparentize(0.7, props.theme.accent)};
   }
 
   body,

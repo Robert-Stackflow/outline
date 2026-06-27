@@ -1,8 +1,9 @@
 import { observer } from "mobx-react";
-import { CloseIcon, PlusIcon } from "outline-icons";
+import { PlusIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useRouteMatch } from "react-router-dom";
+import { toast } from "sonner";
 import styled from "styled-components";
 import { s } from "@shared/styles";
 import { AiMessageRole } from "@shared/types";
@@ -15,9 +16,11 @@ import useStores from "~/hooks/useStores";
 import { settingsPath } from "~/utils/routeHelpers";
 import Sidebar from "../SidebarLayout";
 
+type Tab = "chat" | "summary";
+
 /**
- * The document-scoped AI chat panel rendered in the right sidebar. Chats are
- * grounded in the current document's content and persisted as conversations.
+ * The document-scoped AI panel rendered in the right sidebar, with tabs for
+ * chatting about the document and viewing an AI-generated summary.
  */
 function DocumentAi() {
   const { t } = useTranslation();
@@ -25,8 +28,10 @@ function DocumentAi() {
   const match = useRouteMatch<{ documentSlug: string }>();
   const document = documents.get(match.params.documentSlug);
 
+  const [tab, setTab] = React.useState<Tab>("chat");
   const [conversationId, setConversationId] = React.useState<string>();
   const [input, setInput] = React.useState("");
+  const [summaryLoading, setSummaryLoading] = React.useState(false);
   const listRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -36,6 +41,7 @@ function DocumentAi() {
   const messages = conversationId
     ? (ai.messages.get(conversationId) ?? [])
     : [];
+  const summary = document ? ai.summaries.get(document.id) : undefined;
 
   React.useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -67,6 +73,20 @@ function DocumentAi() {
     setInput("");
   };
 
+  const handleGenerateSummary = React.useCallback(async () => {
+    if (!document) {
+      return;
+    }
+    setSummaryLoading(true);
+    try {
+      await ai.summarize(document.id);
+    } catch (_err) {
+      toast.error(t("Failed to generate summary"));
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [ai, document, t]);
+
   const notConfigured = ai.config && !ai.config.configured;
 
   return (
@@ -74,72 +94,168 @@ function DocumentAi() {
       title={
         <Flex align="center" justify="space-between" gap={8} auto>
           <div>{t("AI assistant")}</div>
-          <Tooltip content={t("New conversation")}>
-            <NudeButton onClick={handleNewConversation} aria-label={t("New conversation")}>
-              <PlusIcon />
-            </NudeButton>
-          </Tooltip>
+          {tab === "chat" && (
+            <Tooltip content={t("New conversation")}>
+              <NudeButton
+                onClick={handleNewConversation}
+                aria-label={t("New conversation")}
+              >
+                <PlusIcon />
+              </NudeButton>
+            </Tooltip>
+          )}
         </Flex>
       }
       onClose={() => ui.set({ rightSidebar: null })}
       scrollable={false}
     >
       <Container>
-        <Messages ref={listRef}>
-          {notConfigured ? (
-            <Notice>
-              <Text as="p" type="secondary">
-                {t("The AI assistant has not been configured yet.")}
-              </Text>
-              {ai.config?.canManage && (
-                <Link to={settingsPath("ai")}>{t("Configure AI")}</Link>
-              )}
-            </Notice>
-          ) : messages.length === 0 ? (
-            <Empty>
-              <Text as="p" type="secondary">
-                {t("Ask anything about this document.")}
-              </Text>
-            </Empty>
-          ) : (
-            messages.map((message) => (
-              <Message key={message.id} $role={message.role}>
-                {message.role === AiMessageRole.Assistant && (
-                  <Role>{t("Assistant")}</Role>
-                )}
-                <Bubble $role={message.role}>{message.content}</Bubble>
-              </Message>
-            ))
-          )}
-          {ai.isSending &&
-            messages[messages.length - 1]?.role !== AiMessageRole.Assistant && (
-              <Message $role={AiMessageRole.Assistant}>
-                <Role>{t("Assistant")}</Role>
-                <Bubble $role={AiMessageRole.Assistant}>
-                  <Typing>{t("Thinking…")}</Typing>
-                </Bubble>
-              </Message>
-            )}
-        </Messages>
+        <Tabs>
+          <TabButton
+            type="button"
+            $active={tab === "chat"}
+            onClick={() => setTab("chat")}
+          >
+            {t("Chat")}
+          </TabButton>
+          <TabButton
+            type="button"
+            $active={tab === "summary"}
+            onClick={() => setTab("summary")}
+          >
+            {t("Summary")}
+          </TabButton>
+        </Tabs>
 
-        {!notConfigured && (
-          <Composer>
-            <TextArea
-              value={input}
-              placeholder={`${t("Send a message")}…`}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-            />
-            <Button onClick={handleSend} disabled={!input.trim() || ai.isSending}>
-              {t("Send")}
-            </Button>
-          </Composer>
+        {notConfigured ? (
+          <Notice>
+            <Text as="p" type="secondary">
+              {t("The AI assistant has not been configured yet.")}
+            </Text>
+            {ai.config?.canManage && (
+              <Link to={settingsPath("ai")}>{t("Configure AI")}</Link>
+            )}
+          </Notice>
+        ) : tab === "summary" ? (
+          <SummaryView>
+            <SummaryActions>
+              <Button
+                neutral
+                onClick={handleGenerateSummary}
+                disabled={summaryLoading}
+              >
+                {summaryLoading
+                  ? `${t("Generating")}…`
+                  : summary
+                    ? t("Regenerate")
+                    : t("Generate")}
+              </Button>
+            </SummaryActions>
+            {summary ? (
+              <SummaryBody>{summary}</SummaryBody>
+            ) : (
+              <Empty>
+                <Text as="p" type="secondary">
+                  {t("Generate an AI summary of this document.")}
+                </Text>
+              </Empty>
+            )}
+          </SummaryView>
+        ) : (
+          <>
+            <Messages ref={listRef}>
+              {messages.length === 0 ? (
+                <Empty>
+                  <Text as="p" type="secondary">
+                    {t("Ask anything about this document.")}
+                  </Text>
+                </Empty>
+              ) : (
+                messages.map((message) => (
+                  <Message key={message.id} $role={message.role}>
+                    {message.role === AiMessageRole.Assistant && (
+                      <Role>{t("Assistant")}</Role>
+                    )}
+                    <Bubble $role={message.role}>{message.content}</Bubble>
+                  </Message>
+                ))
+              )}
+              {ai.isSending &&
+                messages[messages.length - 1]?.role !==
+                  AiMessageRole.Assistant && (
+                  <Message $role={AiMessageRole.Assistant}>
+                    <Role>{t("Assistant")}</Role>
+                    <Bubble $role={AiMessageRole.Assistant}>
+                      <Typing>{t("Thinking…")}</Typing>
+                    </Bubble>
+                  </Message>
+                )}
+            </Messages>
+
+            <Composer>
+              <TextArea
+                value={input}
+                placeholder={`${t("Send a message")}…`}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={1}
+              />
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim() || ai.isSending}
+              >
+                {t("Send")}
+              </Button>
+            </Composer>
+          </>
         )}
       </Container>
     </Sidebar>
   );
 }
+
+const Tabs = styled.div`
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid ${s("divider")};
+  flex-shrink: 0;
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  border: 0;
+  background: ${(props) =>
+    props.$active ? props.theme.listItemHoverBackground : "transparent"};
+  color: ${(props) => (props.$active ? props.theme.text : props.theme.textTertiary)};
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: var(--pointer);
+
+  &:hover {
+    color: ${s("text")};
+  }
+`;
+
+const SummaryView = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+`;
+
+const SummaryActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+`;
+
+const SummaryBody = styled.div`
+  font-size: 14px;
+  line-height: 1.7;
+  color: ${s("text")};
+  white-space: pre-wrap;
+`;
 
 const Container = styled.div`
   display: flex;

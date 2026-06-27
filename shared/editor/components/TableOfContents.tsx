@@ -59,6 +59,8 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
   );
   const adjustment = minLevel - 1;
 
+  console.log("headings", headings, "adjustment", adjustment);
+
   return (
     <Wrapper contentEditable={false}>
       <List>
@@ -95,41 +97,50 @@ const Empty = styled.div`
 `;
 
 const List = styled.ul`
-  margin: 0;
-  padding: 0;
+  margin: 0 !important;
+  padding: 0 !important;
   list-style: none;
 `;
 
 const Item = styled.li<{ $level: number }>`
   margin: 0;
-  padding-inline-start: ${(props) => props.$level * 24}px;
+  padding-inline-start: ${(props) => (props.$level - 1) * 24}px !important;
 `;
 
 const Entry = styled.span`
-  display: inline-block;
-  max-width: 100%;
+  display: block;
+  width: 100%;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 15px;
-  line-height: 1.5;
-  color: ${s("textSecondary")};
+  line-height: 1.6;
   cursor: var(--pointer);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   transition:
     background 100ms ease,
-    color 100ms ease;
+    color 100ms ease,
+    opacity 100ms ease;
+
+  /* Notion-style: theme-colored, underlined links by default. Rendered as a
+     span so the editor's global link rules don't fight our styling. */
+  color: ${s("link")};
+  text-decoration: underline;
+  text-decoration-color: ${s("link")};
+  text-underline-offset: 2px;
 
   &:hover {
     background: ${s("listItemHoverBackground")};
     color: ${s("text")};
+    opacity: 0.78;
   }
 
   &:focus-visible {
-    outline: none;
     background: ${s("listItemHoverBackground")};
     color: ${s("text")};
+    outline: none;
+    opacity: 0.78;
   }
 `;
 

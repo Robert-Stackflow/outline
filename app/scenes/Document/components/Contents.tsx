@@ -221,8 +221,9 @@ const Outer = styled.div`
 // Sticky keeps it in view while scrolling, sitting slightly above the vertical
 // center of the viewport.
 const Inner = styled.div<{ $hasCover?: boolean }>`
-  position: sticky;
-  top: ${(props) => (props.$hasCover ? "48vh" : "36vh")};
+  position: fixed;
+  inset-inline-end: 24px;
+  top: 50%;
   transform: translateY(-50%);
   pointer-events: auto;
   max-height: calc(100vh - 140px);
