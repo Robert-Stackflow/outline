@@ -232,11 +232,6 @@ const KeyInput = styled.input`
   padding: 6px 8px;
   border-radius: 4px;
 
-  &:focus {
-    background: ${s("background")};
-    box-shadow: 0 0 0 1px ${s("inputBorderFocused")};
-    color: ${s("textSecondary")};
-  }
   &::placeholder {
     color: ${s("placeholder")};
   }
@@ -252,10 +247,6 @@ const ValueInput = styled.input`
   padding: 6px 8px;
   border-radius: 4px;
 
-  &:focus {
-    background: ${s("background")};
-    box-shadow: 0 0 0 1px ${s("inputBorderFocused")};
-  }
   &::placeholder {
     color: ${s("placeholder")};
   }

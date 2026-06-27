@@ -18,7 +18,6 @@ import { UrlHelper } from "@shared/utils/UrlHelper";
 import { isMac } from "@shared/utils/browser";
 import stores from "~/stores";
 import type SearchQuery from "~/models/SearchQuery";
-import KeyboardShortcuts from "~/scenes/KeyboardShortcuts";
 import {
   createAction,
   createExternalLinkAction,
@@ -213,17 +212,9 @@ export const openKeyboardShortcuts = createAction({
   shortcut: ["?"],
   iconInContextMenu: false,
   icon: <KeyboardIcon />,
-  perform: ({ t }) => {
-    // On a document, surface shortcuts as a right-side panel (matching the AI
-    // and comments panels); elsewhere fall back to the centered guide.
-    if (window.location.pathname.startsWith("/doc/")) {
-      stores.ui.set({ rightSidebar: "shortcuts" });
-      return;
-    }
-    stores.dialogs.openGuide({
-      title: t("Keyboard shortcuts"),
-      content: <KeyboardShortcuts />,
-    });
+  perform: () => {
+    // Always surface keyboard shortcuts as a right-side panel.
+    stores.ui.set({ rightSidebar: "shortcuts" });
   },
 });
 

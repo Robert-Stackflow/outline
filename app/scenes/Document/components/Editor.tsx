@@ -197,42 +197,49 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
 
   return (
     <Flex auto column>
-      <DocumentTitle
-        ref={titleRef}
-        readOnly={readOnly}
-        documentId={document.id}
-        title={
-          !document.title && readOnly
-            ? document.titleWithDefault
-            : document.title
-        }
-        icon={document.icon}
-        color={iconColor}
-        onChangeTitle={onChangeTitle}
-        onChangeIcon={onChangeIcon}
-        onGoToNextInput={handleGoToNextInput}
-        onBlur={handleBlur}
-        placeholder={t("Untitled")}
-      />
-      {shareId ? (
-        showLastUpdated && document.updatedAt ? (
-          <SharedMeta type="tertiary">
-            {t("Last updated")} <Time dateTime={document.updatedAt} addSuffix />
-          </SharedMeta>
-        ) : null
-      ) : !rest.template ? (
-        <DocumentMeta
-          document={document as Document}
-          to={{
-            pathname:
-              match.path === matchDocumentHistory
-                ? documentPath(document as Document)
-                : documentHistoryPath(document as Document),
-            state: { sidebarContext },
-          }}
-          rtl={direction === "rtl"}
+      <TitleGroup>
+        {shareId ? (
+          showLastUpdated && document.updatedAt ? (
+            <HoverMeta>
+              <SharedMeta type="tertiary">
+                {t("Last updated")}{" "}
+                <Time dateTime={document.updatedAt} addSuffix />
+              </SharedMeta>
+            </HoverMeta>
+          ) : null
+        ) : !rest.template ? (
+          <HoverMeta>
+            <DocumentMeta
+              document={document as Document}
+              to={{
+                pathname:
+                  match.path === matchDocumentHistory
+                    ? documentPath(document as Document)
+                    : documentHistoryPath(document as Document),
+                state: { sidebarContext },
+              }}
+              rtl={direction === "rtl"}
+            />
+          </HoverMeta>
+        ) : null}
+        <DocumentTitle
+          ref={titleRef}
+          readOnly={readOnly}
+          documentId={document.id}
+          title={
+            !document.title && readOnly
+              ? document.titleWithDefault
+              : document.title
+          }
+          icon={document.icon}
+          color={iconColor}
+          onChangeTitle={onChangeTitle}
+          onChangeIcon={onChangeIcon}
+          onGoToNextInput={handleGoToNextInput}
+          onBlur={handleBlur}
+          placeholder={t("Untitled")}
         />
-      ) : null}
+      </TitleGroup>
       {!rest.template && (
         <DocumentProperties
           document={document as Document}
@@ -278,8 +285,32 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
 }
 
 const SharedMeta = styled(Text)`
-  margin: -12px 0 2em 0;
+  margin: 0;
   font-size: 14px;
+`;
+
+// Groups the (hover-revealed) meta row with the title so the meta only appears
+// when the user is interacting with the document header — Notion-style.
+const TitleGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const HoverMeta = styled.div`
+  min-height: 22px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+
+  ${TitleGroup}:hover &,
+  &:focus-within {
+    opacity: 1;
+  }
+
+  /* The meta components carry their own top/bottom margins; neutralize them so
+     the hover row sits compactly above the title. */
+  & > * {
+    margin: 0;
+  }
 `;
 
 export default observer(React.forwardRef(DocumentEditor));

@@ -107,21 +107,28 @@ const Item = styled.li<{ $level: number }>`
 
 const Entry = styled.span`
   display: inline-block;
-  padding: 4px 0;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
   font-size: 15px;
   line-height: 1.5;
   color: ${s("textSecondary")};
   cursor: var(--pointer);
-  border-bottom: 1px solid transparent;
-  transition: color 100ms ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
 
   &:hover {
+    background: ${s("listItemHoverBackground")};
     color: ${s("text")};
-    border-bottom-color: ${s("divider")};
   }
 
   &:focus-visible {
     outline: none;
+    background: ${s("listItemHoverBackground")};
     color: ${s("text")};
   }
 `;

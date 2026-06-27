@@ -28,6 +28,7 @@ import NotificationBadge from "./NotificationBadge";
 import { PortalContext } from "./Portal";
 import CommandBar from "./CommandBar";
 import SearchDialog from "./SearchDialog";
+import GlobalRightSidebar from "./GlobalRightSidebar";
 
 const SettingsSidebar = lazyWithRetry(
   () => import("~/components/Sidebar/Settings")
@@ -119,6 +120,7 @@ const AuthenticatedLayout: React.FC = ({ children }: Props) => {
               {children}
               <CommandBar />
               <SearchDialog />
+              <GlobalRightSidebar />
               <NotificationBadge />
             </Layout>
           </DndProvider>
