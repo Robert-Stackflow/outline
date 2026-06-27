@@ -21,8 +21,7 @@ function Contents() {
   const scrollPosition = useWindowScrollPosition({
     throttle: 100,
   });
-  const { headings, document } = useDocumentContext();
-  const hasCover = !!document?.coverImage;
+  const { headings } = useDocumentContext();
   const itemRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
   const handleClick = useCallback(
@@ -154,7 +153,6 @@ function Contents() {
     <Outer>
       <Inner
         ref={wrapperRef}
-        $hasCover={hasCover}
         onMouseEnter={openPanel}
         onMouseLeave={scheduleClose}
       >
@@ -220,10 +218,9 @@ const Outer = styled.div`
 // Only this narrow group captures hover, so the popup opens just on the TOC.
 // Sticky keeps it in view while scrolling, sitting slightly above the vertical
 // center of the viewport.
-const Inner = styled.div<{ $hasCover?: boolean }>`
-  position: fixed;
-  inset-inline-end: 24px;
-  top: 50%;
+const Inner = styled.div`
+  position: sticky;
+  top: 36vh;
   transform: translateY(-50%);
   pointer-events: auto;
   max-height: calc(100vh - 140px);

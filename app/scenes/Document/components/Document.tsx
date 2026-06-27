@@ -450,8 +450,11 @@ function DocumentScene({
                     </Editor>
                   </>
                 )}
+                {/* The floating minimap lives inside the body container so its
+                    position is determined relative to the body only — the cover
+                    is a separate sibling above and never shifts it. */}
+                {showContents && <Contents />}
               </MeasuredContainer>
-              {showContents && <Contents />}
             </React.Suspense>
           </Main>
           {children}
@@ -479,6 +482,9 @@ type EditorContainerProps = {
 };
 
 const EditorContainer = styled.div<EditorContainerProps>`
+  // Positioning context for the floating contents minimap, so it is anchored to
+  // the body rather than the cover/Main container.
+  position: relative;
   // Adds space to the gutter to make room for icon & heading annotations
   padding: 0 32px;
 
