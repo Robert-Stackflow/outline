@@ -9,9 +9,11 @@ import { s } from "@shared/styles";
 import Flex from "~/components/Flex";
 import { LoadingIndicatorBar } from "~/components/LoadingIndicator";
 import { useRightSidebarContent } from "~/components/RightSidebarContext";
+import ScrollContext from "~/components/ScrollContext";
 import SkipNavContent from "~/components/SkipNavContent";
 import SkipNavLink from "~/components/SkipNavLink";
 import env from "~/env";
+import useMobile from "~/hooks/useMobile";
 import useStores from "~/hooks/useStores";
 
 type Props = {
@@ -30,9 +32,39 @@ const Layout = React.forwardRef(function Layout_(
   ref: React.RefObject<HTMLDivElement>
 ) {
   const { ui } = useStores();
+  const isMobile = useMobile();
+  const contentRef = React.useRef<HTMLDivElement>(null);
   const sidebarCollapsed =
     !sidebar || (ui.sidebarIsClosed && sidebarCanCollapse);
   const sidebarRight = useRightSidebarContent();
+
+  const body = (
+    <Body auto>
+      {sidebar}
+
+      <SkipNavContent />
+      <Content
+        ref={contentRef}
+        auto
+        justify="center"
+        role="main"
+        $isResizing={ui.sidebarIsResizing}
+        $sidebarCollapsed={sidebarCollapsed}
+        $hasSidebar={!!sidebar}
+        style={
+          sidebarCollapsed
+            ? undefined
+            : {
+                marginInlineStart: `${ui.sidebarWidth}px`,
+              }
+        }
+      >
+        {children}
+      </Content>
+
+      <AnimatePresence initial={false}>{sidebarRight}</AnimatePresence>
+    </Body>
+  );
 
   return (
     <Container column auto ref={ref}>
@@ -44,30 +76,17 @@ const Layout = React.forwardRef(function Layout_(
 
       {ui.progressBarVisible && <LoadingIndicatorBar />}
 
-      <Container auto>
-        {sidebar}
-
-        <SkipNavContent />
-        <Content
-          auto
-          justify="center"
-          role="main"
-          $isResizing={ui.sidebarIsResizing}
-          $sidebarCollapsed={sidebarCollapsed}
-          $hasSidebar={!!sidebar}
-          style={
-            sidebarCollapsed
-              ? undefined
-              : {
-                  marginInlineStart: `${ui.sidebarWidth}px`,
-                }
-          }
-        >
-          {children}
-        </Content>
-
-        <AnimatePresence initial={false}>{sidebarRight}</AnimatePresence>
-      </Container>
+      {/* On desktop the main content is its own scroll container so its
+          scrollbar sits at the content edge rather than the window edge (which
+          would otherwise stack beside the right sidebar's scrollbar). On mobile
+          the ancestor PageScroll owns scrolling, so don't override the context. */}
+      {isMobile ? (
+        body
+      ) : (
+        <ScrollContext.Provider value={contentRef}>
+          {body}
+        </ScrollContext.Provider>
+      )}
     </Container>
   );
 });
@@ -77,6 +96,19 @@ const Container = styled(Flex)`
   position: relative;
   width: 100%;
   min-height: 100%;
+
+  ${breakpoint("tablet")`
+    height: 100vh;
+  `}
+`;
+
+const Body = styled(Flex)`
+  flex: 1;
+  min-height: 0;
+
+  ${breakpoint("tablet")`
+    overflow: hidden;
+  `}
 `;
 
 type ContentProps = {
@@ -104,6 +136,12 @@ const Content = styled(Flex)<ContentProps>`
       props.$hasSidebar &&
       props.$sidebarCollapsed &&
       `margin-inline-start: ${props.theme.sidebarCollapsedWidth}px;`}
+
+    /* The main content scrolls within itself so its scrollbar sits at the
+       content edge, leaving the right sidebar to manage its own scroll. */
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
   `};
 `;
 

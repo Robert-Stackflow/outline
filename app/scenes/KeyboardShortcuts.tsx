@@ -546,7 +546,7 @@ function KeyboardShortcuts({ defaultQuery = "" }: Props) {
         ],
       },
     ],
-    [t]
+    [t],
   );
   const [searchTerm, setSearchTerm] = useState(defaultQuery);
   const normalizedSearchTerm = searchTerm.toLocaleLowerCase();
@@ -579,7 +579,7 @@ function KeyboardShortcuts({ defaultQuery = "" }: Props) {
           ? titleMatches
             ? category.items
             : category.items.filter((item) =>
-                item.label.toLocaleLowerCase().includes(normalizedSearchTerm)
+                item.label.toLocaleLowerCase().includes(normalizedSearchTerm),
               )
           : category.items;
 
@@ -613,8 +613,7 @@ const StickySearch = styled.div`
   z-index: 1;
   padding: 16px;
   margin: -16px;
-  background: ${s("sidebarBackground")};
-  border-radius: 8px;
+  background: ${s("background")};
 `;
 
 const Header = styled.h2`

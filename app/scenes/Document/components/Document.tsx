@@ -514,39 +514,47 @@ const Background = styled(Container)`
 const ExitReadingMode = styled.button`
   appearance: none;
   position: fixed;
-  top: 14px;
+  top: 16px;
   inset-inline-end: 16px;
   z-index: 100;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  background: transparent;
-  border: 0;
+  border-radius: 50%;
+  /* Translucent pill so it stays legible over both light content and dark
+     cover images. */
+  background: ${(props) =>
+    props.theme.isDark ? "rgba(40, 40, 40, 0.6)" : "rgba(255, 255, 255, 0.7)"};
+  backdrop-filter: blur(8px);
+  border: 1px solid ${s("divider")};
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   outline: 0;
   padding: 0;
-  color: ${s("textTertiary")};
+  color: ${s("textSecondary")};
   cursor: var(--pointer);
   animation: ${fadeAndScaleIn} 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
   transition:
-    background 120ms ease,
-    color 120ms ease;
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
 
   &:hover {
-    background: ${s("sidebarHoverBackground")};
     color: ${s("text")};
+    transform: scale(1.06);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
   }
 
   &:focus-visible {
     outline: 0;
-    background: ${s("sidebarHoverBackground")};
+    color: ${s("text")};
   }
 `;
 

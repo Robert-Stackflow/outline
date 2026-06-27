@@ -31,7 +31,6 @@ function KeyboardShortcutsPanel() {
 
 const Scroll = styled.div`
   height: 100%;
-  max-height: calc(100vh - 120px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 16px;

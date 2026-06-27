@@ -115,23 +115,24 @@ export default createGlobalStyle<Props>`
      adjusts smoothly without lingering blank space. The sidebar collapse is
      handled separately by toggleCollapsedSidebar(). */
   [data-page-header] {
-    max-height: 200px;
+    max-height: 120px;
     overflow: hidden;
+    will-change: max-height, opacity, transform;
     transition:
-      max-height 240ms cubic-bezier(0.32, 0.72, 0, 1),
-      min-height 240ms cubic-bezier(0.32, 0.72, 0, 1),
-      padding 240ms cubic-bezier(0.32, 0.72, 0, 1),
-      opacity 200ms ease,
-      transform 200ms ease;
+      max-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+      min-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+      padding 300ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 220ms ease,
+      transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .document-meta-line {
     max-height: 60px;
     overflow: hidden;
     transition:
-      max-height 220ms cubic-bezier(0.32, 0.72, 0, 1),
-      opacity 200ms ease,
-      margin 220ms cubic-bezier(0.32, 0.72, 0, 1);
+      max-height 280ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 220ms ease,
+      margin 280ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   body[data-reading-mode="true"] [data-page-header] {
@@ -140,7 +141,7 @@ export default createGlobalStyle<Props>`
     padding-top: 0;
     padding-bottom: 0;
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-12px);
     pointer-events: none;
     border: 0;
   }

@@ -3,18 +3,15 @@
 import { throttle } from "es-toolkit/compat";
 import { useState, useEffect } from "react";
 import { supportsPassiveListener } from "@shared/utils/browser";
-
-const getPosition = () => ({
-  x: window.pageXOffset,
-  y: window.pageYOffset,
-});
+import { useScrollContext } from "~/components/ScrollContext";
 
 const defaultOptions = {
   throttle: 100,
 };
 
 /**
- * Hook to track the window's scroll position.
+ * Hook to track the scroll position of the nearest scroll container (provided
+ * via ScrollContext), falling back to the window when none is available.
  *
  * @param options Configuration options
  * @param options.throttle Time in milliseconds to throttle the scroll event
@@ -27,26 +24,38 @@ export default function useWindowScrollPosition(options: {
   y: number;
 } {
   const opts = Object.assign({}, defaultOptions, options);
+  const scrollRef = useScrollContext();
+
+  const getPosition = () => {
+    const el = scrollRef?.current;
+    if (el) {
+      return { x: el.scrollLeft, y: el.scrollTop };
+    }
+    return { x: window.pageXOffset, y: window.pageYOffset };
+  };
+
   const [position, setPosition] = useState(getPosition());
 
   useEffect(() => {
+    const target: HTMLElement | Window = scrollRef?.current ?? window;
     const handleScroll = throttle(() => {
       setPosition(getPosition());
     }, opts.throttle);
-    window.addEventListener(
+
+    // Sync once on mount in case the container scrolled before this ran.
+    handleScroll();
+
+    target.addEventListener(
       "scroll",
       handleScroll,
-      supportsPassiveListener
-        ? {
-            passive: true,
-          }
-        : false
+      supportsPassiveListener ? { passive: true } : false
     );
     return () => {
       handleScroll.cancel();
-      window.removeEventListener("scroll", handleScroll);
+      target.removeEventListener("scroll", handleScroll);
     };
-  }, [opts.throttle]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts.throttle, scrollRef]);
 
   return position;
 }
