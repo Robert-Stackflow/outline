@@ -16,6 +16,7 @@ import Text from "~/components/Text";
 import Time from "~/components/Time";
 import Tooltip from "~/components/Tooltip";
 import useStores from "~/hooks/useStores";
+import useQuery from "~/hooks/useQuery";
 import { settingsPath } from "~/utils/routeHelpers";
 
 /**
@@ -25,9 +26,18 @@ import { settingsPath } from "~/utils/routeHelpers";
 function Ai() {
   const { t } = useTranslation();
   const { ai } = useStores();
+  const params = useQuery();
   const [activeId, setActiveId] = React.useState<string>();
   const [input, setInput] = React.useState("");
   const listRef = React.useRef<HTMLDivElement>(null);
+
+  // Preselect a conversation when arrived at via ?c=<id> (sidebar history).
+  const queryConversationId = params.get("c") ?? undefined;
+  React.useEffect(() => {
+    if (queryConversationId) {
+      setActiveId(queryConversationId);
+    }
+  }, [queryConversationId]);
 
   React.useEffect(() => {
     void ai.fetchConfig();

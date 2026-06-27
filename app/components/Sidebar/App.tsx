@@ -5,7 +5,6 @@ import {
   HomeIcon,
   SidebarIcon,
   SidebarReverseIcon,
-  SparklesIcon,
 } from "outline-icons";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -27,7 +26,6 @@ import TeamMenu from "~/menus/TeamMenu";
 import {
   archivePath,
   draftsPath,
-  aiPath,
   homePath,
 } from "~/utils/routeHelpers";
 import TeamLogo from "../TeamLogo";
@@ -35,6 +33,7 @@ import Tooltip from "../Tooltip";
 import Sidebar from "./Sidebar";
 import Collections from "./components/Collections";
 import CompactNav from "./components/CompactNav";
+import AiPanel from "./components/AiPanel";
 import DragPlaceholder from "./components/DragPlaceholder";
 import HistoryNavigation from "./components/HistoryNavigation";
 import Section from "./components/Section";
@@ -153,16 +152,15 @@ const PanelBody = observer(function PanelBody_({
     );
   }
 
+  if (panel === "ai") {
+    return <AiPanel />;
+  }
+
   return (
     <Scrollable flex shadow ref={scrollRef}>
       <SidebarScrollProvider value={scrollArea}>
         <Section>
           <SidebarLink to={homePath()} icon={<HomeIcon />} label={t("Home")} />
-          <SidebarLink
-            to={aiPath()}
-            icon={<SparklesIcon />}
-            label={t("AI")}
-          />
           {can.createDocument && (
             <SidebarLink
               to={draftsPath()}

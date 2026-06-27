@@ -106,7 +106,7 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
 
 const Wrapper = styled.div`
   margin: 0.75em 0;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border: 1px solid ${s("divider")};
   border-radius: 8px;
   background: ${s("backgroundSecondary")};
@@ -119,7 +119,7 @@ const Title = styled.div`
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: ${s("textTertiary")};
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 `;
 
 const Empty = styled.div`
@@ -135,32 +135,43 @@ const List = styled.ul`
 
 const Item = styled.li<{ $level: number }>`
   margin: 0;
-  padding-inline-start: ${(props) => (props.$level - 1) * 22}px;
+  padding-inline-start: ${(props) => (props.$level - 1) * 28}px;
 `;
 
 const Marker = styled.span`
   color: ${s("textTertiary")};
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  min-width: 1.4em;
 `;
 
 const Anchor = styled.a`
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: baseline;
-  padding: 3px 0;
+  padding: 4px 6px;
+  margin: 1px 0;
+  border-radius: 6px;
   font-size: 15px;
   line-height: 1.5;
-  color: ${s("text")};
+  color: ${s("textSecondary")};
   text-decoration: none;
   cursor: var(--pointer);
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 
-  > span:last-child {
-    border-bottom: 1px solid transparent;
+  /* Override the editor's global link color so TOC entries read as text. */
+  &,
+  &:hover,
+  &:focus {
+    color: ${s("textSecondary")};
+    text-decoration: none;
   }
 
-  &:hover > span:last-child {
-    border-bottom-color: ${s("textTertiary")};
+  &:hover {
+    background: ${s("listItemHoverBackground")};
+    color: ${s("text")};
   }
 `;
 

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-export type SidebarPanel = "home" | "notifications";
+export type SidebarPanel = "home" | "notifications" | "ai";
 
 type Ctx = {
   panel: SidebarPanel;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AiApiFormat } from "@shared/types";
 import { BaseSchema } from "../schema";
 
 export const AiConfigSchema = BaseSchema;
@@ -7,6 +8,7 @@ export type AiConfigReq = z.infer<typeof AiConfigSchema>;
 export const AiConfigUpdateSchema = BaseSchema.extend({
   body: z.object({
     enabled: z.boolean().optional(),
+    apiFormat: z.enum(AiApiFormat).optional(),
     baseUrl: z.string().optional(),
     model: z.string().optional(),
     temperature: z.number().min(0).max(2).optional(),

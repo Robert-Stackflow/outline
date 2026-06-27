@@ -1,5 +1,12 @@
 {
   "New API key": "创建 API 密钥",
+  "API format": "API 格式",
+  "The request format your provider expects. Use Chat Completions for OpenAI-compatible APIs, Messages for Anthropic, or Responses for the OpenAI Responses API.": "服务商所需的请求格式，OpenAI 兼容接口用 Chat Completions，Anthropic 用 Messages，OpenAI Responses 接口用 Responses",
+  "Reposition": "调整位置",
+  "Drag image to reposition": "拖动图片以调整位置",
+  "Save position": "保存位置",
+  "Edit as YAML": "以 YAML 编辑",
+  "Edit as list": "以列表编辑",
   "AI assistant": "AI 助手",
   "New conversation": "新建对话",
   "The AI assistant has not been configured yet.": "AI 助手尚未配置",

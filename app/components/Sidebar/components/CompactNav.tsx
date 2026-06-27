@@ -1,4 +1,4 @@
-import { HomeIcon, SearchIcon } from "outline-icons";
+import { HomeIcon, SearchIcon, SparklesIcon } from "outline-icons";
 import { observer } from "mobx-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -58,6 +58,25 @@ function CompactNav() {
           <Label $active={panel === "notifications"}>
             {t("Notifications")}
           </Label>
+        </Pill>
+      </Tooltip>
+
+      <Tooltip
+        content={t("AI")}
+        placement="bottom"
+        disabled={panel === "ai"}
+      >
+        <Pill
+          type="button"
+          $active={panel === "ai"}
+          onClick={() => setPanel("ai")}
+          aria-pressed={panel === "ai"}
+          aria-label={t("AI")}
+        >
+          <IconBox>
+            <SparklesIcon />
+          </IconBox>
+          <Label $active={panel === "ai"}>{t("AI")}</Label>
         </Pill>
       </Tooltip>
 

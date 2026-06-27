@@ -5,6 +5,7 @@ import { client } from "~/utils/ApiClient";
 
 export type AiConfig = {
   enabled: boolean;
+  apiFormat: string;
   baseUrl: string;
   model: string;
   temperature: number;

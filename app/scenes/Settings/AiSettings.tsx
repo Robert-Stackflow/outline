@@ -3,9 +3,11 @@ import { SparklesIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
+import { AiApiFormat } from "@shared/types";
 import Button from "~/components/Button";
 import Heading from "~/components/Heading";
 import Input from "~/components/Input";
+import { InputSelect } from "~/components/InputSelect";
 import Scene from "~/components/Scene";
 import Switch from "~/components/Switch";
 import Text from "~/components/Text";
@@ -26,6 +28,9 @@ function AiSettings() {
   const can = usePolicy(team);
 
   const [enabled, setEnabled] = React.useState(false);
+  const [apiFormat, setApiFormat] = React.useState<string>(
+    AiApiFormat.ChatCompletions
+  );
   const [baseUrl, setBaseUrl] = React.useState("");
   const [model, setModel] = React.useState("");
   const [temperature, setTemperature] = React.useState("0.7");
@@ -37,6 +42,7 @@ function AiSettings() {
   React.useEffect(() => {
     void ai.fetchConfig().then((config) => {
       setEnabled(config.enabled);
+      setApiFormat(config.apiFormat || AiApiFormat.ChatCompletions);
       setBaseUrl(config.baseUrl);
       setModel(config.model);
       setTemperature(String(config.temperature ?? 0.7));
@@ -51,6 +57,7 @@ function AiSettings() {
     try {
       const config = await ai.updateConfig({
         enabled,
+        apiFormat,
         baseUrl,
         model,
         temperature: Number(temperature) || 0.7,
@@ -90,6 +97,27 @@ function AiSettings() {
             checked={enabled}
             onChange={setEnabled}
             disabled={!can.update}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label={t("API format")}
+          name="apiFormat"
+          description={t(
+            "The request format your provider expects. Use Chat Completions for OpenAI-compatible APIs, Messages for Anthropic, or Responses for the OpenAI Responses API."
+          )}
+        >
+          <InputSelect
+            label={t("API format")}
+            labelHidden
+            value={apiFormat}
+            onChange={setApiFormat}
+            disabled={!can.update}
+            options={[
+              { type: "item", label: "Chat Completions (OpenAI)", value: AiApiFormat.ChatCompletions },
+              { type: "item", label: "Messages (Anthropic)", value: AiApiFormat.Messages },
+              { type: "item", label: "Responses (OpenAI)", value: AiApiFormat.Responses },
+            ]}
           />
         </SettingRow>
 

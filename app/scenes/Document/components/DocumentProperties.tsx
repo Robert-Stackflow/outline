@@ -1,15 +1,15 @@
 import { observer } from "mobx-react";
-import { CloseIcon, PlusIcon } from "outline-icons";
+import { CloseIcon, PlusIcon, CodeIcon, BulletedListIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { s } from "@shared/styles";
 import type { JSONObject, JSONValue } from "@shared/types";
 import {
-  parseFrontmatter,
+  objectToYaml,
   stringifyPropertyValue,
+  yamlToObject,
 } from "@shared/utils/frontmatter";
-import { useDocumentContext } from "~/components/DocumentContext";
 import NudeButton from "~/components/NudeButton";
 import Tooltip from "~/components/Tooltip";
 import type Document from "~/models/Document";
@@ -21,72 +21,116 @@ type Props = {
   readOnly?: boolean;
 };
 
-type Row = { key: string; value: string };
+type Row = { id: number; key: string; value: string };
+type Mode = "list" | "yaml";
+
+let nextRowId = 1;
+
+/** Builds editable rows from a document's stored properties. */
+function rowsFromProperties(properties: JSONObject | null | undefined): Row[] {
+  return Object.entries(properties ?? {}).map(([key, value]) => ({
+    id: nextRowId++,
+    key,
+    value: stringifyPropertyValue(value),
+  }));
+}
+
+/** Collapses editable rows into a properties object (drops blank keys). */
+function propertiesFromRows(rows: Row[]): JSONObject {
+  const properties: JSONObject = {};
+  for (const row of rows) {
+    const key = row.key.trim();
+    if (key) {
+      properties[key] = row.value;
+    }
+  }
+  return properties;
+}
 
 /**
- * A Notion-style document properties editor rendered beneath the title. Properties
- * are stored as a free-form key-value map on the document and can be seeded from
- * the document's frontmatter.
+ * A Notion-style document properties editor rendered beneath the title. Acts as
+ * a frontmatter block that can be edited either as a key-value property list or
+ * as raw YAML, with the two views kept in sync.
  */
 function DocumentProperties({ document, readOnly }: Props) {
   const { t } = useTranslation();
-  const { editor } = useDocumentContext();
 
-  const rows = React.useMemo<Row[]>(
-    () =>
-      Object.entries(document.properties ?? {}).map(([key, value]) => ({
-        key,
-        value: stringifyPropertyValue(value),
-      })),
-    [document.properties]
+  const [mode, setMode] = React.useState<Mode>("list");
+  const [rows, setRows] = React.useState<Row[]>(() =>
+    rowsFromProperties(document.properties)
   );
+  const [yamlText, setYamlText] = React.useState("");
+  const [yamlError, setYamlError] = React.useState(false);
+
+  // Re-seed local state when navigating between documents.
+  React.useEffect(() => {
+    setRows(rowsFromProperties(document.properties));
+    setMode("list");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document.id]);
 
   const persist = React.useCallback(
-    (next: Row[]) => {
-      const properties: JSONObject = {};
-      for (const row of next) {
-        const key = row.key.trim();
-        if (key) {
-          properties[key] = row.value;
-        }
-      }
+    (properties: JSONObject) => {
       document.properties = properties;
       void document.save({ properties });
     },
     [document]
   );
 
-  const handleChange = (index: number, patch: Partial<Row>) => {
-    const next = rows.map((row, i) => (i === index ? { ...row, ...patch } : row));
-    persist(next);
+  const updateRows = (next: Row[]) => {
+    setRows(next);
+    persist(propertiesFromRows(next));
   };
 
-  const handleRemove = (index: number) => {
-    persist(rows.filter((_row, i) => i !== index));
+  const handleChange = (id: number, patch: Partial<Row>) => {
+    setRows((current) => {
+      const next = current.map((row) =>
+        row.id === id ? { ...row, ...patch } : row
+      );
+      persist(propertiesFromRows(next));
+      return next;
+    });
   };
 
+  const handleRemove = (id: number) => {
+    updateRows(rows.filter((row) => row.id !== id));
+  };
+
+  // Adds a blank row that stays visible until the user gives it a key.
   const handleAdd = () => {
-    persist([...rows, { key: "", value: "" }]);
+    setRows((current) => [...current, { id: nextRowId++, key: "", value: "" }]);
   };
 
-  const handleImportFrontmatter = () => {
-    const markdown = editor?.value() ?? "";
-    const parsed = parseFrontmatter(markdown);
+  const handleToggleMode = () => {
+    if (mode === "list") {
+      setYamlText(objectToYaml(propertiesFromRows(rows)));
+      setYamlError(false);
+      setMode("yaml");
+    } else {
+      // Parse the YAML back into rows on the way out; keep editing on error.
+      const parsed = yamlToObject(yamlText);
+      if (!parsed) {
+        setYamlError(true);
+        return;
+      }
+      const properties = parsed as JSONObject;
+      setRows(rowsFromProperties(properties));
+      persist(properties);
+      setMode("list");
+    }
+  };
+
+  const handleYamlBlur = () => {
+    const parsed = yamlToObject(yamlText);
     if (!parsed) {
+      setYamlError(true);
       return;
     }
-    const merged: JSONObject = { ...(document.properties ?? {}) };
-    for (const [key, value] of Object.entries(parsed)) {
-      merged[key] = value as JSONValue;
-    }
-    document.properties = merged;
-    void document.save({ properties: merged });
+    setYamlError(false);
+    const properties = parsed as JSONObject;
+    persist(properties);
+    setRows(rowsFromProperties(properties));
   };
-
-  const hasFrontmatter = React.useMemo(
-    () => !!parseFrontmatter(editor?.value() ?? ""),
-    [editor]
-  );
 
   if (readOnly && rows.length === 0) {
     return null;
@@ -94,43 +138,65 @@ function DocumentProperties({ document, readOnly }: Props) {
 
   return (
     <Wrapper>
-      {rows.map((row, index) => (
-        <PropertyRow key={index}>
-          <KeyInput
-            value={row.key}
-            placeholder={t("Property")}
-            disabled={readOnly}
-            onChange={(e) => handleChange(index, { key: e.target.value })}
-          />
-          <ValueInput
-            value={row.value}
-            placeholder={t("Empty")}
-            disabled={readOnly}
-            onChange={(e) => handleChange(index, { value: e.target.value })}
-          />
-          {!readOnly && (
-            <Tooltip content={t("Remove")}>
-              <RemoveButton
-                onClick={() => handleRemove(index)}
-                aria-label={t("Remove")}
-              >
-                <CloseIcon size={16} />
-              </RemoveButton>
-            </Tooltip>
-          )}
-        </PropertyRow>
-      ))}
+      {mode === "yaml" ? (
+        <YamlArea
+          value={yamlText}
+          $error={yamlError}
+          spellCheck={false}
+          placeholder={"key: value"}
+          onChange={(e) => setYamlText(e.target.value)}
+          onBlur={handleYamlBlur}
+        />
+      ) : (
+        rows.map((row) => (
+          <PropertyRow key={row.id}>
+            <KeyInput
+              value={row.key}
+              placeholder={t("Property")}
+              disabled={readOnly}
+              onChange={(e) => handleChange(row.id, { key: e.target.value })}
+            />
+            <ValueInput
+              value={row.value}
+              placeholder={t("Empty")}
+              disabled={readOnly}
+              onChange={(e) => handleChange(row.id, { value: e.target.value })}
+            />
+            {!readOnly && (
+              <Tooltip content={t("Remove")}>
+                <RemoveButton
+                  onClick={() => handleRemove(row.id)}
+                  aria-label={t("Remove")}
+                >
+                  <CloseIcon size={16} />
+                </RemoveButton>
+              </Tooltip>
+            )}
+          </PropertyRow>
+        ))
+      )}
+
       {!readOnly && (
         <Actions>
-          <AddButton type="button" onClick={handleAdd}>
-            <PlusIcon size={16} />
-            {t("Add property")}
-          </AddButton>
-          {hasFrontmatter && (
-            <AddButton type="button" onClick={handleImportFrontmatter}>
-              {t("Import from frontmatter")}
-            </AddButton>
+          {mode === "list" && (
+            <ActionButton type="button" onClick={handleAdd}>
+              <PlusIcon size={16} />
+              {t("Add property")}
+            </ActionButton>
           )}
+          <ActionButton type="button" onClick={handleToggleMode}>
+            {mode === "list" ? (
+              <>
+                <CodeIcon size={16} />
+                {t("Edit as YAML")}
+              </>
+            ) : (
+              <>
+                <BulletedListIcon size={16} />
+                {t("Edit as list")}
+              </>
+            )}
+          </ActionButton>
         </Actions>
       )}
     </Wrapper>
@@ -189,6 +255,22 @@ const ValueInput = styled.input`
   }
 `;
 
+const YamlArea = styled.textarea<{ $error?: boolean }>`
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid
+    ${(props) => (props.$error ? props.theme.brand.red : props.theme.divider)};
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: ${s("fontFamilyMono")};
+  font-size: 13px;
+  line-height: 1.6;
+  background: ${s("codeBackground")};
+  color: ${s("text")};
+  outline: none;
+`;
+
 const RemoveButton = styled(NudeButton)`
   width: 24px;
   height: 24px;
@@ -208,7 +290,7 @@ const RemoveButton = styled(NudeButton)`
 const Actions = styled.div`
   display: flex;
   gap: 4px;
-  margin-top: 2px;
+  margin-top: 4px;
   opacity: 0.6;
   transition: opacity 120ms ease;
 
@@ -217,7 +299,7 @@ const Actions = styled.div`
   }
 `;
 
-const AddButton = styled.button`
+const ActionButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 4px;

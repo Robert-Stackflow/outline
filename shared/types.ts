@@ -733,10 +733,22 @@ export type JSONValue =
 
 export type JSONObject = { [x: string]: JSONValue };
 
+/** The wire format used to talk to the AI provider. */
+export enum AiApiFormat {
+  /** OpenAI-compatible POST /chat/completions */
+  ChatCompletions = "chat_completions",
+  /** Anthropic Messages API POST /messages */
+  Messages = "messages",
+  /** OpenAI Responses API POST /responses */
+  Responses = "responses",
+}
+
 /** Configuration for the AI assistant, stored per-workspace. */
 export type AiSettings = {
   /** Whether the AI assistant is enabled for the workspace. */
   enabled?: boolean;
+  /** The request/response wire format for the provider. */
+  apiFormat?: AiApiFormat;
   /** OpenAI-compatible base URL, e.g. https://api.openai.com/v1 */
   baseUrl?: string;
   /** The model identifier to use, e.g. gpt-4o-mini */

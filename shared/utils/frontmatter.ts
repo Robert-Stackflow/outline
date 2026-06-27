@@ -49,3 +49,42 @@ export function stringifyPropertyValue(value: unknown): string {
   }
   return String(value);
 }
+
+/**
+ * Serializes a properties object to a YAML document for the frontmatter editor.
+ *
+ * @param obj The properties to serialize.
+ * @returns A YAML string (empty string when there are no properties).
+ */
+export function objectToYaml(obj: Record<string, unknown>): string {
+  if (!obj || Object.keys(obj).length === 0) {
+    return "";
+  }
+  try {
+    return yaml.dump(obj, { lineWidth: -1 }).trimEnd();
+  } catch (_err) {
+    return "";
+  }
+}
+
+/**
+ * Parses a YAML document (the body of a frontmatter block) into a properties
+ * object.
+ *
+ * @param text The YAML source.
+ * @returns The parsed object, or null if the YAML is invalid or not a mapping.
+ */
+export function yamlToObject(text: string): Record<string, unknown> | null {
+  if (!text.trim()) {
+    return {};
+  }
+  try {
+    const parsed = yaml.load(text);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return null;
+  } catch (_err) {
+    return null;
+  }
+}

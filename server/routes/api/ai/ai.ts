@@ -58,6 +58,7 @@ router.post(
     ctx.body = {
       data: {
         enabled: !!settings.enabled,
+        apiFormat: settings.apiFormat ?? "chat_completions",
         baseUrl: settings.baseUrl ?? "",
         model: settings.model ?? "",
         temperature: settings.temperature ?? 0.7,
@@ -94,6 +95,7 @@ router.post(
     ctx.body = {
       data: {
         enabled: !!merged.enabled,
+        apiFormat: merged.apiFormat ?? "chat_completions",
         baseUrl: merged.baseUrl ?? "",
         model: merged.model ?? "",
         temperature: merged.temperature ?? 0.7,
