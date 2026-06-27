@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
-import KeyboardShortcuts from "~/scenes/KeyboardShortcuts";
 import NudeButton from "~/components/NudeButton";
 import Tooltip from "~/components/Tooltip";
 import useEditingFocus from "~/hooks/useEditingFocus";
@@ -13,22 +12,20 @@ import useStores from "~/hooks/useStores";
 
 function KeyboardShortcutsButton() {
   const { t } = useTranslation();
-  const { dialogs } = useStores();
+  const { ui } = useStores();
   const isEditingFocus = useEditingFocus();
   const query = useQuery();
   const shortcutsQuery = query.get("shortcuts");
 
-  const handleOpenKeyboardShortcuts = (defaultQuery?: string) => {
-    dialogs.openGuide({
-      title: t("Keyboard shortcuts"),
-      content: <KeyboardShortcuts defaultQuery={defaultQuery} />,
-    });
+  const handleOpenKeyboardShortcuts = () => {
+    ui.set({ rightSidebar: "shortcuts" });
   };
 
   useEffect(() => {
     if (shortcutsQuery !== null) {
-      handleOpenKeyboardShortcuts(shortcutsQuery);
+      handleOpenKeyboardShortcuts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shortcutsQuery]);
 
   return (

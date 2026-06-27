@@ -119,6 +119,8 @@ export default createGlobalStyle<Props>`
     overflow: hidden;
     transition:
       max-height 240ms cubic-bezier(0.32, 0.72, 0, 1),
+      min-height 240ms cubic-bezier(0.32, 0.72, 0, 1),
+      padding 240ms cubic-bezier(0.32, 0.72, 0, 1),
       opacity 200ms ease,
       transform 200ms ease;
   }
@@ -134,9 +136,13 @@ export default createGlobalStyle<Props>`
 
   body[data-reading-mode="true"] [data-page-header] {
     max-height: 0;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
     opacity: 0;
     transform: translateY(-8px);
     pointer-events: none;
+    border: 0;
   }
 
   body[data-reading-mode="true"] .document-meta-line {

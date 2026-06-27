@@ -20,7 +20,6 @@ import Flex from "~/components/Flex";
 import Header from "~/components/Header";
 import Star from "~/components/Star";
 import Tooltip from "~/components/Tooltip";
-import KeyboardShortcuts from "~/scenes/KeyboardShortcuts";
 import { type Editor } from "~/editor";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
 import useCurrentUser from "~/hooks/useCurrentUser";
@@ -72,7 +71,7 @@ function DocumentHeader({
   onSave,
 }: Props) {
   const { t } = useTranslation();
-  const { ui, dialogs } = useStores();
+  const { ui } = useStores();
   const theme = useTheme();
   const team = useCurrentTeam({ rejectOnEmpty: false });
   const user = useCurrentUser({ rejectOnEmpty: false });
@@ -115,11 +114,8 @@ function DocumentHeader({
   const canToggleEmbeds = team?.documentEmbeds;
 
   const handleOpenKeyboardShortcuts = useCallback(() => {
-    dialogs.openGuide({
-      title: t("Keyboard shortcuts"),
-      content: <KeyboardShortcuts />,
-    });
-  }, [dialogs, t]);
+    ui.set({ rightSidebar: "shortcuts" });
+  }, [ui]);
 
   const keyboardShortcutsAction = (
     <Action>
