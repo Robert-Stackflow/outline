@@ -18,7 +18,6 @@ import {
   draftsPath,
   aiPath,
   homePath,
-  searchPath,
   settingsPath,
   matchDocumentSlug as documentSlug,
   matchCollectionSlug as collectionSlug,
@@ -34,7 +33,6 @@ const Document = lazy(() => import("~/scenes/Document"));
 const Drafts = lazy(() => import("~/scenes/Drafts"));
 const Ai = lazy(() => import("~/scenes/Ai"));
 const Home = lazy(() => import("~/scenes/Home"));
-const Search = lazy(() => import("~/scenes/Search"));
 const Trash = lazy(() => import("~/scenes/Trash"));
 const Debug = lazy(() => import("~/scenes/Developer/Debug"));
 const Changesets = lazy(() => import("~/scenes/Developer/Changesets"));
@@ -119,7 +117,6 @@ function AuthenticatedRoutes() {
               component={Document}
             />
             <Route path={`/doc/${documentSlug}`} component={Document} />
-            <Route exact path={`${searchPath()}/:query?`} component={Search} />
             {env.isDevelopment && (
               <Route exact path={debugPath()} component={Debug} />
             )}

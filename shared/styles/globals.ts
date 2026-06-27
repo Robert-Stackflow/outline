@@ -65,6 +65,12 @@ export default createGlobalStyle<Props>`
      .document-title selector covers the page heading rendered by
      ContentEditable above the editor body. Scoping to the container avoids
      the cross-document jump that happens when attributes live on <html>. */
+
+  .ProseMirror {
+    padding: 0px !important;
+    margin: 0px !important;
+  }
+
   [data-document-display][data-smaller-text="true"] .ProseMirror {
     font-size: 14px;
   }

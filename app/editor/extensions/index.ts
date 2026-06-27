@@ -1,4 +1,5 @@
 import type { AnyExtensionClass } from "@shared/editor/lib/types";
+import BlockGutterExtension from "~/editor/extensions/BlockGutter";
 import BlockMenuExtension from "~/editor/extensions/BlockMenu";
 import ClipboardTextSerializer from "~/editor/extensions/ClipboardTextSerializer";
 import DiagramsExtension from "@shared/editor/extensions/Diagrams";
@@ -20,6 +21,7 @@ export const withUIExtensions = (nodes: Nodes) => [
   PasteHandler,
   ClipboardTextSerializer,
   BlockMenuExtension,
+  BlockGutterExtension,
   EmojiMenuExtension,
   MentionMenuExtension,
   FindAndReplaceExtension,

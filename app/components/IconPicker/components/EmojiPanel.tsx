@@ -1,5 +1,5 @@
 import { concat } from "es-toolkit/compat";
-import { PlusIcon } from "outline-icons";
+import { PlusIcon, ShuffleIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import type { EmojiSkinTone } from "@shared/types";
@@ -28,6 +28,8 @@ type Props = {
   query: string;
   panelActive: boolean;
   height?: number;
+  showRandomButton?: boolean;
+  showUploadButton?: boolean;
   onEmojiChange: (emoji: string) => void;
   onQueryChange: (query: string) => void;
 };
@@ -39,11 +41,20 @@ const EmojiPanel = ({
   onEmojiChange,
   onQueryChange,
   height = GRID_HEIGHT,
+  showRandomButton = false,
+  showUploadButton = true,
 }: Props) => {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { emojis, dialogs } = useStores();
   const team = useCurrentTeam();
   const can = usePolicy(team);
+  const isChinese =
+    i18n.language.startsWith("zh") || i18n.resolvedLanguage?.startsWith("zh");
+  const randomEmojiLabel = i18n.exists("Random emoji")
+    ? t("Random emoji")
+    : isChinese
+      ? "随机表情"
+      : "Random emoji";
   const searchRef = React.useRef<HTMLInputElement | null>(null);
   const scrollableRef = React.useRef<HTMLDivElement | null>(null);
   const customEmojis = useComputed(
@@ -150,6 +161,23 @@ const EmojiPanel = ({
         freqCustomEmojis,
       });
 
+  const handleRandomClick = React.useCallback(() => {
+    const availableIcons = templateData.flatMap((node) => node.icons);
+    const icon =
+      availableIcons[Math.floor(Math.random() * availableIcons.length)];
+    if (!icon) {
+      return;
+    }
+    if (icon.type === IconType.SVG) {
+      return;
+    }
+
+    handleEmojiSelection({
+      id: icon.id,
+      value: icon.value,
+    });
+  }, [handleEmojiSelection, templateData]);
+
   React.useLayoutEffect(() => {
     if (!panelActive) {
       return;
@@ -167,8 +195,13 @@ const EmojiPanel = ({
           placeholder={`${t("Search emoji")}…`}
           onChange={handleFilter}
         />
+        {showRandomButton && (
+          <MenuButton onClick={handleRandomClick} aria-label={randomEmojiLabel}>
+            <ShuffleIcon />
+          </MenuButton>
+        )}
         <SkinTonePicker skinTone={skinTone} onChange={handleSkinChange} />
-        {can.update && (
+        {showUploadButton && can.update && (
           <MenuButton
             onClick={handleUploadClick}
             aria-label={t("Upload emoji")}
@@ -180,7 +213,7 @@ const EmojiPanel = ({
       <GridTemplate
         ref={scrollableRef}
         width={panelWidth}
-        height={height - 48}
+        height={height - 54}
         data={templateData}
         onIconSelect={handleEmojiSelection}
         empty={

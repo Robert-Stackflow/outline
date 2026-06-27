@@ -64,15 +64,27 @@ export default class Highlight extends Mark {
           default: null,
           validate: "string|null",
         },
+        scope: {
+          default: null,
+          validate: "string|null",
+        },
+        textColor: {
+          default: null,
+          validate: "string|null",
+        },
       },
       parseDOM: [
         {
           tag: "mark",
           getAttrs: (dom) => {
             const color = dom.getAttribute("data-color") || "";
+            const textColor = dom.getAttribute("data-text-color") || "";
+            const scope = dom.getAttribute("data-scope") || "";
 
             return {
               color: isHexColor(color) ? color : null,
+              scope: scope === "block" ? scope : null,
+              textColor: isHexColor(textColor) ? textColor : null,
             };
           },
         },
@@ -105,16 +117,29 @@ export default class Highlight extends Mark {
           },
         },
       ],
-      toDOM: (node) => [
-        "mark",
-        {
-          "data-color": node.attrs.color,
-          style: `background-color: ${rgba(
-            node.attrs.color || Highlight.presetColors[0].hex,
-            Highlight.opacity
-          )}`,
-        },
-      ],
+      toDOM: (node) => {
+        const isBlockColor = node.attrs.scope === "block";
+
+        return [
+          "mark",
+          {
+            "data-color": node.attrs.color,
+            "data-scope": node.attrs.scope,
+            "data-text-color": node.attrs.textColor,
+            style: isBlockColor
+              ? [
+                  "background-color: transparent",
+                  node.attrs.textColor ? `color: ${node.attrs.textColor}` : "",
+                ]
+                  .filter(Boolean)
+                  .join("; ")
+              : `background-color: ${rgba(
+                  node.attrs.color || Highlight.presetColors[0].hex,
+                  Highlight.opacity
+                )}`,
+          },
+        ];
+      },
     };
   }
 

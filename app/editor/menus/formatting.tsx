@@ -73,7 +73,10 @@ export default function formattingMenuItems(ctx: SelectionContext): MenuItem[] {
     state.selection.from,
     state.selection.to,
     state
-  ).find(({ mark }) => mark.type === state.schema.marks.highlight);
+  ).find(
+    ({ mark }) =>
+      mark.type === state.schema.marks.highlight && mark.attrs.scope !== "block"
+  );
 
   const cellSelectionHasBackground = isTableCell
     ? hasNodeAttrMarkCellSelection(
@@ -252,7 +255,10 @@ export default function formattingMenuItems(ctx: SelectionContext): MenuItem[] {
             name: "highlight",
             label: preset.name,
             icon: <CircleIcon retainColor color={preset.hex} />,
-            active: isMarkActive(schema.marks.highlight, { color: preset.hex }),
+            active: isMarkActive(schema.marks.highlight, {
+              color: preset.hex,
+              scope: null,
+            }),
             attrs: { color: preset.hex },
           })),
           ...(highlight &&
@@ -270,6 +276,7 @@ export default function formattingMenuItems(ctx: SelectionContext): MenuItem[] {
                   ),
                   active: isMarkActive(schema.marks.highlight, {
                     color: highlight.mark.attrs.color,
+                    scope: null,
                   }),
                   attrs: { color: highlight.mark.attrs.color },
                 },

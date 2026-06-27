@@ -17,11 +17,8 @@ import Logger from "~/utils/Logger";
 import history from "~/utils/history";
 import { isModKey } from "@shared/utils/keyboard";
 import lazyWithRetry from "~/utils/lazyWithRetry";
-import {
-  newDocumentPath,
-  settingsPath,
-  homePath,
-} from "~/utils/routeHelpers";
+import { newDocumentPath, settingsPath, homePath } from "~/utils/routeHelpers";
+import { decodeURIComponentSafe } from "~/utils/urls";
 import { DocumentContextProvider } from "./DocumentContext";
 import Fade from "./Fade";
 import NotificationBadge from "./NotificationBadge";
@@ -85,6 +82,31 @@ const AuthenticatedLayout: React.FC = ({ children }: Props) => {
       }
     }
   }, [spendPostLoginPath]);
+
+  React.useEffect(() => {
+    if (
+      location.pathname !== "/search" &&
+      !location.pathname.startsWith("/search/")
+    ) {
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const routeQuery = decodeURIComponentSafe(
+      location.pathname.replace(/^\/search\/?/, "")
+    );
+    const query = decodeURIComponentSafe(
+      routeQuery || params.get("q") || params.get("query") || ""
+    ).trim();
+
+    ui.openSearchDialog({
+      query: query || undefined,
+      collectionId: params.get("collectionId") ?? undefined,
+      documentId: params.get("documentId") ?? undefined,
+      userId: params.get("userId") ?? undefined,
+    });
+    history.replace(homePath());
+  }, [location.pathname, location.search, ui]);
 
   if (auth.isSuspended) {
     return <ErrorSuspended />;

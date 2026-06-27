@@ -5,6 +5,7 @@ import { languages } from "@shared/i18n";
 import { unicodeCLDRtoBCP47, unicodeBCP47toCLDR } from "@shared/utils/date";
 import { isRTLLanguage } from "@shared/utils/rtl";
 import { cdnPath } from "@shared/utils/urls";
+import env from "~/env";
 import Logger from "./Logger";
 
 /**
@@ -32,8 +33,13 @@ export function initI18n(defaultLanguage = "en_US") {
       backend: {
         // this must match the path defined in routes. It's the path that the
         // frontend UI code will hit to load missing translations.
-        loadPath: (locale: string[]) =>
-          cdnPath(`/locales/${unicodeBCP47toCLDR(locale[0])}.json`),
+        loadPath: (locale: string[]) => {
+          const path = cdnPath(
+            `/locales/${unicodeBCP47toCLDR(locale[0])}.json`
+          );
+
+          return env.isDevelopment ? `${path}?t=${Date.now()}` : path;
+        },
       },
       interpolation: {
         escapeValue: false,

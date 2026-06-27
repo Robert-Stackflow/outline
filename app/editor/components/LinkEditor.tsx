@@ -224,12 +224,12 @@ const LinkEditor: React.FC<Props> = ({
 
           return (
             <Tooltip key={index} content={action.tooltip}>
-              <ToolbarButton
+              <LinkToolbarButton
                 onClick={action.handler}
                 disabled={action.disabled}
               >
                 {action.icon}
-              </ToolbarButton>
+              </LinkToolbarButton>
             </Tooltip>
           );
         })}
@@ -282,9 +282,23 @@ const LinkEditor: React.FC<Props> = ({
 
 const InputWrapper = styled(Flex)`
   pointer-events: all;
-  gap: 6px;
-  padding: 6px;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px;
   align-items: center;
+
+  ${Input} {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    line-height: 34px;
+  }
+`;
+
+const LinkToolbarButton = styled(ToolbarButton)`
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
 `;
 
 const SearchResults = styled(Scrollable)<{ $hasResults: boolean }>`

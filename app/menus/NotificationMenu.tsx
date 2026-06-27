@@ -29,6 +29,12 @@ const NotificationMenu: React.FC = () => {
 
 const Button = styled(NudeButton)`
   color: ${s("textSecondary")};
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
   &:${hover},
   &:active,

@@ -7,13 +7,16 @@ export const MenuButton = styled(NudeButton)`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   color: ${s("textSecondary")};
   border: 1px solid ${s("inputBorder")};
-  padding: 4px;
+  border-radius: 7px;
+  padding: 0;
 
   &: ${hover} {
-    border: 1px solid ${s("inputBorderFocused")};
+    border-color: ${s("inputBorderFocused")};
+    background: ${s("listItemHoverBackground")};
+    color: ${s("text")};
   }
 `;

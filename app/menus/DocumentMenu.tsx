@@ -5,14 +5,13 @@ import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { s } from "@shared/styles";
-import { SubscriptionType, UserPreference, DocumentFontFamily } from "@shared/types";
+import { SubscriptionType, DocumentFontFamily } from "@shared/types";
 import type Document from "~/models/Document";
 import type Template from "~/models/Template";
 import { DropdownMenu } from "~/components/Menu/DropdownMenu";
 import { OverflowMenuButton } from "~/components/Menu/OverflowMenuButton";
 import Switch from "~/components/Switch";
 import { ActionContextProvider } from "~/hooks/useActionContext";
-import useCurrentUser from "~/hooks/useCurrentUser";
 import { useDocumentDisplay } from "~/hooks/useDocumentDisplay";
 import useMobile from "~/hooks/useMobile";
 import usePolicy from "~/hooks/usePolicy";
@@ -57,12 +56,11 @@ function DocumentMenu({
   onFindAndReplace,
 }: Props) {
   const { t } = useTranslation();
-  const user = useCurrentUser();
   const isMobile = useMobile();
   const can = usePolicy(document);
   const { state: display, set: setDisplay } = useDocumentDisplay(document.id);
 
-  const { userMemberships, groupMemberships, subscriptions, pins, ui } =
+  const { userMemberships, groupMemberships, subscriptions, pins } =
     useStores();
 
   const isShared = !!(
@@ -156,113 +154,93 @@ function DocumentMenu({
     onSelectTemplate,
   });
 
-  const renderAppearanceGroup = React.useCallback(
-    ({ close }: { close: () => void }) => {
-      if (!can.update || !showDisplayOptions || isMobile) {
-        return null;
-      }
+  const renderAppearanceGroup = React.useCallback(() => {
+    if (!can.update || !showDisplayOptions || isMobile) {
+      return null;
+    }
 
-      return (
-        <>
-          <DisplayOptions>
-            <Style>
-              <FontPicker>
-                {(
-                  [
-                    DocumentFontFamily.Default,
-                    DocumentFontFamily.Serif,
-                    DocumentFontFamily.Mono,
-                  ] as const
-                ).map((family) => {
-                  const active = display.fontFamily === family;
-                  const labels: Record<DocumentFontFamily, string> = {
-                    [DocumentFontFamily.Default]: t("Default"),
-                    [DocumentFontFamily.Serif]: t("Serif"),
-                    [DocumentFontFamily.Mono]: t("Mono"),
-                  };
-                  return (
-                    <FontSwatch
-                      key={family}
-                      $active={active}
-                      $family={family}
-                      onClick={() => handleFontFamilyChange(family)}
-                      type="button"
-                      aria-pressed={active}
-                    >
-                      <span>Ag</span>
-                      <FontLabel>{labels[family]}</FontLabel>
-                    </FontSwatch>
-                  );
-                })}
-              </FontPicker>
-            </Style>
-            <Style>
-              <ToggleMenuItem
-                width={26}
-                height={14}
-                label={t("Small text")}
-                labelPosition="left"
-                checked={display.smallerText}
-                onChange={handleSmallerTextToggle}
-              />
-            </Style>
-            <Style>
-              <ToggleMenuItem
-                width={26}
-                height={14}
-                label={t("Full width")}
-                labelPosition="left"
-                checked={display.fullWidth}
-                onChange={handleFullWidthToggle}
-              />
-            </Style>
-            <Style>
-              <ToggleMenuItem
-                width={26}
-                height={14}
-                label={t("Lock page")}
-                labelPosition="left"
-                checked={display.locked}
-                onChange={handleLockToggle}
-              />
-            </Style>
-            <ReadingModeRow>
-              <ReadingModeButton
-                type="button"
-                onClick={() => {
-                  // Close the dropdown FIRST so the chrome doesn't briefly
-                  // overlap reading mode while the menu lingers.
-                  close();
-                  ui.isReadingMode = true;
-                  if (!ui.sidebarIsClosed) {
-                    ui.toggleCollapsedSidebar();
-                  }
-                }}
-              >
-                {t("Reading mode")}
-              </ReadingModeButton>
-            </ReadingModeRow>
-          </DisplayOptions>
-          <MenuSeparator />
-        </>
-      );
-    },
-    [
-      t,
-      can.update,
-      isMobile,
-      showDisplayOptions,
-      display.fontFamily,
-      display.smallerText,
-      display.fullWidth,
-      display.locked,
-      ui,
-      handleFontFamilyChange,
-      handleSmallerTextToggle,
-      handleFullWidthToggle,
-      handleLockToggle,
-    ]
-  );
+    return (
+      <>
+        <DisplayOptions>
+          <Style>
+            <FontPicker>
+              {(
+                [
+                  DocumentFontFamily.Default,
+                  DocumentFontFamily.Serif,
+                  DocumentFontFamily.Mono,
+                ] as const
+              ).map((family) => {
+                const active = display.fontFamily === family;
+                const labels: Record<DocumentFontFamily, string> = {
+                  [DocumentFontFamily.Default]: t("Default"),
+                  [DocumentFontFamily.Serif]: t("Serif"),
+                  [DocumentFontFamily.Mono]: t("Mono"),
+                };
+                return (
+                  <FontSwatch
+                    key={family}
+                    $active={active}
+                    $family={family}
+                    onClick={() => handleFontFamilyChange(family)}
+                    type="button"
+                    aria-pressed={active}
+                  >
+                    <span>Ag</span>
+                    <FontLabel>{labels[family]}</FontLabel>
+                  </FontSwatch>
+                );
+              })}
+            </FontPicker>
+          </Style>
+          <Style>
+            <ToggleMenuItem
+              width={26}
+              height={14}
+              label={t("Small text")}
+              labelPosition="left"
+              checked={display.smallerText}
+              onChange={handleSmallerTextToggle}
+            />
+          </Style>
+          <Style>
+            <ToggleMenuItem
+              width={26}
+              height={14}
+              label={t("Full width")}
+              labelPosition="left"
+              checked={display.fullWidth}
+              onChange={handleFullWidthToggle}
+            />
+          </Style>
+          <Style>
+            <ToggleMenuItem
+              width={26}
+              height={14}
+              label={t("Lock page")}
+              labelPosition="left"
+              checked={display.locked}
+              onChange={handleLockToggle}
+            />
+          </Style>
+        </DisplayOptions>
+        <MenuSeparator />
+      </>
+    );
+  }, [
+    t,
+    can.update,
+    isMobile,
+    showDisplayOptions,
+    display.fontFamily,
+    display.smallerText,
+    display.fullWidth,
+    display.locked,
+    handleFontFamilyChange,
+    handleSmallerTextToggle,
+    handleFullWidthToggle,
+    handleLockToggle,
+  ]);
 
   const toggleSwitches = React.useMemo<React.ReactNode>(() => {
     if (!can.update || !showToggleEmbeds) {
@@ -326,6 +304,7 @@ function DocumentMenu({
         onOpen={onOpen}
         onClose={onClose}
         ariaLabel={t("Document options")}
+        contentWidth={280}
         prepend={renderAppearanceGroup}
         append={toggleSwitches}
       >
@@ -375,14 +354,12 @@ const FontSwatch = styled.button<{
   gap: 4px;
   padding: 8px 4px;
   border-radius: 6px;
-  border: 1px solid
-    ${(props) => (props.$active ? props.theme.accent : props.theme.divider)};
+  border: 0;
   background: transparent;
   color: ${(props) => (props.$active ? props.theme.accent : props.theme.text)};
   cursor: var(--pointer);
   transition:
     background 120ms ease,
-    border-color 120ms ease,
     color 120ms ease;
 
   > span:first-child {
@@ -400,37 +377,18 @@ const FontSwatch = styled.button<{
   &:hover {
     background: ${(props) => props.theme.listItemHoverBackground};
   }
+
+  ${(props) =>
+    props.$active &&
+    `
+    background: ${props.theme.listItemHoverBackground};
+  `}
 `;
 
 const FontLabel = styled.span`
   font-size: 11px;
   font-weight: 500;
   color: inherit;
-`;
-
-const ReadingModeRow = styled.div`
-  padding: 8px 12px 4px;
-`;
-
-const ReadingModeButton = styled.button`
-  appearance: none;
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: transparent;
-  border: 1px solid ${(props) => props.theme.divider};
-  color: ${(props) => props.theme.text};
-  font-size: 13px;
-  font-weight: 500;
-  cursor: var(--pointer);
-  transition: background 120ms ease;
-
-  &:hover {
-    background: ${(props) => props.theme.listItemHoverBackground};
-  }
 `;
 
 export default observer(DocumentMenu);

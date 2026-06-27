@@ -75,7 +75,6 @@ import {
   newDocumentPath,
   newNestedDocumentPath,
   newSiblingDocumentPath,
-  searchPath,
   documentPath,
   urlify,
   desktopify,
@@ -992,7 +991,7 @@ export const pinDocument = createActionWithChildren({
   children: [pinDocumentToCollection, pinDocumentToHome],
 });
 
-export const searchInDocument = createInternalLinkAction({
+export const searchInDocument = createAction({
   name: ({ t }) => t("Search in document"),
   analyticsName: "Search document",
   section: ActiveDocumentSection,
@@ -1005,20 +1004,14 @@ export const searchInDocument = createInternalLinkAction({
     const document = stores.documents.get(activeDocumentId);
     return !!document?.isActive;
   },
-  to: ({ activeDocumentId, sidebarContext }) => {
+  perform: ({ activeDocumentId, stores }) => {
     if (!activeDocumentId) {
-      return "";
+      return;
     }
 
-    const [pathname, search] = searchPath({
+    stores.ui.openSearchDialog({
       documentId: activeDocumentId,
-    }).split("?");
-
-    return {
-      pathname,
-      search,
-      state: { sidebarContext },
-    };
+    });
   },
 });
 
@@ -1185,15 +1178,14 @@ export const openRandomDocument = createAction({
 });
 
 export const searchDocumentsForQuery = (query: string) =>
-  createInternalLinkAction({
+  createAction({
     id: "search",
     name: ({ t }) =>
       t(`Search documents for "{{searchQuery}}"`, { searchQuery: query }),
     analyticsName: "Search documents",
     section: DocumentSection,
     icon: <SearchIcon />,
-    to: searchPath({ query }),
-    visible: ({ location }) => location.pathname !== searchPath(),
+    perform: ({ stores }) => stores.ui.openSearchDialog({ query }),
   });
 
 export const moveDocumentToCollection = createAction({

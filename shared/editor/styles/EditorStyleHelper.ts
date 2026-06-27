@@ -6,6 +6,9 @@ export class EditorStyleHelper {
 
   static readonly blockRadius = "6px";
 
+  /** Block-level color decoration */
+  static readonly blockColor = "block-color";
+
   // Images
 
   static readonly imageHandle = "image-handle";
@@ -144,11 +147,6 @@ export class EditorStyleHelper {
 
   /** Drag indicator on bottom side of cell */
   static readonly tableDragIndicatorBottom = "table-drag-indicator-bottom";
-
-  // Global
-
-  /** Minimum padding around editor */
-  static readonly padding = 32;
 
   /** Table of contents width */
   static readonly tocWidth = 256;

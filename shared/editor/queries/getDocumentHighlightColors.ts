@@ -12,7 +12,7 @@ export function getDocumentHighlightColors(state: EditorState): string[] {
   state.doc.descendants((node) => {
     if (node.isText) {
       const highlightMark = node.marks.find(
-        (mark) => mark.type.name === "highlight"
+        (mark) => mark.type.name === "highlight" && mark.attrs.scope !== "block"
       );
       if (highlightMark?.attrs.color) {
         colors.add(highlightMark.attrs.color);

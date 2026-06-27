@@ -59,8 +59,6 @@ function Overview({ collection, readOnly }: Props) {
   const childOffsetHeight = childRef.current?.offsetHeight || 0;
   const editorStyle = useMemo(
     () => ({
-      padding: "0 32px",
-      margin: "0 -32px",
       paddingBottom: `calc(30vh - ${childOffsetHeight}px)`,
     }),
     [childOffsetHeight]

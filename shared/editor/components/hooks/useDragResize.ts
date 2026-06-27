@@ -294,8 +294,7 @@ export default function useDragResize(props: Params): ReturnValue {
       const max = ref.current
         ? parseInt(
             getComputedStyle(ref.current).getPropertyValue("--document-width")
-          ) -
-          EditorStyleHelper.padding * 2
+          )
         : Infinity;
       setMaxWidth(max);
       setSizeAtDragStart({

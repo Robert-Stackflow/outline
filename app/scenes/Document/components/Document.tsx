@@ -391,71 +391,72 @@ function DocumentScene({
             />
           )}
           <Main style={fullWidthTransformOffsetStyle}>
-            {!isShare && <DocumentCover document={document} readOnly={readOnly} />}
-            <React.Suspense
-              fallback={
-                <EditorContainer docFullWidth={document.fullWidth}>
-                  <PlaceholderDocument />
-                </EditorContainer>
-              }
-            >
-              <MeasuredContainer
-                name="document"
-                as={EditorContainer}
-                docFullWidth={document.fullWidth}
+            {!isShare && (
+              <DocumentCover document={document} readOnly={readOnly} />
+            )}
+            <BodyWrapper>
+              <React.Suspense
+                fallback={
+                  <EditorContainer docFullWidth={document.fullWidth}>
+                    <PlaceholderDocument />
+                  </EditorContainer>
+                }
               >
-                {revision ? (
-                  <RevisionViewer
-                    ref={editorRef}
-                    document={document}
-                    revision={revision}
-                    id={revision.id}
-                  />
-                ) : (
-                  <>
-                    <Notices document={document} readOnly={readOnly} />
-
-                    {showContents && (
-                      <PrintContentsContainer>
-                        <Contents />
-                      </PrintContentsContainer>
-                    )}
-                    <Editor
-                      id={document.id}
-                      key={embedsDisabled ? "disabled" : "enabled"}
+                <MeasuredContainer
+                  name="document"
+                  as={EditorContainer}
+                  docFullWidth={document.fullWidth}
+                >
+                  {revision ? (
+                    <RevisionViewer
                       ref={editorRef}
-                      multiplayer={multiplayerEditor}
-                      isDraft={document.isDraft}
                       document={document}
-                      value={readOnly ? document.data : undefined}
-                      defaultValue={document.data}
-                      embedsDisabled={embedsDisabled}
-                      onSynced={onSynced}
-                      onFileUploadStart={onFileUploadStart}
-                      onFileUploadStop={onFileUploadStop}
-                      onCreateLink={onCreateLink}
-                      onChangeTitle={handleChangeTitle}
-                      onChangeIcon={handleChangeIcon}
-                      onSave={onSave}
-                      onPublish={onPublish}
-                      onCancel={goBack}
-                      readOnly={readOnly}
-                      canUpdate={abilities.update}
-                      canComment={abilities.comment}
-                      autoFocus={document.createdAt === document.updatedAt}
-                    >
-                      <ReferencesWrapper>
-                        <References document={document} />
-                      </ReferencesWrapper>
-                    </Editor>
-                  </>
-                )}
-                {/* The floating minimap lives inside the body container so its
-                    position is determined relative to the body only — the cover
-                    is a separate sibling above and never shifts it. */}
+                      revision={revision}
+                      id={revision.id}
+                    />
+                  ) : (
+                    <>
+                      <Notices document={document} readOnly={readOnly} />
+
+                      {showContents && (
+                        <PrintContentsContainer>
+                          <Contents />
+                        </PrintContentsContainer>
+                      )}
+                      <Editor
+                        id={document.id}
+                        key={embedsDisabled ? "disabled" : "enabled"}
+                        ref={editorRef}
+                        multiplayer={multiplayerEditor}
+                        isDraft={document.isDraft}
+                        document={document}
+                        value={readOnly ? document.data : undefined}
+                        defaultValue={document.data}
+                        embedsDisabled={embedsDisabled}
+                        onSynced={onSynced}
+                        onFileUploadStart={onFileUploadStart}
+                        onFileUploadStop={onFileUploadStop}
+                        onCreateLink={onCreateLink}
+                        onChangeTitle={handleChangeTitle}
+                        onChangeIcon={handleChangeIcon}
+                        onSave={onSave}
+                        onPublish={onPublish}
+                        onCancel={goBack}
+                        readOnly={readOnly}
+                        canUpdate={abilities.update}
+                        canComment={abilities.comment}
+                        autoFocus={document.createdAt === document.updatedAt}
+                      >
+                        <ReferencesWrapper>
+                          <References document={document} />
+                        </ReferencesWrapper>
+                      </Editor>
+                    </>
+                  )}
+                </MeasuredContainer>
                 {showContents && <Contents />}
-              </MeasuredContainer>
-            </React.Suspense>
+              </React.Suspense>
+            </BodyWrapper>
           </Main>
           {children}
         </Container>
@@ -466,6 +467,11 @@ function DocumentScene({
 
 const Main = styled.div`
   margin-top: 32px;
+`;
+
+const BodyWrapper = styled.div`
+  position: relative;
+  width: 100%;
 `;
 
 const PrintContentsContainer = styled.div`
@@ -482,9 +488,6 @@ type EditorContainerProps = {
 };
 
 const EditorContainer = styled.div<EditorContainerProps>`
-  // Positioning context for the floating contents minimap, so it is anchored to
-  // the body rather than the cover/Main container.
-  position: relative;
   // Adds space to the gutter to make room for icon & heading annotations
   padding: 0 32px;
 

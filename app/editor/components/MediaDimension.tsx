@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import Flex from "@shared/components/Flex";
 import Text from "@shared/components/Text";
-import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
 import { extraArea } from "@shared/styles";
 import Input, { NativeInput, Outline } from "~/components/Input";
 import { useEditor } from "./EditorContext";
@@ -47,7 +46,7 @@ export function MediaDimension() {
     const docWidth = parseInt(
       getComputedStyle(ref.current).getPropertyValue("--document-width")
     );
-    const maxWidth = docWidth - EditorStyleHelper.padding * 2;
+    const maxWidth = docWidth;
     const constrainedWidth = Math.min(width, maxWidth); // Ensure media width does not exceed the max width of the editor.
     const aspectRatio = height / constrainedWidth;
 

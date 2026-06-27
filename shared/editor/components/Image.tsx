@@ -46,6 +46,7 @@ const Image = (props: Props) => {
   const [naturalWidth, setNaturalWidth] = React.useState(node.attrs.width);
   const [naturalHeight, setNaturalHeight] = React.useState(node.attrs.height);
   const lastTapTimeRef = React.useRef(0);
+  const imageRef = React.useRef<HTMLImageElement>(null);
   const ref = React.useRef<HTMLDivElement>(null);
   const {
     width,
@@ -76,6 +77,7 @@ const Image = (props: Props) => {
   ]
     .filter(Boolean)
     .join(" ");
+  const sanitizedSrc = sanitizeImageSrc(src);
 
   React.useEffect(() => {
     if (node.attrs.width && node.attrs.width !== width) {
@@ -84,9 +86,41 @@ const Image = (props: Props) => {
         height: node.attrs.height,
       });
     }
-  }, [node.attrs.width]);
+  }, [node.attrs.height, node.attrs.width, setSize, width]);
 
-  const sanitizedSrc = sanitizeImageSrc(src);
+  const handleImageLoad = React.useCallback(
+    (image: HTMLImageElement) => {
+      // Cached images can complete before React observes the load event. Keep
+      // the rendered state in sync so the blank placeholder does not linger.
+      const nw = image.naturalWidth || 300;
+      const nh = image.naturalHeight;
+      setNaturalWidth(nw);
+      setNaturalHeight(nh);
+      setLoaded(true);
+
+      if (!node.attrs.width) {
+        setSize((state) => ({
+          ...state,
+          width: nw,
+        }));
+      }
+    },
+    [node.attrs.width, setSize]
+  );
+
+  React.useEffect(() => {
+    const image = imageRef.current;
+    if (loaded || error || !image?.complete) {
+      return;
+    }
+
+    if (!image.naturalWidth && !image.naturalHeight) {
+      return;
+    }
+
+    handleImageLoad(image);
+  }, [error, handleImageLoad, loaded, sanitizedSrc]);
+
   const linkMarkType = props.view.state.schema.marks.link;
   const imgLink =
     find(node.attrs.marks ?? [], (mark) => mark.type === linkMarkType.name)
@@ -202,10 +236,14 @@ const Image = (props: Props) => {
             rel="noopener noreferrer nofollow"
           >
             <img
+              ref={imageRef}
               className={EditorStyleHelper.imageHandle}
               style={{
                 ...widthStyle,
-                display: loaded ? "block" : "none",
+                display: "block",
+                inset: loaded ? undefined : 0,
+                opacity: loaded ? 1 : 0,
+                position: loaded ? undefined : "absolute",
               }}
               src={sanitizedSrc}
               alt={node.attrs.alt || ""}
@@ -213,23 +251,7 @@ const Image = (props: Props) => {
                 setError(true);
                 setLoaded(true);
               }}
-              onLoad={(ev: React.SyntheticEvent<HTMLImageElement>) => {
-                // For some SVG's Firefox does not provide the naturalWidth, in this
-                // rare case we need to provide a default so that the image can be
-                // seen and is not sized to 0px
-                const nw = (ev.target as HTMLImageElement).naturalWidth || 300;
-                const nh = (ev.target as HTMLImageElement).naturalHeight;
-                setNaturalWidth(nw);
-                setNaturalHeight(nh);
-                setLoaded(true);
-
-                if (!node.attrs.width) {
-                  setSize((state) => ({
-                    ...state,
-                    width: nw,
-                  }));
-                }
-              }}
+              onLoad={(ev) => handleImageLoad(ev.currentTarget)}
               onClick={handleImageClick}
               onTouchStart={handleImageTouchStart}
             />

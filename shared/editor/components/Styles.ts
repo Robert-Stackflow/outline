@@ -61,6 +61,25 @@ const mathStyle = (props: Props) => css`
     scrollbar-color: ${props.theme.scrollbarThumb} transparent;
   }
 
+  math-block.math-fit,
+  math-display.math-fit {
+    overflow-x: clip;
+    scrollbar-width: none;
+  }
+
+  math-block.math-fit::-webkit-scrollbar,
+  math-display.math-fit::-webkit-scrollbar {
+    display: none;
+  }
+
+  math-block.math-fit .math-render,
+  math-display.math-fit .math-render {
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    width: 100%;
+  }
+
   .math-node::-webkit-scrollbar {
     height: 6px;
   }
@@ -634,8 +653,6 @@ width: 100%;
   word-wrap: break-word;
   white-space: pre-wrap;
   white-space: break-spaces;
-  padding: ${props.editorStyle?.padding ?? "initial"};
-  margin: ${props.editorStyle?.margin ?? "initial"};
 
   & > .${EditorStyleHelper.multiplayerCursor} {
     display: none;
@@ -713,6 +730,18 @@ width: 100%;
   h4 { font-size: var(--font-size-h4); }
   h5 { font-size: var(--font-size-h5); }
   h6 { font-size: var(--font-size-h6); }
+
+  h3 {
+    margin-top: 1.85em;
+    margin-bottom: 0.55em;
+  }
+
+  h4,
+  h5,
+  h6 {
+    margin-top: 1.65em;
+    margin-bottom: 0.5em;
+  }
 
   .${EditorStyleHelper.multiplayerSelection} {
     transition: background-color 500ms ease-in-out;
@@ -929,17 +958,11 @@ iframe.embed {
 }
 
 .${EditorStyleHelper.tableFullWidth} {
-  transform: translateX(calc(50% + ${
-    EditorStyleHelper.padding
-  }px + var(--container-width) * -0.5 + var(--full-width-transform-offset)));
+  transform: translateX(calc(50% + var(--container-width) * -0.5 + var(--full-width-transform-offset)));
 
   .${EditorStyleHelper.tableScrollable},
   table {
-    width: calc(var(--container-width) - ${EditorStyleHelper.padding * 2}px);
-  }
-
-  &.${EditorStyleHelper.tableShadowRight}::after {
-    left: calc(var(--container-width) - ${EditorStyleHelper.padding * 3}px);
+    width: var(--container-width);
   }
 }
 
@@ -949,9 +972,9 @@ iframe.embed {
   right: -1px;
   top: 0;
   bottom: -1px;
-  width: 2px;
+  width: 3px;
   z-index: 20;
-  background-color: ${props.theme.text};
+  background-color: ${props.theme.accent};
   pointer-events: none;
 }
 
@@ -1221,7 +1244,7 @@ h6:not(.placeholder)::before {
   h5,
   h6 {
     .heading-anchor {
-      display: inline-flex;
+      display: none;
     }
     &:not(.placeholder)::before {
       display: none;
@@ -1579,63 +1602,9 @@ ul.checkbox_list > li.checked > div > p {
   color: ${props.theme.textTertiary};
 }
 
-ul li,
-ol li {
-  &::before {
-    background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjMiIGhlaWdodD0iMiIgcng9IjEiIGZpbGw9IiM0RTVDNkUiLz4KPHJlY3QgeD0iOCIgeT0iMTEiIHdpZHRoPSIzIiBoZWlnaHQ9IjIiIHJ4PSIxIiBmaWxsPSIjNEU1QzZFIi8+CjxyZWN0IHg9IjgiIHk9IjE1IiB3aWR0aD0iMyIgaGVpZ2h0PSIyIiByeD0iMSIgZmlsbD0iIzRFNUM2RSIvPgo8cmVjdCB4PSIxMyIgeT0iNyIgd2lkdGg9IjMiIGhlaWdodD0iMiIgcng9IjEiIGZpbGw9IiM0RTVDNkUiLz4KPHJlY3QgeD0iMTMiIHk9IjExIiB3aWR0aD0iMyIgaGVpZ2h0PSIyIiByeD0iMSIgZmlsbD0iIzRFNUM2RSIvPgo8cmVjdCB4PSIxMyIgeT0iMTUiIHdpZHRoPSIzIiBoZWlnaHQ9IjIiIHJ4PSIxIiBmaWxsPSIjNEU1QzZFIi8+Cjwvc3ZnPgo=") no-repeat;
-    background-position: 0 2px;
-    content: "";
-    display: ${props.readOnly ? "none" : "inline-block"};
-    cursor: grab;
-    width: 24px;
-    height: 24px;
-    position: absolute;
-    left: -40px;
-    opacity: 0;
-    transition: opacity 200ms ease-in-out;
-  }
-
-  &:dir(rtl)::before {
-    left: auto;
-    right: -40px;
-  }
-}
-
-ul li[draggable=true]::before,
-ol li[draggable=true]::before {
-  cursor: grabbing;
-}
-
-ul > li.counter-2,
-ol li.counter-2 {
-  &::before {
-    left: -50px;
-  }
-  &:dir(rtl)::before {
-    left: auto;
-    right: -50px;
-  }
-}
-
-ul > li.hovering::before,
-ol li.hovering::before {
-  opacity: 0.5;
-}
-
 ul li.ProseMirror-selectednode::after,
 ol li.ProseMirror-selectednode::after {
   display: none;
-}
-
-ul.checkbox_list > li {
-  &::before {
-    left: 0;
-  }
-
-  &:dir(rtl)::before {
-    left: auto;
-    right: 0;
-  }
 }
 
 ul.checkbox_list {
@@ -1705,14 +1674,14 @@ ul.checkbox_list {
     &:not(:has(svg)) {
       background-image: ${`url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M3 0C1.34315 0 0 1.34315 0 3V11C0 12.6569 1.34315 14 3 14H11C12.6569 14 14 12.6569 14 11V3C14 1.34315 12.6569 0 11 0H3ZM3 2C2.44772 2 2 2.44772 2 3V11C2 11.5523 2.44772 12 3 12H11C11.5523 12 12 11.5523 12 11V3C12 2.44772 11.5523 2 11 2H3Z' fill='${props.theme.text.replace(
         /#/g,
-        "%23"
+        "%23",
       )}' /%3E%3C/svg%3E%0A");`}
 
       &[aria-checked=true] {
         background-image: ${`url(
             "data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M3 0C1.34315 0 0 1.34315 0 3V11C0 12.6569 1.34315 14 3 14H11C12.6569 14 14 12.6569 14 11V3C14 1.34315 12.6569 0 11 0H3ZM4.26825 5.85982L5.95873 7.88839L9.70003 2.9C10.0314 2.45817 10.6582 2.36863 11.1 2.7C11.5419 3.03137 11.6314 3.65817 11.3 4.1L6.80002 10.1C6.41275 10.6164 5.64501 10.636 5.2318 10.1402L2.7318 7.14018C2.37824 6.71591 2.43556 6.08534 2.85984 5.73178C3.28412 5.37821 3.91468 5.43554 4.26825 5.85982Z' fill='${props.theme.accent.replace(
               /#/g,
-              "%23"
+              "%23",
             )}' /%3E%3C/svg%3E%0A"
         )`};
       }
@@ -2186,7 +2155,7 @@ table {
       background-size: 16px 16px;
       background-position: 50% 50%;
       background-image: url("data:image/svg+xml;base64,${btoa(
-        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 5C11.4477 5 11 5.44772 11 6V11H6C5.44772 11 5 11.4477 5 12C5 12.5523 5.44772 13 6 13H11V18C11 18.5523 11.4477 19 12 19C12.5523 19 13 18.5523 13 18V13H18C18.5523 13 19 12.5523 19 12C19 11.4477 18.5523 11 18 11H13V6C13 5.44772 12.5523 5 12 5Z" fill="white"/></svg>'
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 5C11.4477 5 11 5.44772 11 6V11H6C5.44772 11 5 11.4477 5 12C5 12.5523 5.44772 13 6 13H11V18C11 18.5523 11.4477 19 12 19C12.5523 19 13 18.5523 13 18V13H18C18.5523 13 19 12.5523 19 12C19 11.4477 18.5523 11 18 11H13V6C13 5.44772 12.5523 5 12 5Z" fill="white"/></svg>',
       )}")
     }
 
@@ -2203,7 +2172,7 @@ table {
 
   .${EditorStyleHelper.tableAddRow} {
     bottom: -1px;
-    left: -16px;
+    left: -12px;
     width: 0;
     height: 2px;
     z-index: 1;
@@ -2212,7 +2181,7 @@ table {
       content: "";
       position: absolute;
       bottom: -1px;
-      left: -10px;
+      left: -8px;
       width: 4px;
       height: 4px;
       display: ${props.readOnly ? "none" : "block"};
@@ -2221,18 +2190,18 @@ table {
     }
 
     &:hover {
-      width: calc(var(--table-width) - ${EditorStyleHelper.padding * 1.5}px);
+      width: var(--table-width);
     }
 
     &:hover::after {
       bottom: -7.5px;
-      left: -16px;
+      left: -12px;
     }
 
     // extra clickable area
     &::before {
       bottom: -12px;
-      left: -18px;
+      left: -14px;
     }
 
     &.first {
@@ -2247,7 +2216,7 @@ table {
   }
 
   .${EditorStyleHelper.tableAddColumn} {
-    top: -16px;
+    top: -12px;
     right: -1px;
     width: 2px;
     height: 0;
@@ -2256,7 +2225,7 @@ table {
     &::after {
       content: "";
       position: absolute;
-      top: -10px;
+      top: -8px;
       right: -1px;
       width: 4px;
       height: 4px;
@@ -2266,17 +2235,17 @@ table {
     }
 
     &:hover {
-      height: calc(var(--table-height) - ${EditorStyleHelper.padding}px + 6px);
+      height: calc(var(--table-height) - 10px);
     }
 
     &:hover::after {
-      top: -16px;
+      top: -12px;
       right: -7px;
     }
 
     // extra clickable area
     &::before {
-      top: -16px;
+      top: -14px;
       right: -12px;
     }
 
@@ -2300,27 +2269,27 @@ table {
       content: "";
       cursor: grab;
       position: absolute;
-      top: -16px;
+      top: -12px;
       left: 0;
       width: 100%;
-      height: 12px;
+      height: 8px;
       background: ${props.theme.divider};
       display: ${props.readOnly ? "none" : "block"};
     }
 
     &:hover::after {
-      background: ${props.theme.text};
+      background: ${props.theme.accent};
     }
 
     body.${EditorStyleHelper.tableDragging} &:hover::after {
-      background: ${props.theme.divider};
+      background: ${props.theme.accent};
     }
     &.first::after {
       border-top-left-radius: 3px;
       border-bottom-left-radius: 3px;
     }
     &.selected::after {
-      background: ${props.theme.tableSelected};
+      background: ${props.theme.accent};
     }
   }
 
@@ -2334,28 +2303,28 @@ table {
       content: "";
       cursor: grab;
       position: absolute;
-      left: -16px;
+      left: -12px;
       top: 0;
       height: 100%;
-      width: 12px;
+      width: 8px;
       background: ${props.theme.divider};
       border-color: ${props.theme.background};
       display: ${props.readOnly ? "none" : "block"};
     }
 
     &:hover::after {
-      background: ${props.theme.text};
+      background: ${props.theme.accent};
     }
 
     body.${EditorStyleHelper.tableDragging} &:hover::after {
-      background: ${props.theme.divider};
+      background: ${props.theme.accent};
     }
     &.first::after {
       border-top-left-radius: 3px;
       border-top-right-radius: 3px;
     }
     &.selected::after {
-      background: ${props.theme.tableSelected};
+      background: ${props.theme.accent};
     }
   }
 
@@ -2369,22 +2338,22 @@ table {
       content: "";
       cursor: var(--pointer);
       background: ${props.theme.divider};
-      width: 13px;
-      height: 13px;
-      border-radius: 13px;
+      width: 10px;
+      height: 10px;
+      border-radius: 10px;
       border: 2px solid ${props.theme.background};
       position: absolute;
-      top: -18px;
-      left: -18px;
+      top: -14px;
+      left: -14px;
       display: ${props.readOnly ? "none" : "block"};
       z-index: 10;
     }
 
     &:hover::after {
-      background: ${props.theme.text};
+      background: ${props.theme.accent};
     }
     &.selected::after {
-      background: ${props.theme.tableSelected};
+      background: ${props.theme.accent};
     }
     &.dragging::after {
       background: ${props.theme.accent};
@@ -2440,7 +2409,7 @@ table {
   position: absolute;
   top: 0;
   width: 2px;
-  height: calc(var(--table-height) - ${EditorStyleHelper.padding}px - 10px);
+  height: calc(var(--table-height) - 10px);
   background: ${props.theme.accent};
   z-index: 100;
   pointer-events: none;
@@ -2459,7 +2428,7 @@ table {
   position: absolute;
   left: 0;
   height: 2px;
-  width: calc(var(--table-width) - ${EditorStyleHelper.padding * 2}px - 2px);
+  width: calc(var(--table-width) - 2px);
   background: ${props.theme.accent};
   z-index: 100;
   pointer-events: none;
@@ -2513,7 +2482,7 @@ table {
 
 .${EditorStyleHelper.tableScrollable} {
   position: relative;
-  margin: -1em ${-EditorStyleHelper.padding}px -0.5em;
+  margin: -1em 0 -0.5em;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   overflow-y: hidden;
@@ -2521,8 +2490,8 @@ table {
   overflow-anchor: none;
   padding-top: 1em;
   padding-bottom: .5em;
-  padding-left: ${EditorStyleHelper.padding}px;
-  padding-right: ${EditorStyleHelper.padding}px;
+  padding-left: 0;
+  padding-right: 0;
   transition: border 250ms ease-in-out 0s;
 
   &:hover {
@@ -2567,55 +2536,19 @@ table {
 }
 
 .${EditorStyleHelper.tableShadowLeft}::before {
-  left: -${EditorStyleHelper.padding}px;
+  left: 0;
   right: auto;
   box-shadow: 16px 0 16px -16px inset rgba(0, 0, 0, ${
     props.theme.isDark ? 1 : 0.25
   });
-  border-left: ${EditorStyleHelper.padding}px solid ${props.theme.background};
 }
 
 .${EditorStyleHelper.tableShadowRight}::after {
-  right: -${EditorStyleHelper.padding}px;
+  right: 0;
   left: auto;
   box-shadow: -16px 0 16px -16px inset rgba(0, 0, 0, ${
     props.theme.isDark ? 1 : 0.25
   });
-  border-right: ${EditorStyleHelper.padding}px solid ${props.theme.background};
-}
-
-.block-menu-trigger {
-  opacity: 0;
-  pointer-events: none;
-  display: ${props.readOnly ? "none" : "inline"};
-  width: 24px;
-  height: 24px;
-  color: ${props.theme.textSecondary};
-  background: none;
-  position: absolute;
-  transition: color 150ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    opacity 150ms ease-in-out;
-  outline: none;
-  border: 0;
-  padding: 0;
-  margin-top: 1px;
-  margin-${props.$rtl ? "right" : "left"}: -28px;
-  border-radius: 4px;
-
-  &:hover,
-  &:focus {
-    cursor: var(--pointer);
-    color: ${props.theme.text};
-    background: ${props.theme.backgroundSecondary};
-  }
-}
-
-.ProseMirror[contenteditable="true"]:focus-within,
-.ProseMirror-focused .block-menu-trigger,
-.block-menu-trigger:active,
-.block-menu-trigger:focus {
-  opacity: 1;
-  pointer-events: initial;
 }
 
 .ProseMirror-gapcursor {
@@ -2641,6 +2574,144 @@ table {
     background: ${props.theme.background};
     border: 2px solid ${props.theme.accent};
   }
+}
+
+.${EditorStyleHelper.blockColor} {
+  --block-color-background: transparent;
+  --block-visual-background: var(--block-color-background);
+  --block-visual-horizontal-padding: 0px;
+  --block-visual-top: -3px;
+  --block-visual-bottom: -3px;
+
+  position: relative;
+  z-index: 0;
+  background: transparent;
+  box-shadow: none;
+
+  a {
+    color: inherit;
+    text-decoration-color: currentColor;
+  }
+}
+
+.${EditorStyleHelper.blockColor}:not(li)::after,
+.block-gutter-active:not(li)::after,
+li.${EditorStyleHelper.blockColor}::after,
+li.block-gutter-active::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: var(--block-visual-top);
+  bottom: var(--block-visual-bottom);
+  z-index: -1;
+  border-radius: ${EditorStyleHelper.blockRadius};
+  background: var(--block-visual-background);
+  pointer-events: none;
+}
+
+.${EditorStyleHelper.blockColor}:not(li)::after,
+.block-gutter-active:not(li)::after {
+  left: calc(
+    var(--block-visual-left, 0px) - var(--block-visual-horizontal-padding)
+  );
+  right: calc(
+    var(--block-visual-right, 0px) - var(--block-visual-horizontal-padding)
+  );
+}
+
+li.${EditorStyleHelper.blockColor}::after,
+li.block-gutter-active::after {
+  left: calc(
+    var(--block-visual-left, -28px) - var(--block-visual-horizontal-padding)
+  );
+  right: calc(
+    var(--block-visual-right, 0px) - var(--block-visual-horizontal-padding)
+  );
+}
+
+blockquote.${EditorStyleHelper.blockColor},
+blockquote.block-gutter-active {
+  overflow: visible;
+}
+
+blockquote.${EditorStyleHelper.blockColor}::before,
+blockquote.block-gutter-active::before {
+  z-index: 1;
+}
+
+.${EditorStyleHelper.toggleBlock}.${EditorStyleHelper.blockColor} {
+  padding: 0;
+  margin: 0;
+}
+
+li.${EditorStyleHelper.blockColor},
+li.block-gutter-active {
+  --block-visual-background: var(--block-color-background);
+  --block-visual-horizontal-padding: 0px;
+  --block-visual-top: 2px;
+  --block-visual-bottom: 2px;
+}
+
+li.block-gutter-active {
+  --block-visual-background: var(--block-gutter-active-background);
+}
+
+li.${EditorStyleHelper.blockColor} > *,
+li.block-gutter-active > * {
+  position: relative;
+}
+
+/* Block highlighted while its gutter actions menu is open. */
+.block-gutter-active {
+  --block-gutter-active-background: ${transparentize(0.88, props.theme.accent)};
+  --block-visual-background: var(--block-gutter-active-background);
+  --block-visual-horizontal-padding: 0px;
+  --block-visual-top: -3px;
+  --block-visual-bottom: -3px;
+
+  position: relative;
+  z-index: 0;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.block-gutter-active.ProseMirror-selectednode {
+  outline: none;
+}
+
+/* Clean drag ghost (no shadow) for block dragging via the gutter handle. */
+.block-gutter-drag-image,
+.block-gutter-drag-image * {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  background-color: ${props.theme.background};
+}
+
+.block-gutter-drag-image::before,
+.block-gutter-drag-image::after,
+.block-gutter-drag-image *::before,
+.block-gutter-drag-image *::after {
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+.ProseMirror.block-gutter-dragging .ProseMirror-selectednode,
+.ProseMirror.block-gutter-dragging .ProseMirror-selectednode * {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+.ProseMirror.block-gutter-dragging .ProseMirror-selectednode::before,
+.ProseMirror.block-gutter-dragging .ProseMirror-selectednode::after,
+.ProseMirror.block-gutter-dragging .ProseMirror-selectednode *::before,
+.ProseMirror.block-gutter-dragging .ProseMirror-selectednode *::after {
+  box-shadow: none !important;
+  border-color: transparent !important;
 }
 
 .ProseMirror-gapcursor::after {
@@ -2670,7 +2741,6 @@ del {
 
 @media print {
   .placeholder::before,
-  .block-menu-trigger,
   .heading-anchor,
   button.show-source-button,
   h1:not(.placeholder)::before,

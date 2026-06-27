@@ -1,10 +1,11 @@
 import { observer } from "mobx-react";
 import { CloseIcon, PlusIcon, CodeIcon, BulletedListIcon } from "outline-icons";
+import { transparentize } from "polished";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { s } from "@shared/styles";
-import type { JSONObject, JSONValue } from "@shared/types";
+import type { JSONObject } from "@shared/types";
 import {
   objectToYaml,
   stringifyPropertyValue,
@@ -148,18 +149,20 @@ function DocumentProperties({ document, readOnly }: Props) {
           onBlur={handleYamlBlur}
         />
       ) : (
-        rows.map((row) => (
-          <PropertyRow key={row.id}>
+        rows.map((row, index) => (
+          <PropertyRow key={row.id} $readOnly={readOnly}>
             <KeyInput
               value={row.key}
               placeholder={t("Property")}
               disabled={readOnly}
+              aria-label={`${t("Property")} ${index + 1}`}
               onChange={(e) => handleChange(row.id, { key: e.target.value })}
             />
             <ValueInput
               value={row.value}
               placeholder={t("Empty")}
               disabled={readOnly}
+              aria-label={`${t("Property")} ${index + 1} ${t("Empty")}`}
               onChange={(e) => handleChange(row.id, { value: e.target.value })}
             />
             {!readOnly && (
@@ -204,16 +207,25 @@ function DocumentProperties({ document, readOnly }: Props) {
 }
 
 const Wrapper = styled.div`
-  margin: 4px 0 14px;
+  margin: -4px 0px 18px 0px;
+  padding: 8px 0px 10px;
+  border-top: 1px solid ${s("divider")};
+  border-bottom: 1px solid ${s("divider")};
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 `;
 
-const PropertyRow = styled.div`
-  display: flex;
+const PropertyRow = styled.div<{ $readOnly?: boolean }>`
+  display: grid;
+  grid-template-columns: ${(props) =>
+    props.$readOnly
+      ? "minmax(104px, 0.34fr) minmax(0, 1fr)"
+      : "minmax(104px, 0.34fr) minmax(0, 1fr) 28px"};
   align-items: center;
-  gap: 4px;
+  column-gap: 10px;
+  min-height: 34px;
+  padding: 2px 4px;
   border-radius: 6px;
   transition: background 100ms ease;
 
@@ -223,37 +235,66 @@ const PropertyRow = styled.div`
 `;
 
 const KeyInput = styled.input`
-  flex: 0 0 150px;
+  width: 100%;
+  min-width: 0;
   border: 0;
   outline: none;
   background: transparent;
   font-size: 14px;
+  line-height: 22px;
   color: ${s("textTertiary")};
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &::placeholder {
     color: ${s("placeholder")};
   }
+
+  &:focus {
+    background: ${s("background")};
+    box-shadow: inset 0 0 0 1px ${s("inputBorderFocused")};
+  }
+
+  &:disabled {
+    opacity: 1;
+    cursor: default;
+  }
 `;
 
 const ValueInput = styled.input`
-  flex: 1;
+  width: 100%;
+  min-width: 0;
   border: 0;
   outline: none;
   background: transparent;
   font-size: 14px;
+  line-height: 22px;
   color: ${s("text")};
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &::placeholder {
     color: ${s("placeholder")};
+  }
+
+  &:focus {
+    background: ${s("background")};
+    box-shadow: inset 0 0 0 1px ${s("inputBorderFocused")};
+  }
+
+  &:disabled {
+    opacity: 1;
+    cursor: default;
   }
 `;
 
 const YamlArea = styled.textarea<{ $error?: boolean }>`
   width: 100%;
+  box-sizing: border-box;
   min-height: 96px;
   resize: vertical;
   border: 1px solid
@@ -263,9 +304,16 @@ const YamlArea = styled.textarea<{ $error?: boolean }>`
   font-family: ${s("fontFamilyMono")};
   font-size: 13px;
   line-height: 1.6;
-  background: ${s("codeBackground")};
+  background: ${(props) =>
+    props.theme.isDark
+      ? props.theme.codeBackground
+      : transparentize(0.35, props.theme.backgroundSecondary)};
   color: ${s("text")};
   outline: none;
+
+  &:focus {
+    border-color: ${s("inputBorderFocused")};
+  }
 `;
 
 const RemoveButton = styled(NudeButton)`
@@ -287,8 +335,8 @@ const RemoveButton = styled(NudeButton)`
 const Actions = styled.div`
   display: flex;
   gap: 4px;
-  margin-top: 4px;
-  opacity: 0.6;
+  padding: 4px 4px 0px;
+  opacity: 0.72;
   transition: opacity 120ms ease;
 
   ${Wrapper}:hover & {

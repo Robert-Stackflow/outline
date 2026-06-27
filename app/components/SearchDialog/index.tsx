@@ -1,5 +1,6 @@
 import { observer } from "mobx-react";
-import { CloseIcon } from "outline-icons";
+import { CloseIcon, SearchIcon } from "outline-icons";
+import { transparentize } from "polished";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Waypoint } from "react-waypoint";
@@ -18,6 +19,7 @@ import DocumentListItem from "~/components/DocumentListItem";
 import Flex from "~/components/Flex";
 import NudeButton from "~/components/NudeButton";
 import { Portal } from "~/components/Portal";
+import Switch from "~/components/Switch";
 import Text from "~/components/Text";
 import useKeyDown from "~/hooks/useKeyDown";
 import usePaginatedRequest from "~/hooks/usePaginatedRequest";
@@ -25,6 +27,7 @@ import useStores from "~/hooks/useStores";
 import type { PaginationParams, SearchResult } from "~/types";
 import CollectionFilter from "~/scenes/Search/components/CollectionFilter";
 import DateFilter from "~/scenes/Search/components/DateFilter";
+import { DocumentFilter } from "~/scenes/Search/components/DocumentFilter";
 import DocumentTypeFilter from "~/scenes/Search/components/DocumentTypeFilter";
 import { SortInput } from "~/scenes/Search/components/SortInput";
 import UserFilter from "~/scenes/Search/components/UserFilter";
@@ -46,6 +49,7 @@ function SearchDialog() {
   const [inputValue, setInputValue] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [collectionId, setCollectionId] = React.useState("");
+  const [documentId, setDocumentId] = React.useState("");
   const [userId, setUserId] = React.useState("");
   const [dateFilter, setDateFilter] = React.useState<TDateFilter>(
     "" as TDateFilter
@@ -62,21 +66,28 @@ function SearchDialog() {
 
   const close = React.useCallback(() => ui.closeSearchDialog(), [ui]);
 
-  // Reset transient state whenever the dialog is dismissed so it always opens
-  // fresh.
+  // Seed transient state whenever the dialog opens. Search routes and command
+  // actions pass their target query/filter here instead of navigating away.
   React.useEffect(() => {
     if (!ui.searchDialogOpen) {
-      setInputValue("");
-      setQuery("");
-      setCollectionId("");
-      setUserId("");
-      setDateFilter("" as TDateFilter);
-      setStatusFilter([TStatusFilter.Published, TStatusFilter.Draft]);
-      setTitleFilter(false);
-      setSort("" as TSortFilter);
-      setDirection("" as TDirectionFilter);
+      return;
     }
-  }, [ui.searchDialogOpen]);
+
+    const options = ui.searchDialogOptions;
+    const nextQuery = options.query ?? "";
+    setInputValue(nextQuery);
+    setQuery(nextQuery.trim());
+    setCollectionId(options.collectionId ?? "");
+    setDocumentId(options.documentId ?? "");
+    setUserId(options.userId ?? "");
+    setDateFilter((options.dateFilter ?? "") as TDateFilter);
+    setStatusFilter(
+      options.statusFilter ?? [TStatusFilter.Published, TStatusFilter.Draft]
+    );
+    setTitleFilter(options.titleFilter ?? false);
+    setSort((options.sort ?? "") as TSortFilter);
+    setDirection((options.direction ?? "") as TDirectionFilter);
+  }, [ui.searchDialogOpen, ui.searchDialogOptions]);
 
   // Debounce the typed value into the active query for search-as-you-type.
   React.useEffect(() => {
@@ -94,13 +105,15 @@ function SearchDialog() {
     { allowInInput: true }
   );
 
-  const isSearchable = !!(query || collectionId || userId);
+  const isSearchable = !!(query || collectionId || documentId || userId);
+  const document = documentId ? documents.get(documentId) : undefined;
 
   const filters = React.useMemo(
     () => ({
       query: query || undefined,
       statusFilter,
       collectionId,
+      documentId,
       userId,
       dateFilter,
       titleFilter,
@@ -109,8 +122,9 @@ function SearchDialog() {
     }),
     [
       query,
-      JSON.stringify(statusFilter),
+      statusFilter,
       collectionId,
+      documentId,
       userId,
       dateFilter,
       titleFilter,
@@ -143,7 +157,7 @@ function SearchDialog() {
     return () => Promise.resolve([] as SearchResult[]);
   }, [query, titleFilter, filters, searches, documents, isSearchable]);
 
-  const { data, next, end, loading } = usePaginatedRequest(requestFn, {
+  const { data, next, end, error, loading } = usePaginatedRequest(requestFn, {
     limit: Pagination.defaultLimit,
   });
 
@@ -155,14 +169,14 @@ function SearchDialog() {
     return null;
   }
 
-  const showEmpty = !loading && !!query && data?.length === 0;
+  const showEmpty = !loading && isSearchable && data?.length === 0;
   const handleResultsClick = (event: React.MouseEvent) => {
     // Any navigation triggered from within the results should dismiss the
     // dialog. Ignore modified clicks (open in new tab).
     if (
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
       (event.target as HTMLElement).closest("a")
     ) {
       close();
@@ -179,6 +193,9 @@ function SearchDialog() {
           onClick={(event) => event.stopPropagation()}
         >
           <InputRow align="center">
+            <InputIcon aria-hidden>
+              <SearchIcon size={22} />
+            </InputIcon>
             <InputWrapper
               ref={inputRef}
               value={inputValue}
@@ -199,14 +216,23 @@ function SearchDialog() {
           </InputRow>
 
           <Filters align="center" gap={4} wrap>
-            <CollectionFilter
-              collectionId={collectionId}
-              onSelect={(id) => setCollectionId(id ?? "")}
-            />
-            <UserFilter
-              userId={userId}
-              onSelect={(id) => setUserId(id ?? "")}
-            />
+            {document ? (
+              <DocumentFilter
+                document={document}
+                onClick={() => setDocumentId("")}
+              />
+            ) : (
+              <CollectionFilter
+                collectionId={collectionId}
+                onSelect={(id) => setCollectionId(id ?? "")}
+              />
+            )}
+            {(!documentId || query) && (
+              <UserFilter
+                userId={userId}
+                onSelect={(id) => setUserId(id ?? "")}
+              />
+            )}
             <DocumentTypeFilter
               statusFilter={statusFilter}
               onSelect={({ statusFilter: sf }) => setStatusFilter(sf)}
@@ -215,6 +241,16 @@ function SearchDialog() {
               dateFilter={dateFilter}
               onSelect={(df) => setDateFilter(df ?? ("" as TDateFilter))}
             />
+            {!!query && !documentId && (
+              <SearchTitlesFilter
+                width={26}
+                height={14}
+                label={t("Search titles only")}
+                onChange={(checked: boolean) => setTitleFilter(checked)}
+                checked={titleFilter}
+                inForm={false}
+              />
+            )}
             <Spacer />
             {isSearchable && (
               <SortInput
@@ -231,7 +267,16 @@ function SearchDialog() {
           <Results onClickCapture={handleResultsClick}>
             {isSearchable ? (
               <>
-                {showEmpty ? (
+                {error ? (
+                  <Empty>
+                    <Text as="p" type="secondary">
+                      {t(
+                        "Please try again or contact support if the problem persists"
+                      )}
+                      .
+                    </Text>
+                  </Empty>
+                ) : showEmpty ? (
                   <Empty>
                     <Text as="p" type="secondary">
                       {t("No documents found for your search filters.")}
@@ -284,7 +329,7 @@ const Backdrop = styled.div`
   inset: 0;
   z-index: ${depths.overlay};
   background: ${(props) =>
-    props.theme.isDark ? "rgba(0, 0, 0, 0.55)" : "rgba(0, 0, 0, 0.25)"};
+    props.theme.isDark ? "rgba(0, 0, 0, 0.64)" : "rgba(15, 15, 15, 0.22)"};
   animation: ${fadeIn} 150ms ease;
 `;
 
@@ -295,26 +340,32 @@ const Positioner = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 12vh 16px 16px;
+  padding: min(96px, 12vh) 16px 16px;
   overflow-y: auto;
 `;
 
 const Panel = styled.div`
   width: 100%;
-  max-width: 640px;
-  max-height: 70vh;
+  max-width: 760px;
+  max-height: min(760px, calc(100vh - 72px));
   display: flex;
   flex-direction: column;
   background: ${s("menuBackground")};
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: ${s("modalShadow")};
   overflow: hidden;
   animation: ${fadeAndScaleIn} 180ms ease;
 `;
 
 const InputRow = styled(Flex)`
-  padding: 6px 8px 6px 16px;
+  gap: 10px;
+  padding: 10px 10px 10px 18px;
   border-bottom: 1px solid ${s("divider")};
+`;
+
+const InputIcon = styled.span`
+  display: inline-flex;
+  color: ${s("textTertiary")};
 `;
 
 const InputWrapper = styled.input`
@@ -322,9 +373,10 @@ const InputWrapper = styled.input`
   border: 0;
   outline: none;
   background: transparent;
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 400;
-  padding: 10px 0;
+  line-height: 30px;
+  padding: 6px 0;
   color: ${s("text")};
 
   ::-webkit-search-cancel-button {
@@ -336,8 +388,9 @@ const InputWrapper = styled.input`
 `;
 
 const CloseButton = styled(NudeButton)`
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   color: ${s("textTertiary")};
   &:hover {
     color: ${s("text")};
@@ -346,8 +399,12 @@ const CloseButton = styled(NudeButton)`
 `;
 
 const Filters = styled(Flex)`
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid ${s("divider")};
+  background: ${(props) =>
+    props.theme.isDark
+      ? "rgba(255, 255, 255, 0.025)"
+      : transparentize(0.55, props.theme.backgroundSecondary)};
 `;
 
 const Spacer = styled.span`
@@ -357,7 +414,7 @@ const Spacer = styled.span`
 const Results = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 8px 12px 12px;
+  padding: 10px 18px 18px;
 `;
 
 const SectionHeading = styled.h3`
@@ -370,8 +427,17 @@ const SectionHeading = styled.h3`
 `;
 
 const Empty = styled.div`
-  padding: 24px 4px;
+  padding: 48px 4px;
   text-align: center;
+`;
+
+const SearchTitlesFilter = styled(Switch)`
+  white-space: nowrap;
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  height: 28px;
+  color: ${s("textSecondary")};
 `;
 
 export default observer(SearchDialog);

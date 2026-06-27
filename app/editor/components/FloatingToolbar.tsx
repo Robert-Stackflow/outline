@@ -22,6 +22,8 @@ type Props = {
   align?: "start" | "end" | "center";
   active?: boolean;
   children: React.ReactNode;
+  from?: number;
+  to?: number;
   width?: number;
   forwardedRef?: React.RefObject<HTMLDivElement> | null;
 };
@@ -39,33 +41,44 @@ function usePosition({
   menuRef,
   active,
   align = "center",
+  from,
+  to,
 }: {
   menuRef: React.RefObject<HTMLDivElement>;
   active?: boolean;
   align?: Props["align"];
+  from?: number;
+  to?: number;
 }) {
   const { view } = useEditor();
   const { selection } = view.state;
   const [menuWidth, setMenuWidth] = React.useState(0);
-  const menuHeight = 36;
+  const [menuHeight, setMenuHeight] = React.useState(36);
+  const menuGap = 10;
 
-  // Measure the menu width after DOM updates to ensure accurate positioning
+  // Measure the menu after DOM updates. The link editor is taller than the
+  // compact formatting toolbar, so positioning from a fixed height would place
+  // the expanded control over the selected link.
   React.useLayoutEffect(() => {
     if (menuRef.current) {
       const width = menuRef.current.offsetWidth;
+      const height = Math.max(36, menuRef.current.offsetHeight);
       if (width !== menuWidth) {
         setMenuWidth(width);
       }
+      if (height !== menuHeight) {
+        setMenuHeight(height);
+      }
     }
-  });
+  }, [menuHeight, menuRef, menuWidth]);
 
   // based on the start and end of the selection calculate the position at
   // the center top
   let fromPos;
   let toPos;
   try {
-    fromPos = view.coordsAtPos(selection.from);
-    toPos = view.coordsAtPos(selection.to, -1);
+    fromPos = view.coordsAtPos(from ?? selection.from);
+    toPos = view.coordsAtPos(to ?? selection.to, -1);
   } catch (err) {
     Logger.warn("Unable to calculate selection position", { err });
     return defaultPosition;
@@ -215,7 +228,7 @@ function usePosition({
     HEADER_HEIGHT,
     Math.min(
       window.innerHeight - menuHeight - margin,
-      Math.max(margin, selectionBounds.top - menuHeight)
+      Math.max(margin, selectionBounds.top - menuHeight - menuGap)
     )
   );
 
@@ -249,6 +262,8 @@ const FloatingToolbar = React.forwardRef(function FloatingToolbar_(
     menuRef,
     active: props.active,
     align: props.align,
+    from: props.from,
+    to: props.to,
   });
 
   if (isSelectingText) {
@@ -329,6 +344,8 @@ const arrow = (props: WrapperProps) =>
           height: 24px;
           transform: translateX(-50%) rotate(45deg);
           background: ${s("menuBackground")};
+          border-right: 1px solid ${s("divider")};
+          border-bottom: 1px solid ${s("divider")};
           border-radius: 3px;
           z-index: 0;
           position: absolute;
@@ -380,7 +397,7 @@ const Background = styled.div<{ align: Props["align"] }>`
     0 0 0 1px ${s("divider")},
     0 4px 16px rgba(0, 0, 0, 0.06);
   border-radius: 8px;
-  height: 32px;
+  min-height: 32px;
 
   ${(props) =>
     props.align === "start" &&

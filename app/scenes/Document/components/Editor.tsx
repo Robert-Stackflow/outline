@@ -1,4 +1,5 @@
 import { observer } from "mobx-react";
+import { m } from "framer-motion";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { mergeRefs } from "react-merge-refs";
@@ -88,6 +89,7 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
 
   const iconColor = document.color ?? (first(colorPalette) as string);
   const childRef = React.useRef<HTMLDivElement>(null);
+  const [propertiesVisible, setPropertiesVisible] = React.useState(false);
   const focusAtStart = React.useCallback(() => {
     if (editorRef.current) {
       editorRef.current.focusAtStart();
@@ -106,6 +108,10 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
       ui.set({ rightSidebar: "comments" });
     }
   }, [focusedComment, ui, document.id, params, setFocusedCommentId]);
+
+  React.useEffect(() => {
+    setPropertiesVisible(false);
+  }, [document.id]);
 
   // Save document when blurring title, but delay so that if clicking on a
   // button this is allowed to execute first.
@@ -175,8 +181,6 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
   const childOffsetHeight = childRef.current?.offsetHeight || 0;
   const editorStyle = React.useMemo(
     () => ({
-      padding: "0 32px",
-      margin: "0 -32px",
       paddingBottom: `calc(30vh - ${childOffsetHeight}px)`,
     }),
     [childOffsetHeight]
@@ -193,10 +197,12 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
   );
 
   const direction = titleRef.current?.getComputedDirection();
+  const showTitleActions = !document.icon && !readOnly && can.update;
+  const hasCover = "coverImage" in document && !!document.coverImage;
 
   return (
     <Flex auto column>
-      <TitleGroup>
+      <TitleGroup $hasCover={hasCover}>
         {shareId ? (
           showLastUpdated && document.updatedAt ? (
             <HoverMeta>
@@ -207,7 +213,7 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
             </HoverMeta>
           ) : null
         ) : !rest.template ? (
-          <HoverMeta>
+          <HoverMeta $visible={showTitleActions}>
             <DocumentMeta
               document={document as Document}
               to={{
@@ -217,6 +223,13 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
                     : documentHistoryPath(document as Document),
                 state: { sidebarContext },
               }}
+              iconColor={iconColor}
+              onChangeIcon={onChangeIcon}
+              propertiesVisible={propertiesVisible}
+              onToggleProperties={() =>
+                setPropertiesVisible((visible) => !visible)
+              }
+              readOnly={readOnly}
               rtl={direction === "rtl"}
             />
           </HoverMeta>
@@ -240,10 +253,17 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
         />
       </TitleGroup>
       {!rest.template && (
-        <DocumentProperties
-          document={document as Document}
-          readOnly={readOnly}
-        />
+        <PropertiesDisclosure
+          $visible={propertiesVisible}
+          aria-hidden={!propertiesVisible}
+        >
+          <PropertiesDisclosureInner>
+            <DocumentProperties
+              document={document as Document}
+              readOnly={readOnly}
+            />
+          </PropertiesDisclosureInner>
+        </PropertiesDisclosure>
       )}
       <EditorComponent
         ref={mergeRefs([ref, editorRef, handleRefChanged])}
@@ -287,14 +307,17 @@ const SharedMeta = styled(Text)`
 
 // Groups the (hover-revealed) meta row with the title so the meta only appears
 // when the user is interacting with the document header — Notion-style.
-const TitleGroup = styled.div`
+const TitleGroup = styled.div<{ $hasCover?: boolean }>`
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  padding-top: ${(props) => (props.$hasCover ? 8 : 56)}px;
+  margin-bottom: 14px;
 `;
 
-const HoverMeta = styled.div`
-  min-height: 22px;
-  opacity: 0;
+const HoverMeta = styled.div<{ $visible?: boolean }>`
+  min-height: 28px;
+  opacity: ${(props) => (props.$visible ? 1 : 0)};
   transition: opacity 150ms ease;
 
   ${TitleGroup}:hover &,
@@ -307,6 +330,28 @@ const HoverMeta = styled.div`
   & > * {
     margin: 0;
   }
+`;
+
+const PropertiesDisclosure = styled(m.div).attrs<{ $visible?: boolean }>(
+  (props) => ({
+    animate: {
+      height: props.$visible ? "auto" : 0,
+      opacity: props.$visible ? 1 : 0,
+    },
+    initial: false,
+    transition: {
+      duration: 0.18,
+      ease: "easeInOut",
+    },
+  })
+)<{ $visible?: boolean }>`
+  overflow: hidden;
+  pointer-events: ${(props) => (props.$visible ? "auto" : "none")};
+`;
+
+const PropertiesDisclosureInner = styled.div`
+  min-height: 0;
+  overflow: hidden;
 `;
 
 export default observer(React.forwardRef(DocumentEditor));

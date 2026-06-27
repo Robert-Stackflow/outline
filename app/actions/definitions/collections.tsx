@@ -35,11 +35,7 @@ import {
 } from "~/actions";
 import { ActiveCollectionSection, CollectionSection } from "~/actions/sections";
 import { setPersistedState } from "~/hooks/usePersistedState";
-import {
-  newDocumentPath,
-  newTemplatePath,
-  searchPath,
-} from "~/utils/routeHelpers";
+import { newDocumentPath, newTemplatePath } from "~/utils/routeHelpers";
 import ExportDialog from "~/components/ExportDialog";
 import { getEventFiles } from "@shared/utils/files";
 import history from "~/utils/history";
@@ -265,7 +261,7 @@ export const sortCollection = createActionWithChildren({
   ],
 });
 
-export const searchInCollection = createInternalLinkAction({
+export const searchInCollection = createAction({
   name: ({ t }) => t("Search in collection"),
   analyticsName: "Search collection",
   section: ActiveCollectionSection,
@@ -278,18 +274,11 @@ export const searchInCollection = createInternalLinkAction({
 
     return stores.policies.abilities(collection.id).readDocument;
   },
-  to: ({ getActiveModel, sidebarContext }) => {
+  perform: ({ getActiveModel, stores }) => {
     const collection = getActiveModel(Collection);
-
-    const [pathname, search] = searchPath({
+    stores.ui.openSearchDialog({
       collectionId: collection?.id,
-    }).split("?");
-
-    return {
-      pathname,
-      search,
-      state: { sidebarContext },
-    };
+    });
   },
 });
 

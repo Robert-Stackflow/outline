@@ -4,12 +4,12 @@ import { Selection } from "prosemirror-state";
 import { __parseFromClipboard } from "prosemirror-view";
 import * as React from "react";
 import { mergeRefs } from "react-merge-refs";
-import styled, { css } from "styled-components";
+import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
-import Icon, { IconTitleWrapper } from "@shared/components/Icon";
+import Icon from "@shared/components/Icon";
 import isMarkdown from "@shared/editor/lib/isMarkdown";
 import normalizePastedMarkdown from "@shared/editor/lib/markdown/normalize";
-import { extraArea, s } from "@shared/styles";
+import { s } from "@shared/styles";
 import { light } from "@shared/styles/theme";
 import {
   getCurrentDateAsString,
@@ -240,32 +240,16 @@ const DocumentTitle = React.forwardRef(function DocumentTitle_(
   ) : null;
 
   return (
-    <Title
-      className="document-title"
-      onClick={handleClick}
-      onChange={handleChange}
-      onKeyDown={handleKeyDown}
-      onPaste={handlePaste}
-      onBlur={handleBlur}
-      placeholder={placeholder}
-      value={title}
-      $iconPickerIsOpen={iconPickerIsOpen}
-      $containsIcon={!!icon}
-      autoFocus={!title}
-      maxLength={DocumentValidation.maxTitleLength}
-      readOnly={readOnly}
-      aria-label={t("Document title")}
-      dir="auto"
-      ref={mergeRefs([ref, externalRef])}
-    >
-      {can.update && !readOnly ? (
-        <IconTitleWrapper dir={dir}>
+    <TitleBlock>
+      {can.update && !readOnly && icon ? (
+        <TitleIconRow dir={dir} $isOpen={iconPickerIsOpen}>
           <React.Suspense fallback={fallbackIcon}>
             <StyledIconPicker
               icon={icon ?? null}
               color={color}
               initial={initial}
               size={40}
+              ariaLabel={t("Icon Picker")}
               popoverPosition="bottom-start"
               onChange={handleIconChange}
               onOpen={handleOpen}
@@ -274,32 +258,67 @@ const DocumentTitle = React.forwardRef(function DocumentTitle_(
               borderOnHover
             />
           </React.Suspense>
-        </IconTitleWrapper>
+        </TitleIconRow>
       ) : icon ? (
-        <IconTitleWrapper dir={dir} aria-hidden>
+        <TitleIconRow dir={dir} aria-hidden>
           {fallbackIcon}
-        </IconTitleWrapper>
+        </TitleIconRow>
       ) : null}
-    </Title>
+      <Title
+        className="document-title"
+        onClick={handleClick}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        value={title}
+        autoFocus={!title}
+        maxLength={DocumentValidation.maxTitleLength}
+        readOnly={readOnly}
+        aria-label={t("Document title")}
+        dir="auto"
+        ref={mergeRefs([ref, externalRef])}
+      />
+    </TitleBlock>
   );
 });
 
-type TitleProps = {
-  $containsIcon: boolean;
-  $iconPickerIsOpen: boolean;
-  readOnly?: boolean;
-};
+const StyledIconPicker = styled(IconPicker)``;
 
-// Extra area prevents gap between icon and beginning of title
-const StyledIconPicker = styled(IconPicker)`
-  ${extraArea(8)}
+const TitleBlock = styled.div`
+  display: flex;
+  flex-direction: column;
 `;
 
-const Title = styled(ContentEditable)<TitleProps>`
-  position: relative;
+const TitleIconRow = styled.div<{ $isOpen?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 40px;
+  margin-bottom: 10px;
+
+  ${PopoverButton} {
+    opacity: ${(props) => (props.$isOpen ? 1 : 0.8)};
+  }
+
+  ${breakpoint("tablet")`
+    &:hover {
+      ${PopoverButton} {
+        opacity: 0.65;
+
+        &:hover,
+        &[aria-expanded="true"] {
+          opacity: 1;
+        }
+      }
+    }
+  `};
+`;
+
+const Title = styled(ContentEditable)<{ readOnly?: boolean }>`
   line-height: ${lineHeight};
-  margin-top: 8vh;
-  margin-bottom: 0.5em;
+  margin: 0;
   font-size: ${fontSize};
   font-weight: 600;
   border: 0;
@@ -316,35 +335,9 @@ const Title = styled(ContentEditable)<TitleProps>`
     opacity: 1;
   }
 
-  ${(props: TitleProps) =>
-    !props.readOnly &&
-    css`
-      &:focus-within,
-      &:focus {
-        ${PopoverButton} {
-          opacity: 1 !important;
-        }
-      }
-    `};
-
-  ${PopoverButton} {
-    opacity: ${(props: TitleProps) =>
-      props.$containsIcon ? "1 !important" : 0};
-  }
-
   ${breakpoint("tablet")`
-    margin-top: 6vh;
     margin-left: 0;
-
-    &:hover {
-      ${PopoverButton} {
-        opacity: 0.5;
-
-        &:hover {
-          opacity: 1;
-        }
-      }
-    }`};
+  `};
 
   @media print {
     color: ${light.text};

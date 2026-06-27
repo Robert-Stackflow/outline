@@ -139,12 +139,16 @@ const IconPanel = ({
 };
 
 const InputSearchContainer = styled(Flex)`
-  height: 48px;
-  padding: 6px 12px 0px;
+  height: 54px;
+  padding: 10px 14px 8px;
 `;
 
 const StyledInputSearch = styled(InputSearch)`
   flex-grow: 1;
+
+  input {
+    height: 34px;
+  }
 `;
 
 export default IconPanel;

@@ -4,9 +4,7 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import styled from "styled-components";
-import breakpoint from "styled-components-breakpoint";
 import { s } from "@shared/styles";
-import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
 import { AttachmentPreset } from "@shared/types";
 import type Document from "~/models/Document";
 import Flex from "~/components/Flex";
@@ -163,14 +161,15 @@ function DocumentCover({ document, readOnly }: Props) {
             </Controls>
           ) : (
             <Controls gap={2}>
-              <PillButton type="button" onClick={handlePick}>
-                <ImageIcon size={16} />
-                {t("Change cover")}
-              </PillButton>
               <PillButton
                 type="button"
-                onClick={() => setRepositioning(true)}
+                onClick={handlePick}
+                disabled={uploading}
               >
+                <ImageIcon size={16} />
+                {uploading ? t("Uploading…") : t("Change cover")}
+              </PillButton>
+              <PillButton type="button" onClick={() => setRepositioning(true)}>
                 <MoveIcon size={16} />
                 {t("Reposition")}
               </PillButton>
@@ -184,19 +183,7 @@ function DocumentCover({ document, readOnly }: Props) {
     );
   }
 
-  if (readOnly) {
-    return null;
-  }
-
-  return (
-    <AddBar>
-      <AddButton type="button" onClick={handlePick} disabled={uploading}>
-        <ImageIcon size={18} />
-        {uploading ? t("Uploading…") : t("Add cover")}
-      </AddButton>
-      {input}
-    </AddBar>
-  );
+  return null;
 }
 
 const Banner = styled.div<{ $repositioning?: boolean }>`
@@ -228,7 +215,7 @@ const CoverImage = styled.img<{ $repositioning?: boolean }>`
 
 const Controls = styled(Flex)`
   position: absolute;
-  bottom: 14px;
+  top: 14px;
   right: 16px;
   align-items: center;
   padding: 3px;
@@ -265,45 +252,10 @@ const PillButton = styled.button`
     background: ${s("listItemHoverBackground")};
     color: ${s("text")};
   }
-`;
 
-const AddBar = styled.div`
-  display: flex;
-  align-items: center;
-  height: 28px;
-  margin: 0 auto 4px;
-  padding: 0 32px;
-  max-width: calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter});
-  opacity: 0.6;
-  transition: opacity 150ms ease;
-
-  ${breakpoint("tablet")`
-    padding: 0 44px;
-  `}
-
-  &:hover,
-  &:focus-within {
-    opacity: 1;
-  }
-`;
-
-const AddButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: ${s("textTertiary")};
-  font-size: 14px;
-  font-weight: 500;
-  cursor: var(--pointer);
-
-  &:hover {
-    background: ${s("listItemHoverBackground")};
-    color: ${s("text")};
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
   }
 `;
 

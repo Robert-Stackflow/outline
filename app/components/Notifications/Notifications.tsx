@@ -118,8 +118,8 @@ function Notifications(
         }}
         column
       >
-        <Header justify="flex-start">
-          <HStack>
+        <Header>
+          <HeaderControls>
             <StyledInputSelect
               label={t("Filter")}
               labelHidden
@@ -129,6 +129,8 @@ function Notifications(
               short
               nude
             />
+          </HeaderControls>
+          <HeaderActions>
             {unreadCount > 0 && (
               <Tooltip content={t("Mark all as read")}>
                 <Button
@@ -140,7 +142,7 @@ function Notifications(
               </Tooltip>
             )}
             <NotificationMenu />
-          </HStack>
+          </HeaderActions>
         </Header>
         <StyledScrollable ref={ref} flex topShadow hiddenScrollbars>
           <React.Suspense fallback={null}>
@@ -172,11 +174,11 @@ const StyledInputSelect = styled(InputSelect)`
   color: ${s("textSecondary")};
   font-weight: 500;
   font-size: 14px;
-  height: 24px;
+  height: 30px;
 
   & > * {
-    min-height: 24px;
-    line-height: 24px !important;
+    min-height: 30px;
+    line-height: 30px !important;
   }
 `;
 
@@ -194,6 +196,12 @@ const EmptyNotifications = styled(Empty)`
 
 const Button = styled(NudeButton)`
   color: ${s("textSecondary")};
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
   &:${hover},
   &:active {
@@ -203,8 +211,17 @@ const Button = styled(NudeButton)`
 `;
 
 const Header = styled(Flex)`
-  padding: 8px 12px 12px;
-  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  min-height: 46px;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   ${Button} {
     opacity: 0.75;
@@ -217,6 +234,14 @@ const Header = styled(Flex)`
       opacity: 1;
     }
   }
+`;
+
+const HeaderControls = styled(HStack)`
+  min-width: 0;
+`;
+
+const HeaderActions = styled(HStack)`
+  flex-shrink: 0;
 `;
 
 export default observer(React.forwardRef(Notifications));

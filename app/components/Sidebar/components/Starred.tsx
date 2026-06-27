@@ -1,9 +1,9 @@
+import { transparentize } from "polished";
 import { observer } from "mobx-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import styled, { css } from "styled-components";
-import { s } from "@shared/styles";
 import type Star from "~/models/Star";
 import DelayedMount from "~/components/DelayedMount";
 import Flex from "~/components/Flex";
@@ -101,7 +101,7 @@ const Section = styled.div<{ $isActiveDrop?: boolean }>`
   ${(props) =>
     props.$isActiveDrop &&
     css`
-      background: ${s("sidebarActiveBackground")};
+      background: ${transparentize(0.85, props.theme.accent)};
     `}
 `;
 

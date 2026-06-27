@@ -1,4 +1,5 @@
 import DateTime from "../extensions/DateTime";
+import { BlockColor } from "../extensions/BlockColor";
 import DeleteNearAtom from "../extensions/DeleteNearAtom";
 import HexColorPreview from "../extensions/HexColorPreview";
 import History from "../extensions/History";
@@ -121,6 +122,7 @@ export const richExtensions: Nodes = [
   Mention,
   ToggleBlock,
   Toc,
+  BlockColor,
   // Container type nodes should be last so that key handlers are registered for content inside
   // the container nodes first.
   ...listExtensions,

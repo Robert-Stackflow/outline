@@ -150,27 +150,6 @@ export function newSiblingDocumentPath(params: {
   return `/doc/new?${queryString.stringify(query)}`;
 }
 
-export function searchPath({
-  query,
-  collectionId,
-  documentId,
-  ref,
-}: {
-  query?: string;
-  collectionId?: string;
-  documentId?: string;
-  ref?: string;
-} = {}): string {
-  const search = queryString.stringify({
-    q: query,
-    collectionId,
-    documentId,
-    ref,
-  });
-
-  return `/search${search ? `?${search}` : ""}`;
-}
-
 export function sharedModelPath(shareId: string, modelPath?: string) {
   if (shareId === env.ROOT_SHARE_ID) {
     return modelPath ? modelPath : "/";

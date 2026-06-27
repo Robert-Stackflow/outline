@@ -26,7 +26,7 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
   const { t } = useTranslation();
 
   const headings = ProsemirrorHelper.getHeadings(view.state.doc).filter(
-    (heading) => heading.level <= 3,
+    (heading) => heading.level <= 3
   );
 
   const scrollTo = React.useCallback((id: string) => {
@@ -55,11 +55,9 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
   // indentation when a document starts at, say, an H2.
   const minLevel = headings.reduce(
     (memo, heading) => Math.min(memo, heading.level),
-    Infinity,
+    Infinity
   );
   const adjustment = minLevel - 1;
-
-  console.log("headings", headings, "adjustment", adjustment);
 
   return (
     <Wrapper contentEditable={false}>
@@ -87,12 +85,12 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
 }
 
 const Wrapper = styled.div`
-  margin: 0.5em 0;
+  margin: 0.45em 0;
   user-select: none;
 `;
 
 const Empty = styled.div`
-  font-size: 14px;
+  font-size: 13px;
   color: ${s("textTertiary")};
 `;
 
@@ -104,16 +102,16 @@ const List = styled.ul`
 
 const Item = styled.li<{ $level: number }>`
   margin: 0;
-  padding-inline-start: ${(props) => (props.$level - 1) * 24}px !important;
+  padding-inline-start: ${(props) => (props.$level - 1) * 18}px !important;
 `;
 
 const Entry = styled.span`
   display: block;
   width: 100%;
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 6px;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.45;
   cursor: var(--pointer);
   overflow: hidden;
   text-overflow: ellipsis;

@@ -41,12 +41,16 @@ type Props = {
   modal?: boolean;
   /** Additional component to display at the bottom of the top-level menu */
   append?: React.ReactNode;
+  /** Optional fixed content width for larger menus */
+  contentWidth?: number | string;
   /**
    * Additional component to display at the top of the top-level menu. May be
    * a function receiving `{ close }` to imperatively dismiss the menu (e.g.
    * after a custom action like "Enter reading mode" runs).
    */
-  prepend?: React.ReactNode | ((args: { close: () => void }) => React.ReactNode);
+  prepend?:
+    | React.ReactNode
+    | ((args: { close: () => void }) => React.ReactNode);
   /** Callback when menu is opened */
   onOpen?: () => void;
   /** Callback when menu is closed */
@@ -64,6 +68,7 @@ export const DropdownMenu = observer(
         ariaLabel,
         modal = true,
         append,
+        contentWidth,
         prepend,
         onOpen,
         onClose,
@@ -140,6 +145,11 @@ export const DropdownMenu = observer(
               onAnimationStart={disablePointerEvents}
               onAnimationEnd={enablePointerEvents}
               onCloseAutoFocus={preventDefault}
+              style={
+                contentWidth
+                  ? { width: contentWidth, maxWidth: "calc(100vw - 12px)" }
+                  : undefined
+              }
             >
               {typeof prepend === "function"
                 ? prepend({ close: () => handleOpenChange(false) })

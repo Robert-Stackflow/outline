@@ -41,7 +41,7 @@ function Contents() {
 
       // Smoothly scroll the heading into view rather than jumping abruptly.
       const element = window.document.getElementById(
-        decodeURIComponentSafe(id),
+        decodeURIComponentSafe(id)
       );
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -51,7 +51,7 @@ function Contents() {
       // shareable and the active sidebar context is retained.
       history.replace(patchLocation(history.location, { hash: `#${id}` }));
     },
-    [history],
+    [history]
   );
 
   useEffect(() => {
@@ -60,7 +60,7 @@ function Contents() {
     for (let key = 0; key < headings.length; key++) {
       const heading = headings[key];
       const element = window.document.getElementById(
-        decodeURIComponentSafe(heading.id),
+        decodeURIComponentSafe(heading.id)
       );
 
       if (element) {
@@ -92,7 +92,7 @@ function Contents() {
   // if all of the headings in the document start at level 3, for example.
   const minHeading = headings.reduce(
     (memo, heading) => (heading.level < memo ? heading.level : memo),
-    Infinity,
+    Infinity
   );
   const headingAdjustment = minHeading - 1;
   const { t } = useTranslation();
@@ -116,7 +116,7 @@ function Contents() {
       // Open to the left of the right-aligned minimap, clamped to the viewport.
       const left = Math.min(
         Math.max(margin, rect.right - PANEL_WIDTH),
-        window.innerWidth - PANEL_WIDTH - margin,
+        window.innerWidth - PANEL_WIDTH - margin
       );
       const top = Math.max(margin, rect.top - 10);
       const maxHeight = window.innerHeight - top - margin;
@@ -140,7 +140,7 @@ function Contents() {
         clearTimeout(closeTimer.current);
       }
     },
-    [],
+    []
   );
 
   if (headings.length === 0) {
@@ -208,6 +208,7 @@ const Outer = styled.div`
   inset-inline-end: 24px;
   top: 0;
   bottom: 0;
+  z-index: 1;
   pointer-events: none;
 
   ${breakpoint("tablet")`
@@ -216,12 +217,11 @@ const Outer = styled.div`
 `;
 
 // Only this narrow group captures hover, so the popup opens just on the TOC.
-// Sticky keeps it in view while scrolling, sitting slightly above the vertical
-// center of the viewport.
+// The containing block is the document body, so covers and other page chrome do
+// not participate in the minimap's positioning.
 const Inner = styled.div`
   position: sticky;
-  top: 36vh;
-  transform: translateY(-50%);
+  top: max(calc(var(--header-offset, 64px) + 88px), 28vh);
   pointer-events: auto;
   max-height: calc(100vh - 140px);
   overflow-y: auto;
@@ -241,7 +241,7 @@ const Minimap = styled.div<{ $hidden?: boolean }>`
 
 const Line = styled.div<{ level: number; active?: boolean }>`
   height: ${(props) => (props.active ? 3 : 2)}px;
-  width: ${(props) => Math.max(10, 24 - (props.level - 1) * 5)}px;
+  width: ${(props) => Math.max(8, 18 - (props.level - 1) * 4)}px;
   border-radius: 2px;
   background: ${(props) =>
     props.active ? props.theme.text : props.theme.divider};

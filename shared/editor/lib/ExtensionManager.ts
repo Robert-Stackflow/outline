@@ -6,6 +6,7 @@ import type { MarkSpec, NodeSpec, Schema } from "prosemirror-model";
 import type { EditorView } from "prosemirror-view";
 import type { Primitive } from "utility-types";
 import type { Editor } from "~/editor";
+import { blockColorNodeAttrs } from "./blockColor";
 import type Mark from "../marks/Mark";
 import type Node from "../nodes/Node";
 import type { SelectionToolbarMenuDescriptor } from "../types";
@@ -14,6 +15,8 @@ import type Extension from "./Extension";
 import type { AnyExtension, AnyExtensionClass } from "./types";
 import makeRules from "./markdown/rules";
 import { MarkdownSerializer } from "./markdown/serializer";
+
+const blockColorNodeNames = new Set(["list_item", "checkbox_item"]);
 
 export default class ExtensionManager {
   extensions: AnyExtension[] = [];
@@ -80,7 +83,10 @@ export default class ExtensionManager {
     const nodes: Record<string, NodeSpec> = Object.fromEntries(
       this.extensions
         .filter((extension) => extension.type === "node")
-        .map((node: Node) => [node.name, node.schema])
+        .map((node: Node) => [
+          node.name,
+          withBlockColorAttrs(node.name, node.schema),
+        ])
     );
 
     for (const i in nodes) {
@@ -314,4 +320,25 @@ export default class ExtensionManager {
         };
       }, {});
   }
+}
+
+function withBlockColorAttrs(name: string, schema: NodeSpec): NodeSpec {
+  if (!supportsBlockColorAttrs(name, schema)) {
+    return schema;
+  }
+
+  return {
+    ...schema,
+    attrs: {
+      ...blockColorNodeAttrs,
+      ...schema.attrs,
+    },
+  };
+}
+
+function supportsBlockColorAttrs(name: string, schema: NodeSpec): boolean {
+  return (
+    schema.group?.split(" ").includes("block") === true ||
+    blockColorNodeNames.has(name)
+  );
 }

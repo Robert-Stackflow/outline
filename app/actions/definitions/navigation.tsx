@@ -28,7 +28,6 @@ import Desktop from "~/utils/Desktop";
 import isCloudHosted from "~/utils/isCloudHosted";
 import {
   homePath,
-  searchPath,
   draftsPath,
   archivePath,
   trashPath,
@@ -46,12 +45,14 @@ export const navigateToHome = createInternalLinkAction({
 });
 
 export const navigateToRecentSearchQuery = (searchQuery: SearchQuery) =>
-  createInternalLinkAction({
+  createAction({
     section: RecentSearchesSection,
     name: searchQuery.query,
     analyticsName: "Navigate to recent search query",
     icon: <SearchIcon />,
-    to: searchPath({ query: searchQuery.query }),
+    perform: ({ stores }) => {
+      stores.ui.openSearchDialog({ query: searchQuery.query });
+    },
   });
 
 export const navigateToDrafts = createInternalLinkAction({
@@ -63,13 +64,12 @@ export const navigateToDrafts = createInternalLinkAction({
   visible: ({ location }) => location.pathname !== draftsPath(),
 });
 
-export const navigateToSearch = createInternalLinkAction({
+export const navigateToSearch = createAction({
   name: ({ t }) => t("Search"),
   analyticsName: "Navigate to search",
   section: NavigationSection,
   icon: <SearchIcon />,
-  to: searchPath(),
-  visible: ({ location }) => location.pathname !== searchPath(),
+  perform: ({ stores }) => stores.ui.openSearchDialog(),
 });
 
 export const navigateToArchive = createInternalLinkAction({

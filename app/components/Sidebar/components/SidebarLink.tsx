@@ -1,4 +1,5 @@
 import type { LocationDescriptor } from "history";
+import { transparentize } from "polished";
 import * as React from "react";
 import styled, { useTheme, css } from "styled-components";
 import breakpoint from "styled-components-breakpoint";
@@ -232,7 +233,7 @@ export const IconWrapper = styled.span`
 
 const Content = styled.span`
   display: flex;
-  align-items: start;
+  align-items: center;
   position: relative;
   width: 100%;
   min-width: 0;
@@ -243,8 +244,9 @@ const Actions = styled(EventBoundary)<{ $showActions?: boolean }>`
   align-items: center;
   visibility: ${(props) => (props.$showActions ? "visible" : "hidden")};
   position: absolute;
-  top: 3px;
+  top: 50%;
   inset-inline-end: 4px;
+  transform: translateY(-50%);
   gap: 2px;
   color: ${s("textTertiary")};
   transition: opacity 50ms;
@@ -252,8 +254,17 @@ const Actions = styled(EventBoundary)<{ $showActions?: boolean }>`
 
   /* No shared background layer behind the group. Each action button (+, ⋯)
      gets its own rounded highlight only when individually hovered/open. */
+  > span {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+  }
+
   button,
   a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: none !important;
     box-shadow: none !important;
     border-radius: 6px;
@@ -309,7 +320,9 @@ const Link = styled(NavLink)<{
     --background: ${s("sidebarActiveBackground")};
   }
 
-  ${(props) => props.$isActiveDrop && `--background: ${props.theme.slateDark};`}
+  ${(props) =>
+    props.$isActiveDrop &&
+    `--background: ${transparentize(0.85, props.theme.accent)};`}
 
   display: flex;
   position: relative;
@@ -323,7 +336,7 @@ const Link = styled(NavLink)<{
   white-space: nowrap;
   background: var(--background);
   color: ${(props) =>
-    props.$isActiveDrop ? props.theme.white : props.theme.sidebarText};
+    props.$isActiveDrop ? props.theme.accent : props.theme.sidebarText};
   font-size: 16px;
   cursor: var(--pointer);
   overflow: hidden;
@@ -352,7 +365,7 @@ const Link = styled(NavLink)<{
     `}
 
   svg {
-    ${(props) => (props.$isActiveDrop ? `fill: ${props.theme.white};` : "")}
+    ${(props) => (props.$isActiveDrop ? `fill: ${props.theme.accent};` : "")}
     transition: fill 50ms;
   }
 
@@ -388,7 +401,7 @@ const Link = styled(NavLink)<{
     &:hover,
     &:has([data-state="open"]) {
       color: ${(props) =>
-        props.$isActiveDrop ? props.theme.white : props.theme.text};
+        props.$isActiveDrop ? props.theme.accent : props.theme.text};
     }
   }
 

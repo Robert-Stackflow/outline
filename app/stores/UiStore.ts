@@ -1,7 +1,13 @@
 import { action, computed, observable } from "mobx";
 import { flushSync } from "react-dom";
 import { light as defaultTheme } from "@shared/styles/theme";
-import type { ProsemirrorData } from "@shared/types";
+import type {
+  DateFilter,
+  DirectionFilter,
+  ProsemirrorData,
+  SortFilter,
+  StatusFilter,
+} from "@shared/types";
 import Storage from "@shared/utils/Storage";
 import Document from "~/models/Document";
 import type Model from "~/models/base/Model";
@@ -27,6 +33,18 @@ export enum SystemTheme {
 }
 
 export type ResolvedTheme = "light" | "dark" | "system";
+
+export interface SearchDialogOptions {
+  query?: string;
+  collectionId?: string;
+  documentId?: string;
+  userId?: string;
+  dateFilter?: DateFilter | "";
+  statusFilter?: StatusFilter[];
+  titleFilter?: boolean;
+  sort?: SortFilter | "";
+  direction?: DirectionFilter | "";
+}
 
 type PersistedData = Pick<
   UiStore,
@@ -79,6 +97,10 @@ class UiStore {
   /** Whether the global search dialog is currently open. */
   @observable
   searchDialogOpen = false;
+
+  /** Initial state for the next search dialog open. */
+  @observable
+  searchDialogOptions: SearchDialogOptions = {};
 
   @observable
   mobileSidebarVisible = false;
@@ -403,7 +425,8 @@ class UiStore {
   };
 
   @action
-  openSearchDialog = () => {
+  openSearchDialog = (options: SearchDialogOptions = {}) => {
+    this.searchDialogOptions = options;
     this.searchDialogOpen = true;
   };
 

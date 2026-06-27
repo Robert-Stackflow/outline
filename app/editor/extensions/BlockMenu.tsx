@@ -1,12 +1,8 @@
 import { t } from "i18next";
 import { action } from "mobx";
-import { PlusIcon } from "outline-icons";
-import { Plugin } from "prosemirror-state";
-import { Decoration, DecorationSet } from "prosemirror-view";
-import ReactDOM from "react-dom";
+import type { CommandFactory } from "@shared/editor/lib/Extension";
 import type { WidgetProps } from "@shared/editor/lib/Extension";
 import { PlaceholderPlugin } from "@shared/editor/plugins/PlaceholderPlugin";
-import { findParentNode } from "@shared/editor/queries/findParentNode";
 import Suggestion from "~/editor/extensions/Suggestion";
 import BlockMenu from "../components/BlockMenu";
 
@@ -26,54 +22,8 @@ export default class BlockMenuExtension extends Suggestion {
   }
 
   get plugins() {
-    const button = document.createElement("button");
-    button.className = "block-menu-trigger";
-    button.type = "button";
-    ReactDOM.render(<PlusIcon />, button);
-
     return [
       ...super.plugins,
-      new Plugin({
-        props: {
-          decorations: (state) => {
-            const parent = findParentNode(
-              (node) => node.type.name === "paragraph"
-            )(state.selection);
-
-            if (!parent) {
-              return;
-            }
-
-            const isTopLevel = state.selection.$from.depth === 1;
-            if (!isTopLevel) {
-              return;
-            }
-
-            const decorations: Decoration[] = [];
-            const isEmptyNode = parent && parent.node.content.size === 0;
-
-            if (isEmptyNode) {
-              decorations.push(
-                Decoration.widget(
-                  parent.pos,
-                  () => {
-                    button.onclick = action(() => {
-                      this.state.query = "";
-                      this.state.open = true;
-                    });
-                    return button;
-                  },
-                  {
-                    key: "block-trigger",
-                  }
-                )
-              );
-            }
-
-            return DecorationSet.create(state.doc, decorations);
-          },
-        },
-      }),
       new PlaceholderPlugin([
         {
           condition: ({ node, $start, textContent, state }) =>
@@ -107,6 +57,30 @@ export default class BlockMenuExtension extends Suggestion {
 
     this.state.open = false;
   });
+
+  /**
+   * Returns commands owned by the block menu extension.
+   *
+   * @returns editor commands that can open the block menu.
+   */
+  commands(): Record<string, CommandFactory> {
+    return {
+      openBlockMenu: () => (state, dispatch) => {
+        const trigger = Array.isArray(this.options.trigger)
+          ? this.options.trigger[0]
+          : this.options.trigger;
+
+        dispatch?.(state.tr.insertText(trigger));
+
+        action(() => {
+          this.state.query = "";
+          this.state.open = true;
+        })();
+
+        return true;
+      },
+    };
+  }
 
   widget = ({ rtl }: WidgetProps) => {
     const { props } = this.editor;

@@ -293,6 +293,10 @@ export function SelectionToolbar(props: Props) {
       align={align}
       active={isActive}
       ref={menuRef}
+      from={
+        activeToolbar === Toolbar.Link && linkMark ? linkMark.from : undefined
+      }
+      to={activeToolbar === Toolbar.Link && linkMark ? linkMark.to : undefined}
       width={
         activeToolbar === Toolbar.Link || activeToolbar === Toolbar.Media
           ? 336

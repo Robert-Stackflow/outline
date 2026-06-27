@@ -1,5 +1,5 @@
 import { observer } from "mobx-react";
-import { EditIcon, KeyboardIcon } from "outline-icons";
+import { EditIcon, EyeIcon, KeyboardIcon } from "outline-icons";
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -117,13 +117,38 @@ function DocumentHeader({
     ui.set({ rightSidebar: "shortcuts" });
   }, [ui]);
 
+  const handleEnterReadingMode = useCallback(() => {
+    ui.isReadingMode = true;
+    if (!ui.sidebarIsClosed) {
+      ui.toggleCollapsedSidebar();
+    }
+  }, [ui]);
+
   const keyboardShortcutsAction = (
     <Action>
-      <Tooltip content={t("Keyboard shortcuts")} shortcut="?" placement="bottom">
+      <Tooltip
+        content={t("Keyboard shortcuts")}
+        shortcut="?"
+        placement="bottom"
+      >
         <Button
           aria-label={t("Keyboard shortcuts")}
           icon={<KeyboardIcon />}
           onClick={handleOpenKeyboardShortcuts}
+          borderOnHover
+          neutral
+        />
+      </Tooltip>
+    </Action>
+  );
+
+  const readingModeAction = (
+    <Action>
+      <Tooltip content={t("Reading mode")} placement="bottom">
+        <Button
+          aria-label={t("Reading mode")}
+          icon={<EyeIcon />}
+          onClick={handleEnterReadingMode}
           borderOnHover
           neutral
         />
@@ -279,6 +304,7 @@ function DocumentHeader({
             </Action>
           )}
           {!isDeleted && <Separator />}
+          {!isMobile && !isDeleted && !isRevision && readingModeAction}
           {!isMobile && keyboardShortcutsAction}
           <Action>
             <DocumentMenu

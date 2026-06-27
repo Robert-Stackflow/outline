@@ -1,5 +1,5 @@
 import { observer } from "mobx-react";
-import { PlusIcon, SparklesIcon } from "outline-icons";
+import { PlusIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -7,6 +7,7 @@ import styled from "styled-components";
 import { s } from "@shared/styles";
 import Scrollable from "~/components/Scrollable";
 import Text from "~/components/Text";
+import Tooltip from "~/components/Tooltip";
 import useStores from "~/hooks/useStores";
 import { aiPath } from "~/utils/routeHelpers";
 
@@ -15,7 +16,7 @@ import { aiPath } from "~/utils/routeHelpers";
  * CompactNav "AI" entry; each item opens the full AI page at that conversation.
  */
 function AiPanel() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { ai } = useStores();
 
   React.useEffect(() => {
@@ -24,19 +25,21 @@ function AiPanel() {
   }, [ai]);
 
   const conversations = ai.orderedConversations;
+  const conversationListTitle =
+    i18n.language.startsWith("zh") || i18n.resolvedLanguage?.startsWith("zh")
+      ? `${t("Chat")}${t("Lists")}`
+      : `${t("Chat")} ${t("List").toLowerCase()}`;
 
   return (
     <Scrollable flex shadow>
       <Inner>
         <Header>
-          <Title>
-            <SparklesIcon size={18} />
-            {t("AI")}
-          </Title>
-          <NewLink to={aiPath()}>
-            <PlusIcon size={16} />
-            {t("New")}
-          </NewLink>
+          <Title>{conversationListTitle}</Title>
+          <Tooltip content={t("New conversation")} placement="bottom">
+            <NewLink to={aiPath()} aria-label={t("New conversation")}>
+              <PlusIcon size={18} />
+            </NewLink>
+          </Tooltip>
         </Header>
 
         {conversations.length === 0 ? (
@@ -67,34 +70,30 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px 8px;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 0 10px;
 `;
 
 const Title = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 15px;
+  min-width: 0;
+  font-size: 14px;
   font-weight: 600;
   color: ${s("text")};
-
-  svg {
-    color: ${s("accent")};
-  }
 `;
 
 const NewLink = styled(Link)`
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 500;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
   color: ${s("textTertiary")};
-  padding: 4px 6px;
   border-radius: 6px;
 
   &:hover {
-    background: ${s("sidebarHoverBackground")};
+    background: ${s("sidebarControlHoverBackground")};
     color: ${s("text")};
   }
 `;
