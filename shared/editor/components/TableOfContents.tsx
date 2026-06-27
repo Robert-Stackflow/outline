@@ -2,7 +2,6 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { s } from "../../styles";
-import type { Heading } from "../../utils/ProsemirrorHelper";
 import { ProsemirrorHelper } from "../../utils/ProsemirrorHelper";
 import type { ComponentProps } from "../types";
 
@@ -19,9 +18,9 @@ function safeDecode(value: string) {
 
 /**
  * A live table of contents block. Reads the headings from the current document
- * and renders a numbered, indented outline that scrolls to each heading on
- * click. Re-renders automatically when the document's headings change (driven
- * by a decoration plugin on the parent node).
+ * and renders an indented outline (Notion-style: no border, no numbering) that
+ * scrolls to each heading on click. Re-renders automatically when the document's
+ * headings change (driven by a decoration plugin on the parent node).
  */
 function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
   const { t } = useTranslation();
@@ -57,7 +56,6 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
   if (headings.length === 0) {
     return (
       <Wrapper contentEditable={false}>
-        <Title>{t("Table of contents")}</Title>
         <Empty>
           {isEditable
             ? t("Add headings to populate the table of contents")
@@ -68,34 +66,23 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
   }
 
   // Normalize so the shallowest heading becomes level 1 — prevents deep
-  // indentation when a document starts at, say, an H3.
+  // indentation when a document starts at, say, an H2.
   const minLevel = headings.reduce(
     (memo, heading) => Math.min(memo, heading.level),
     Infinity
   );
   const adjustment = minLevel - 1;
 
-  // Build hierarchical numbering (1, 2, 2.1, 2.2, 3 …) based on adjusted level.
-  const counters: number[] = [];
-  const numbered = headings.map((heading) => {
-    const level = heading.level - adjustment; // 1-based
-    counters[level - 1] = (counters[level - 1] ?? 0) + 1;
-    counters.length = level; // reset deeper counters
-    return { heading, level, label: counters.join(".") };
-  });
-
   return (
     <Wrapper contentEditable={false}>
-      <Title>{t("Table of contents")}</Title>
       <List>
-        {numbered.map(({ heading, level, label }) => (
-          <Item key={heading.id} $level={level}>
+        {headings.map((heading) => (
+          <Item key={heading.id} $level={heading.level - adjustment}>
             <Anchor
               href={`#${heading.id}`}
               onClick={(event) => handleClick(event, heading.id)}
             >
-              <Marker>{label}</Marker>
-              <span>{heading.title}</span>
+              {heading.title}
             </Anchor>
           </Item>
         ))}
@@ -106,20 +93,7 @@ function TableOfContents({ view, isEditable }: Omit<ComponentProps, "theme">) {
 
 const Wrapper = styled.div`
   margin: 0.75em 0;
-  padding: 14px 18px;
-  border: 1px solid ${s("divider")};
-  border-radius: 8px;
-  background: ${s("backgroundSecondary")};
   user-select: none;
-`;
-
-const Title = styled.div`
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: ${s("textTertiary")};
-  margin-bottom: 10px;
 `;
 
 const Empty = styled.div`
@@ -135,43 +109,28 @@ const List = styled.ul`
 
 const Item = styled.li<{ $level: number }>`
   margin: 0;
-  padding-inline-start: ${(props) => (props.$level - 1) * 28}px;
-`;
-
-const Marker = styled.span`
-  color: ${s("textTertiary")};
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-  min-width: 1.4em;
+  padding-inline-start: ${(props) => (props.$level - 1) * 24}px;
 `;
 
 const Anchor = styled.a`
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  padding: 4px 6px;
-  margin: 1px 0;
-  border-radius: 6px;
+  display: inline-block;
+  padding: 3px 0;
   font-size: 15px;
-  line-height: 1.5;
-  color: ${s("textSecondary")};
-  text-decoration: none;
+  line-height: 1.6;
   cursor: var(--pointer);
-  transition:
-    background 120ms ease,
-    color 120ms ease;
+  border-bottom: 1px solid transparent;
 
-  /* Override the editor's global link color so TOC entries read as text. */
-  &,
-  &:hover,
-  &:focus {
-    color: ${s("textSecondary")};
+  /* Override the editor's global link color so TOC entries read as text.
+     Doubled selector beats the ".ProseMirror a" rule on specificity. */
+  &&,
+  &&:hover,
+  &&:focus {
+    color: ${s("text")};
     text-decoration: none;
   }
 
-  &:hover {
-    background: ${s("listItemHoverBackground")};
-    color: ${s("text")};
+  &&:hover {
+    border-bottom-color: ${s("textTertiary")};
   }
 `;
 

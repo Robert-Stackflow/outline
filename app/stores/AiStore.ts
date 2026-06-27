@@ -1,4 +1,6 @@
 import { action, observable, runInAction } from "mobx";
+import { getCookie } from "tiny-cookie";
+import { CSRF } from "@shared/constants";
 import { AiMessageRole } from "@shared/types";
 import type RootStore from "./RootStore";
 import { client } from "~/utils/ApiClient";
@@ -120,7 +122,8 @@ export default class AiStore {
   };
 
   /**
-   * Sends a message and returns the conversation id (newly created if needed).
+   * Sends a message and streams the assistant reply token-by-token, updating the
+   * message list as deltas arrive. Returns the conversation id.
    */
   @action
   chat = async (params: {
@@ -130,35 +133,90 @@ export default class AiStore {
   }): Promise<string> => {
     this.isSending = true;
 
-    // Optimistically append the user's message if we have a conversation.
-    if (params.conversationId) {
-      const optimistic: AiMessage = {
-        id: `temp-${Date.now()}`,
-        conversationId: params.conversationId,
-        role: AiMessageRole.User,
-        content: params.message,
-      };
+    let convId = params.conversationId;
+    const tempAssistantId = `temp-asst-${Date.now()}`;
+    let assistantContent = "";
+
+    // Show the user's message and an empty assistant bubble immediately.
+    if (convId) {
       runInAction(() => {
-        const existing = this.messages.get(params.conversationId!) ?? [];
-        this.messages.set(params.conversationId!, [...existing, optimistic]);
+        const existing = this.messages.get(convId!) ?? [];
+        this.messages.set(convId!, [
+          ...existing,
+          {
+            id: `temp-user-${Date.now()}`,
+            conversationId: convId!,
+            role: AiMessageRole.User,
+            content: params.message,
+          },
+          {
+            id: tempAssistantId,
+            conversationId: convId!,
+            role: AiMessageRole.Assistant,
+            content: "",
+          },
+        ]);
       });
     }
 
     try {
-      const res = await client.post("/ai.chat", params);
-      const conversation = res.data.conversation as AiConversation;
-      const newMessages = res.data.messages as AiMessage[];
-
-      runInAction(() => {
-        this.conversations.set(conversation.id, conversation);
-        // Replace any optimistic messages with the authoritative list tail.
-        const existing = (this.messages.get(conversation.id) ?? []).filter(
-          (m) => !m.id.startsWith("temp-")
-        );
-        this.messages.set(conversation.id, [...existing, ...newMessages]);
+      await this.streamRequest("/api/ai.chat", params, (event) => {
+        if (event.type === "meta") {
+          const conversation = event.conversation as AiConversation;
+          convId = conversation.id;
+          runInAction(() => {
+            this.conversations.set(conversation.id, conversation);
+            const existing = (this.messages.get(conversation.id) ?? []).filter(
+              (m) => !m.id.startsWith("temp-")
+            );
+            this.messages.set(conversation.id, [
+              ...existing,
+              event.userMessage as AiMessage,
+              {
+                id: tempAssistantId,
+                conversationId: conversation.id,
+                role: AiMessageRole.Assistant,
+                content: "",
+              },
+            ]);
+          });
+        } else if (event.type === "delta") {
+          assistantContent += event.text as string;
+          if (convId) {
+            const id = convId;
+            runInAction(() => {
+              const msgs = this.messages.get(id) ?? [];
+              this.messages.set(
+                id,
+                msgs.map((m) =>
+                  m.id === tempAssistantId
+                    ? { ...m, content: assistantContent }
+                    : m
+                )
+              );
+            });
+          }
+        } else if (event.type === "done") {
+          if (convId) {
+            const id = convId;
+            runInAction(() => {
+              const msgs = this.messages.get(id) ?? [];
+              this.messages.set(
+                id,
+                msgs.map((m) =>
+                  m.id === tempAssistantId
+                    ? (event.assistantMessage as AiMessage)
+                    : m
+                )
+              );
+            });
+          }
+        } else if (event.type === "error") {
+          throw new Error((event.message as string) || "AI request failed");
+        }
       });
 
-      return conversation.id;
+      return convId ?? "";
     } finally {
       runInAction(() => {
         this.isSending = false;
@@ -166,13 +224,89 @@ export default class AiStore {
     }
   };
 
+  /**
+   * Streams a document summary, updating the cached summary as deltas arrive.
+   */
   @action
   summarize = async (documentId: string): Promise<string> => {
-    const res = await client.post("/ai.summary", { documentId });
-    runInAction(() => {
-      this.summaries.set(documentId, res.data.summary);
+    let text = "";
+    runInAction(() => this.summaries.set(documentId, ""));
+
+    await this.streamRequest("/api/ai.summary", { documentId }, (event) => {
+      if (event.type === "delta") {
+        text += event.text as string;
+        runInAction(() => this.summaries.set(documentId, text));
+      } else if (event.type === "error") {
+        throw new Error((event.message as string) || "AI request failed");
+      }
     });
-    return res.data.summary as string;
+
+    return text;
+  };
+
+  /**
+   * POSTs to a Server-Sent Events endpoint and dispatches each parsed JSON
+   * payload to `onEvent`. Adds the CSRF token the same way ApiClient does.
+   */
+  private streamRequest = async (
+    url: string,
+    body: object,
+    onEvent: (event: Record<string, unknown>) => void
+  ) => {
+    const csrfToken = getCookie(CSRF.cookieName);
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        "x-api-version": "4",
+        ...(csrfToken ? { [CSRF.headerName]: csrfToken } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok || !response.body) {
+      let message = "AI request failed";
+      try {
+        const data = await response.json();
+        message = data?.message || message;
+      } catch (_err) {
+        // ignore
+      }
+      throw new Error(message);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
+      for (const part of parts) {
+        const line = part
+          .split("\n")
+          .find((l) => l.startsWith("data:"));
+        if (!line) {
+          continue;
+        }
+        const data = line.slice(5).trim();
+        if (!data) {
+          continue;
+        }
+        try {
+          onEvent(JSON.parse(data));
+        } catch (_err) {
+          // ignore malformed event
+        }
+      }
+    }
   };
 
   @action

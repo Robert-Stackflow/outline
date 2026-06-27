@@ -40,6 +40,7 @@ import Container from "./Container";
 import Contents from "./Contents";
 import Editor from "./Editor";
 import Header from "./Header";
+import DocumentCover from "./DocumentCover";
 import Notices from "./Notices";
 import References from "./References";
 import RevisionViewer from "./RevisionViewer";
@@ -390,6 +391,7 @@ function DocumentScene({
             />
           )}
           <Main style={fullWidthTransformOffsetStyle}>
+            {!isShare && <DocumentCover document={document} readOnly={readOnly} />}
             <React.Suspense
               fallback={
                 <EditorContainer docFullWidth={document.fullWidth}>

@@ -14,7 +14,7 @@ import {
 import type { APIContext } from "@server/types";
 import { AiMessageRole } from "@shared/types";
 import type { ChatMessage } from "@server/utils/ai";
-import { chatCompletion, isAiConfigured } from "@server/utils/ai";
+import { streamChatCompletion, isAiConfigured } from "@server/utils/ai";
 import { RateLimiterStrategy } from "@server/utils/RateLimiter";
 import pagination from "../middlewares/pagination";
 import * as T from "./schema";
@@ -23,6 +23,22 @@ const router = new Router();
 
 const MAX_CONTEXT_CHARS = 12000;
 const MAX_HISTORY_MESSAGES = 20;
+
+/**
+ * Switches the response into Server-Sent Events mode and returns a `send`
+ * function for emitting JSON payloads as events.
+ */
+function startSSE(ctx: APIContext): (payload: object) => void {
+  ctx.respond = false;
+  ctx.res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  return (payload: object) =>
+    ctx.res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
 
 /** Builds the document context string injected into the system prompt. */
 async function buildDocumentContext(
@@ -176,28 +192,42 @@ router.post(
       })),
     ];
 
-    const reply = await chatCompletion(team, messages);
-
-    const assistantMessage = await AiMessage.create({
-      conversationId: conversation.id,
-      role: AiMessageRole.Assistant,
-      content: reply,
+    // Stream the assistant reply as Server-Sent Events so the client can render
+    // it with a typewriter effect.
+    const send = startSSE(ctx);
+    send({
+      type: "meta",
+      conversation: presentAiConversation(conversation),
+      userMessage: presentAiMessage(userMessage),
     });
 
-    // Touch the conversation so it sorts to the top of recent history.
-    conversation.changed("updatedAt", true);
-    await conversation.save();
+    try {
+      const reply = await streamChatCompletion(team, messages, (delta) => {
+        send({ type: "delta", text: delta });
+      });
 
-    ctx.body = {
-      data: {
-        conversation: presentAiConversation(conversation),
-        messages: [
-          presentAiMessage(userMessage),
-          presentAiMessage(assistantMessage),
-        ],
-      },
-      policies: presentPolicies(user, [conversation]),
-    };
+      const assistantMessage = await AiMessage.create({
+        conversationId: conversation.id,
+        role: AiMessageRole.Assistant,
+        content: reply,
+      });
+
+      // Touch the conversation so it sorts to the top of recent history.
+      conversation.changed("updatedAt", true);
+      await conversation.save();
+
+      send({
+        type: "done",
+        assistantMessage: presentAiMessage(assistantMessage),
+      });
+    } catch (err) {
+      send({
+        type: "error",
+        message: err instanceof Error ? err.message : "AI request failed",
+      });
+    } finally {
+      ctx.res.end();
+    }
   }
 );
 
@@ -224,18 +254,29 @@ router.post(
       MAX_CONTEXT_CHARS
     );
 
-    const reply = await chatCompletion(team, [
-      {
-        role: "system",
-        content:
-          "You are a concise summarizer. Produce a short summary (2-4 sentences) of the document the user provides. Respond in the same language as the document. Do not add a heading.",
-      },
-      { role: "user", content: markdown },
-    ]);
-
-    ctx.body = {
-      data: { summary: reply },
-    };
+    const send = startSSE(ctx);
+    try {
+      await streamChatCompletion(
+        team,
+        [
+          {
+            role: "system",
+            content:
+              "You are a concise summarizer. Produce a short summary (2-4 sentences) of the document the user provides. Respond in the same language as the document. Do not add a heading.",
+          },
+          { role: "user", content: markdown },
+        ],
+        (delta) => send({ type: "delta", text: delta })
+      );
+      send({ type: "done" });
+    } catch (err) {
+      send({
+        type: "error",
+        message: err instanceof Error ? err.message : "AI request failed",
+      });
+    } finally {
+      ctx.res.end();
+    }
   }
 );
 

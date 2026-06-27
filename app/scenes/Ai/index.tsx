@@ -138,13 +138,15 @@ function Ai() {
                   </Message>
                 ))
               )}
-              {ai.isSending && (
-                <Message $role={AiMessageRole.Assistant}>
-                  <Bubble $role={AiMessageRole.Assistant}>
-                    <Typing>{t("Thinking…")}</Typing>
-                  </Bubble>
-                </Message>
-              )}
+              {ai.isSending &&
+                messages[messages.length - 1]?.role !==
+                  AiMessageRole.Assistant && (
+                  <Message $role={AiMessageRole.Assistant}>
+                    <Bubble $role={AiMessageRole.Assistant}>
+                      <Typing>{t("Thinking…")}</Typing>
+                    </Bubble>
+                  </Message>
+                )}
             </ChatMessages>
             <Composer align="flex-end" gap={8}>
               <TextArea

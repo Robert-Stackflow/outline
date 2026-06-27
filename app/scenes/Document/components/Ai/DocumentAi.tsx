@@ -111,14 +111,15 @@ function DocumentAi() {
               </Message>
             ))
           )}
-          {ai.isSending && (
-            <Message $role={AiMessageRole.Assistant}>
-              <Role>{t("Assistant")}</Role>
-              <Bubble $role={AiMessageRole.Assistant}>
-                <Typing>{t("Thinking…")}</Typing>
-              </Bubble>
-            </Message>
-          )}
+          {ai.isSending &&
+            messages[messages.length - 1]?.role !== AiMessageRole.Assistant && (
+              <Message $role={AiMessageRole.Assistant}>
+                <Role>{t("Assistant")}</Role>
+                <Bubble $role={AiMessageRole.Assistant}>
+                  <Typing>{t("Thinking…")}</Typing>
+                </Bubble>
+              </Message>
+            )}
         </Messages>
 
         {!notConfigured && (

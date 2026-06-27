@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
 import { s } from "@shared/styles";
+import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
 import { AttachmentPreset } from "@shared/types";
 import type Document from "~/models/Document";
 import Flex from "~/components/Flex";
@@ -200,16 +201,13 @@ function DocumentCover({ document, readOnly }: Props) {
 
 const Banner = styled.div<{ $repositioning?: boolean }>`
   position: relative;
-  margin: 0 -32px 20px;
+  width: 100%;
   height: 30vh;
   max-height: 280px;
   min-height: 160px;
+  margin-bottom: 12px;
   overflow: hidden;
   background: ${s("backgroundSecondary")};
-
-  ${breakpoint("tablet")`
-    margin: 0 -44px 24px;
-  `}
 
   &:hover > div {
     opacity: 1;
@@ -270,9 +268,15 @@ const AddBar = styled.div`
   display: flex;
   align-items: center;
   height: 28px;
-  margin-bottom: 4px;
+  margin: 0 auto 4px;
+  padding: 0 32px;
+  max-width: calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter});
   opacity: 0.6;
   transition: opacity 150ms ease;
+
+  ${breakpoint("tablet")`
+    padding: 0 44px;
+  `}
 
   &:hover,
   &:focus-within {

@@ -100,10 +100,128 @@ type RequestParams = {
   messages: ChatMessage[];
 };
 
+/**
+ * Streams a chat completion against the team's configured provider, invoking
+ * `onText` for each text delta as it arrives. Returns the full accumulated text.
+ *
+ * @param team The team whose AI configuration to use.
+ * @param messages The conversation messages to send.
+ * @param onText Callback invoked with each text delta.
+ * @returns The full assistant reply.
+ * @throws InvalidRequestError if AI is not configured or the provider errors.
+ */
+export async function streamChatCompletion(
+  team: Team,
+  messages: ChatMessage[],
+  onText: (delta: string) => void
+): Promise<string> {
+  if (!isAiConfigured(team)) {
+    throw InvalidRequestError("AI is not configured for this workspace");
+  }
+
+  const settings = team.aiSettings ?? {};
+  const baseUrl = (settings.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, "");
+  const model = settings.model || DEFAULT_MODEL;
+  const temperature = settings.temperature ?? 0.7;
+  const apiKey = team.aiApiKey as string;
+  const format = settings.apiFormat ?? AiApiFormat.ChatCompletions;
+
+  const { url, headers, body } = buildRequest(
+    format,
+    { baseUrl, model, temperature, apiKey, messages },
+    true
+  );
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      timeout: REQUEST_TIMEOUT,
+    });
+  } catch (err) {
+    Logger.error("AI provider request failed", err as Error);
+    throw InvalidRequestError("Failed to reach the AI provider");
+  }
+
+  if (!response.ok || !response.body) {
+    const text = await response.text?.().catch(() => "");
+    Logger.warn("AI provider returned an error", {
+      status: response.status,
+      body: (text ?? "").slice(0, 500),
+    });
+    throw InvalidRequestError(
+      `AI provider error (${response.status}). Please check your configuration.`
+    );
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+
+  // node-fetch exposes the body as an async-iterable Node Readable.
+  for await (const chunk of response.body as AsyncIterable<Buffer>) {
+    buffer += decoder.decode(chunk, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) {
+        continue;
+      }
+      const data = trimmed.slice(5).trim();
+      if (!data || data === "[DONE]") {
+        continue;
+      }
+      let json: unknown;
+      try {
+        json = JSON.parse(data);
+      } catch (_err) {
+        continue;
+      }
+      const delta = extractDelta(format, json);
+      if (delta) {
+        full += delta;
+        onText(delta);
+      }
+    }
+  }
+
+  return full.trim();
+}
+
+/** Extracts a text delta from a single streamed SSE payload. */
+function extractDelta(format: AiApiFormat, json: unknown): string | undefined {
+  if (format === AiApiFormat.Messages) {
+    const event = json as {
+      type?: string;
+      delta?: { type?: string; text?: string };
+    };
+    if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
+      return event.delta.text;
+    }
+    return undefined;
+  }
+
+  if (format === AiApiFormat.Responses) {
+    const event = json as { type?: string; delta?: string };
+    if (event.type === "response.output_text.delta") {
+      return event.delta;
+    }
+    return undefined;
+  }
+
+  return (json as { choices?: { delta?: { content?: string } }[] }).choices?.[0]
+    ?.delta?.content;
+}
+
 /** Builds the provider request for the chosen wire format. */
 function buildRequest(
   format: AiApiFormat,
-  { baseUrl, model, temperature, apiKey, messages }: RequestParams
+  { baseUrl, model, temperature, apiKey, messages }: RequestParams,
+  stream = false
 ): { url: string; headers: Record<string, string>; body: object } {
   if (format === AiApiFormat.Messages) {
     // Anthropic Messages API: system is a top-level field, not a message.
@@ -127,6 +245,7 @@ function buildRequest(
         max_tokens: MAX_OUTPUT_TOKENS,
         ...(system ? { system } : {}),
         messages: conversation,
+        ...(stream ? { stream: true } : {}),
       },
     };
   }
@@ -153,6 +272,7 @@ function buildRequest(
         ...(instructions ? { instructions } : {}),
         input,
         max_output_tokens: MAX_OUTPUT_TOKENS,
+        ...(stream ? { stream: true } : {}),
       },
     };
   }
@@ -168,7 +288,7 @@ function buildRequest(
       model,
       messages,
       temperature,
-      stream: false,
+      stream,
     },
   };
 }

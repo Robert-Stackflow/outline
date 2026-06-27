@@ -33,7 +33,6 @@ import {
 import { decodeURIComponentSafe } from "~/utils/urls";
 import MultiplayerEditor from "./AsyncMultiplayerEditor";
 import AiSummaryCard from "./AiSummaryCard";
-import DocumentCover from "./DocumentCover";
 import DocumentMeta from "./DocumentMeta";
 import DocumentProperties from "./DocumentProperties";
 import DocumentTitle from "./DocumentTitle";
@@ -198,7 +197,6 @@ function DocumentEditor(props: Props, ref: React.ForwardedRef<SharedEditor>) {
 
   return (
     <Flex auto column>
-      <DocumentCover document={document as Document} readOnly={readOnly} />
       <DocumentTitle
         ref={titleRef}
         readOnly={readOnly}

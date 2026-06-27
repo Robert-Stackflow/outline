@@ -18,8 +18,15 @@ import { parseAuthentication } from "./authentication";
  */
 export function attachCSRFToken() {
   return async function attachCSRFTokenMiddleware(ctx: AppContext, next: Next) {
-    // Only attach tokens for safe methods that don't mutate state
-    if (["GET", "HEAD", "OPTIONS"].includes(ctx.method)) {
+    // Only attach tokens for safe methods that don't mutate state, and only when
+    // one isn't already present — regenerating the token on every GET creates a
+    // race where a background GET rotates the cookie between a client reading it
+    // and a concurrent mutating POST being dispatched, causing a spurious
+    // "CSRF token mismatch".
+    if (
+      ["GET", "HEAD", "OPTIONS"].includes(ctx.method) &&
+      !ctx.cookies.get(CSRF.cookieName)
+    ) {
       const raw = generateRawToken(16);
       const bundled = bundleToken(raw, env.SECRET_KEY);
 
