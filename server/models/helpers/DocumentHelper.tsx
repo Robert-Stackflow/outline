@@ -10,6 +10,11 @@ import textBetween from "@shared/editor/lib/textBetween";
 import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
 import type { NavigationNode, ProsemirrorData } from "@shared/types";
 import { IconType, TextEditMode } from "@shared/types";
+import {
+  extractFrontmatter,
+  extractProsemirrorFrontmatter,
+  objectToYaml,
+} from "@shared/utils/frontmatter";
 import { determineIconType } from "@shared/utils/icon";
 import { parser, serializer, schema } from "@server/editor";
 import { ValidationError } from "@server/errors";
@@ -87,16 +92,32 @@ export class DocumentHelper {
       return Node.fromJSON(schema, document);
     }
     if ("content" in document && document.content) {
-      return Node.fromJSON(schema, document.content);
+      const content =
+        document instanceof Document
+          ? DocumentHelper.extractFrontmatterFromData(
+              document,
+              document.content
+            )
+          : document.content;
+      return Node.fromJSON(schema, content);
     }
     if ("state" in document && document.state) {
       const ydoc = new Y.Doc();
       Y.applyUpdate(ydoc, document.state);
-      return Node.fromJSON(schema, yDocToProsemirrorJSON(ydoc, "default"));
+      const content = yDocToProsemirrorJSON(ydoc, "default") as ProsemirrorData;
+      return Node.fromJSON(
+        schema,
+        document instanceof Document
+          ? DocumentHelper.extractFrontmatterFromData(document, content)
+          : content
+      );
     }
 
-    const text =
+    let text =
       document instanceof Collection ? document.description : document.text;
+    if (document instanceof Document) {
+      text = DocumentHelper.extractFrontmatterFromText(document, text ?? "");
+    }
     return parser.parse(text ?? "") || Node.fromJSON(schema, {});
   }
 
@@ -125,23 +146,46 @@ export class DocumentHelper {
     let data;
 
     if ("content" in document && document.content) {
+      const content =
+        document instanceof Document
+          ? DocumentHelper.extractFrontmatterFromData(
+              document,
+              document.content
+            )
+          : document.content;
+
       // Optimized path for documents with content available and no transformation required.
       if (
         !options?.removeMarks &&
         !options?.signedUrls &&
         !options?.internalUrlBase
       ) {
-        return document.content;
+        return content;
       }
-      doc = Node.fromJSON(schema, document.content);
+      doc = Node.fromJSON(schema, content);
     } else if ("state" in document && document.state) {
       const ydoc = new Y.Doc();
       Y.applyUpdate(ydoc, document.state);
-      doc = Node.fromJSON(schema, yDocToProsemirrorJSON(ydoc, "default"));
+      const content = yDocToProsemirrorJSON(ydoc, "default") as ProsemirrorData;
+      doc = Node.fromJSON(
+        schema,
+        document instanceof Document
+          ? DocumentHelper.extractFrontmatterFromData(document, content)
+          : content
+      );
     } else if (document instanceof Collection) {
       doc = parser.parse(document.description ?? "");
     } else {
-      doc = parser.parse("text" in document ? (document.text ?? "") : "");
+      const text =
+        document instanceof Document
+          ? DocumentHelper.extractFrontmatterFromText(
+              document,
+              document.text ?? ""
+            )
+          : "text" in document
+            ? (document.text ?? "")
+            : "";
+      doc = parser.parse(text);
     }
 
     if (doc && options?.signedUrls && options?.teamId) {
@@ -168,6 +212,43 @@ export class DocumentHelper {
   }
 
   /**
+   * Extracts legacy frontmatter from ProseMirror data into document properties.
+   */
+  private static extractFrontmatterFromData(
+    document: Document,
+    data: ProsemirrorData
+  ): ProsemirrorData {
+    const extracted = extractProsemirrorFrontmatter(data);
+    if (!extracted) {
+      return data;
+    }
+
+    if (!document.properties || Object.keys(document.properties).length === 0) {
+      document.properties = extracted.properties;
+    }
+    document.content = extracted.body;
+
+    return extracted.body;
+  }
+
+  /**
+   * Extracts leading markdown frontmatter into document properties.
+   */
+  private static extractFrontmatterFromText(
+    document: Document,
+    text: string
+  ): string {
+    const extracted = extractFrontmatter(text);
+    if (!extracted) {
+      return text;
+    }
+
+    document.properties = extracted.properties;
+    document.text = extracted.body;
+    return extracted.body;
+  }
+
+  /**
    * Returns the document as plain text. This method uses the
    * collaborative state if available, otherwise it falls back to Markdown.
    *
@@ -191,6 +272,8 @@ export class DocumentHelper {
     options?: {
       /** Whether to include the document title (default: true) */
       includeTitle?: boolean;
+      /** Whether to include document properties as YAML frontmatter */
+      includeProperties?: boolean;
       /** Whether to sign attachment urls, and if so for how many seconds is the signature valid */
       signedUrls?: number;
       /** The team context */
@@ -213,20 +296,39 @@ export class DocumentHelper {
       .replace(/(^|\n)\\(\n|$)/g, "\n\n")
       .trim();
 
-    if (
+    const markdownParts: string[] = [];
+
+    const includeDocumentTitle =
       (document instanceof Collection ||
         document instanceof Document ||
         document instanceof Revision) &&
-      options?.includeTitle !== false
+      options?.includeTitle !== false;
+
+    if (
+      document instanceof Document &&
+      options?.includeProperties &&
+      document.properties &&
+      Object.keys(document.properties).length > 0
     ) {
+      const yaml = objectToYaml(document.properties);
+      if (yaml) {
+        markdownParts.push(`---\n${yaml}\n---`);
+      }
+    }
+
+    if (includeDocumentTitle) {
       const iconType = determineIconType(document.icon);
       const name =
         document instanceof Collection ? document.name : document.title;
       const title = `${iconType === IconType.Emoji ? document.icon + " " : ""}${name}`;
-      return `# ${title}\n\n${text}`;
+      markdownParts.push(`# ${title}`);
     }
 
-    return text;
+    if (text || includeDocumentTitle) {
+      markdownParts.push(text);
+    }
+
+    return markdownParts.join("\n\n");
   }
 
   /**

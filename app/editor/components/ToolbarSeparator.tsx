@@ -3,7 +3,7 @@ import { s } from "@shared/styles";
 
 const Separator = styled.div`
   align-self: center;
-  height: 16px;
+  height: 20px;
   width: 1px;
   background: ${s("divider")};
   display: inline-block;

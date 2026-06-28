@@ -2,164 +2,18 @@ import type Token from "markdown-it/lib/token.mjs";
 import type { NodeSpec } from "prosemirror-model";
 import type { EditorState } from "prosemirror-state";
 import { Plugin, PluginKey } from "prosemirror-state";
-import type { EditorView } from "prosemirror-view";
 import { DecorationSet, Decoration } from "prosemirror-view";
-import { isInTable, moveTableColumn, TableMap } from "prosemirror-tables";
-import { addColumnBefore, selectColumn } from "../commands/table";
-import { isMobile } from "../../utils/browser";
+import { TableMap } from "prosemirror-tables";
 import {
   getCellAttrs,
   isValidCellAlignment,
   isValidCellMarks,
   setCellAttrs,
 } from "../lib/table";
-import {
-  getCellsInColumn,
-  getCellsInRow,
-  isColumnSelected,
-  isTableSelected,
-} from "../queries/table";
+import { getCellsInColumn } from "../queries/table";
 import { EditorStyleHelper } from "../styles/EditorStyleHelper";
-import { cn } from "../styles/utils";
 import Node from "./Node";
-import {
-  rowDragPluginKey,
-  columnDragPluginKey,
-  type ColumnDragState,
-} from "../plugins/TableDragState";
-
-/**
- * Sets up drag tracking for column grip interactions.
- *
- * @param view The editor view.
- * @param gripElement The grip element being dragged.
- * @param fromIndex The index of the column being dragged.
- */
-function setupColumnDragTracking(
-  view: EditorView,
-  gripElement: HTMLElement,
-  fromIndex: number
-): void {
-  let isDragging = false;
-  let currentToIndex = fromIndex;
-
-  /**
-   * Finds the table wrapper element from the current editor DOM.
-   */
-  const findTableElement = (): HTMLElement | null => {
-    const tables = view.dom.querySelectorAll(`.${EditorStyleHelper.table}`);
-    if (tables.length === 1) {
-      return tables[0] as HTMLElement;
-    }
-    for (const table of tables) {
-      if (
-        table.querySelector(".selectedCell") ||
-        table.querySelector("[class*='selected']")
-      ) {
-        return table as HTMLElement;
-      }
-    }
-    return tables.length > 0 ? (tables[0] as HTMLElement) : null;
-  };
-
-  /**
-   * Updates the drag state in the plugin via a transaction.
-   */
-  const updateDragState = (toIndex: number) => {
-    const tr = view.state.tr.setMeta(columnDragPluginKey, {
-      isDragging: true,
-      fromIndex,
-      toIndex,
-    });
-    view.dispatch(tr);
-  };
-
-  /**
-   * Clears the drag state in the plugin.
-   */
-  const clearDragState = () => {
-    const tr = view.state.tr.setMeta(columnDragPluginKey, {
-      isDragging: false,
-      fromIndex: -1,
-      toIndex: -1,
-    });
-    view.dispatch(tr);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    const tableElement = findTableElement();
-    if (!tableElement) {
-      return;
-    }
-
-    if (!isDragging) {
-      isDragging = true;
-      document.body.classList.add(EditorStyleHelper.tableDragging);
-    }
-
-    const table = tableElement.querySelector("table");
-    if (!table) {
-      return;
-    }
-
-    const headerRow = table.querySelector("tr");
-    if (!headerRow) {
-      return;
-    }
-
-    const cells = headerRow.querySelectorAll("th, td");
-    const cols = getCellsInRow(0)(view.state);
-    let targetIndex = fromIndex;
-
-    cells.forEach((cell, index) => {
-      const rect = cell.getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right) {
-        targetIndex = index;
-      }
-    });
-
-    targetIndex = Math.max(0, Math.min(targetIndex, cols.length - 1));
-
-    if (targetIndex !== currentToIndex) {
-      currentToIndex = targetIndex;
-      updateDragState(targetIndex);
-    }
-  };
-
-  const handleMouseUp = () => {
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-
-    document.body.classList.remove(EditorStyleHelper.tableDragging);
-
-    if (isDragging && currentToIndex !== fromIndex && isInTable(view.state)) {
-      // Verify both indices are still valid for the current table. The document
-      // may have changed during the drag (e.g. collaborative editing)
-      const currentCols = getCellsInRow(0)(view.state);
-      const inBounds =
-        fromIndex >= 0 &&
-        fromIndex < currentCols.length &&
-        currentToIndex >= 0 &&
-        currentToIndex < currentCols.length;
-
-      if (inBounds) {
-        const moved = moveTableColumn({ from: fromIndex, to: currentToIndex })(
-          view.state,
-          view.dispatch
-        );
-        if (moved) {
-          // Select the column at its new position
-          selectColumn(currentToIndex)(view.state, view.dispatch);
-        }
-      }
-    }
-
-    clearDragState();
-  };
-
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-}
+import { columnDragPluginKey, type ColumnDragState } from "../plugins/TableDragState";
 
 /**
  * Builds a widget decoration for the column drag indicator.
@@ -250,26 +104,6 @@ export default class TableHeader extends Node {
   }
 
   get plugins() {
-    function buildAddColumnDecoration(pos: number, index: number) {
-      const className = cn(EditorStyleHelper.tableAddColumn, {
-        first: index === 0,
-      });
-
-      return Decoration.widget(
-        pos + 1,
-        () => {
-          const plus = document.createElement("a");
-          plus.role = "button";
-          plus.className = className;
-          plus.dataset.index = index.toString();
-          return plus;
-        },
-        {
-          key: cn(className, index),
-        }
-      );
-    }
-
     // Plugin for column drag and drop indicator
     const columnDragPlugin = new Plugin<ColumnDragState>({
       key: columnDragPluginKey,
@@ -287,60 +121,6 @@ export default class TableHeader extends Node {
         decorations: createColumnDragDecorations,
       },
     });
-
-    const createColumnDecorations = (state: EditorState) => {
-      if (!this.editor.view?.editable) {
-        return DecorationSet.empty;
-      }
-
-      // Hide add column buttons when dragging rows or columns
-      const columnDragState = columnDragPluginKey.getState(state);
-      const rowDragState = rowDragPluginKey.getState(state);
-      const isDragging =
-        columnDragState?.isDragging || rowDragState?.isDragging;
-
-      const { doc } = state;
-      const decorations: Decoration[] = [];
-      const cols = getCellsInRow(0)(state);
-
-      if (cols) {
-        cols.forEach((pos, index) => {
-          const className = cn(EditorStyleHelper.tableGripColumn, {
-            selected: isColumnSelected(index)(state) || isTableSelected(state),
-            first: index === 0,
-            last: index === cols.length - 1,
-          });
-
-          decorations.push(
-            Decoration.widget(
-              pos + 1,
-              () => {
-                const grip = document.createElement("a");
-                grip.role = "button";
-                grip.className = className;
-                grip.dataset.index = index.toString();
-                return grip;
-              },
-              {
-                key: cn(className, index),
-              }
-            )
-          );
-
-          // The add-column affordance is too small to tap on mobile, where
-          // columns can be added via the inline menu instead.
-          if (!isDragging && !isMobile()) {
-            if (index === 0) {
-              decorations.push(buildAddColumnDecoration(pos, index));
-            }
-
-            decorations.push(buildAddColumnDecoration(pos, index + 1));
-          }
-        });
-      }
-
-      return DecorationSet.create(doc, decorations);
-    };
 
     const createHeaderDecorations = (state: EditorState) => {
       const { doc } = state;
@@ -412,72 +192,6 @@ export default class TableHeader extends Node {
           },
         },
         props: {
-          decorations(state) {
-            return this.getState(state);
-          },
-        },
-      }),
-      new Plugin({
-        key: new PluginKey("table-header-decorations"),
-        state: {
-          init: (_, state) => createColumnDecorations(state),
-          apply: (tr, pluginState, oldState, newState) => {
-            // Recompute if selection, document, or drag state changed
-            if (
-              !tr.selectionSet &&
-              !tr.docChanged &&
-              !tr.getMeta(columnDragPluginKey) &&
-              !tr.getMeta(rowDragPluginKey)
-            ) {
-              return pluginState;
-            }
-
-            return createColumnDecorations(newState);
-          },
-        },
-        props: {
-          handleDOMEvents: {
-            mousedown: (view: EditorView, event: MouseEvent) => {
-              if (!(event.target instanceof HTMLElement)) {
-                return false;
-              }
-
-              const targetAddColumn = event.target.closest(
-                `.${EditorStyleHelper.tableAddColumn}`
-              );
-              if (targetAddColumn) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                const index = Number(
-                  targetAddColumn.getAttribute("data-index")
-                );
-                addColumnBefore({ index })(view.state, view.dispatch);
-                return true;
-              }
-
-              const targetGripColumn = event.target.closest(
-                `.${EditorStyleHelper.tableGripColumn}`
-              );
-              if (targetGripColumn instanceof HTMLElement) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-
-                const colIndex = Number(
-                  targetGripColumn.getAttribute("data-index")
-                );
-                selectColumn(colIndex, event.metaKey || event.shiftKey)(
-                  view.state,
-                  view.dispatch
-                );
-
-                // Setup drag tracking for potential drag operation
-                setupColumnDragTracking(view, targetGripColumn, colIndex);
-                return true;
-              }
-
-              return false;
-            },
-          },
           decorations(state) {
             return this.getState(state);
           },

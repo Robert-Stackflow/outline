@@ -3,6 +3,10 @@ import { TextSelection } from "prosemirror-state";
 import type { EditorView, NodeView } from "prosemirror-view";
 import { v4 as uuidv4 } from "uuid";
 import { isBrowser } from "../../utils/browser";
+import {
+  createBlockViewElements,
+  shouldIgnoreBlockViewMutation,
+} from "../lib/blockView";
 
 const checkboxSVG = `<svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg"><rect class="checkbox-box" x="1" y="1" width="12" height="12" rx="3" /><path class="checkbox-tick" d="M3.5 7.3L6 9.8L10.5 4.2" /></svg>`;
 
@@ -30,7 +34,18 @@ export class CheckboxItemView implements NodeView {
 
     const id = `checkbox-${uuidv4()}`;
 
-    this.dom = document.createElement("li");
+    const elements = createBlockViewElements({
+      nodeName: node.type.name,
+      role: "task-item",
+      domTagName: "li",
+      chrome: true,
+    });
+
+    if (!elements.chrome || !elements.indicator) {
+      throw new Error("Checkbox item block chrome failed to initialize");
+    }
+
+    this.dom = elements.dom;
     this.dom.setAttribute("data-type", "checkbox_item");
 
     this.checkbox = document.createElement("span");
@@ -40,18 +55,14 @@ export class CheckboxItemView implements NodeView {
     this.checkbox.setAttribute("role", "checkbox");
     this.checkbox.innerHTML = checkboxSVG;
 
-    this.wrapper = document.createElement("span");
-    this.wrapper.contentEditable = "false";
-    this.wrapper.appendChild(this.checkbox);
+    this.wrapper = elements.chrome;
+    elements.indicator.appendChild(this.checkbox);
     if (isBrowser) {
       this.wrapper.addEventListener("click", this.handleClick);
     }
 
-    this.contentDOM = document.createElement("div");
+    this.contentDOM = elements.contentDOM;
     this.contentDOM.id = id;
-
-    this.dom.appendChild(this.wrapper);
-    this.dom.appendChild(this.contentDOM);
 
     this.updateChecked(node);
   }
@@ -67,7 +78,7 @@ export class CheckboxItemView implements NodeView {
   ignoreMutation(mutation: MutationRecord) {
     // Only mutations within the editable content should be read by the editor;
     // the checkbox chrome is managed here.
-    return !this.contentDOM.contains(mutation.target);
+    return shouldIgnoreBlockViewMutation(this.contentDOM, mutation);
   }
 
   destroy() {

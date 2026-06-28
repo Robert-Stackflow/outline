@@ -168,11 +168,16 @@ const Actions = styled(Flex)`
      "neutral" Button paints a 1px inset border + chrome that visually
      clashes with the bare icon controls living right next to it. */
   button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent !important;
     box-shadow: none !important;
     border: 0 !important;
+    min-width: 30px;
     min-height: 30px;
     height: 30px;
+    flex-shrink: 0;
     border-radius: 6px;
     color: ${s("textSecondary")};
     font-weight: 500;
@@ -192,6 +197,7 @@ const Actions = styled(Flex)`
       color: ${s("textTertiary")};
       opacity: 0.6;
     }
+
   }
 
   /* Slightly more breathing room around the divider that separates the
@@ -299,7 +305,9 @@ const ExpandSidebarButton = styled(NudeButton)`
   align-items: center;
   justify-content: center;
   color: ${s("textTertiary")};
-  transition: background 120ms ease, color 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 
   &:hover,
   &:active,

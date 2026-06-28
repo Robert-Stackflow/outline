@@ -6,13 +6,14 @@ import type {
   NodeType,
   Node as ProsemirrorNode,
 } from "prosemirror-model";
-import type { Command } from "prosemirror-state";
+import { Plugin, type Command } from "prosemirror-state";
 import { PageBreakIcon, HorizontalRuleIcon } from "outline-icons";
 import type { Primitive } from "utility-types";
 import { isNodeActive } from "../queries/isNodeActive";
 import type { MarkdownSerializerState } from "../lib/markdown/serializer";
 import type { SelectionToolbarMenuDescriptor } from "../types";
 import Node from "./Node";
+import { HorizontalRuleView } from "./HorizontalRuleView";
 
 export default class HorizontalRule extends Node {
   get name() {
@@ -43,6 +44,18 @@ export default class HorizontalRule extends Node {
         );
         return true;
       };
+  }
+
+  get plugins() {
+    return [
+      new Plugin({
+        props: {
+          nodeViews: {
+            [this.name]: (node) => new HorizontalRuleView(node),
+          },
+        },
+      }),
+    ];
   }
 
   selectionToolbarMenus(): SelectionToolbarMenuDescriptor[] {

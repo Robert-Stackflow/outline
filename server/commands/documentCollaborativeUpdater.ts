@@ -4,6 +4,7 @@ import { Node } from "prosemirror-model";
 import { yDocToProsemirrorJSON } from "y-prosemirror";
 import * as Y from "yjs";
 import type { ProsemirrorData } from "@shared/types";
+import { normalizeBlockColorAttrs } from "@shared/editor/lib/blockColor";
 import { schema } from "@server/editor";
 import Logger from "@server/logging/Logger";
 import { Document, Event } from "@server/models";
@@ -56,10 +57,12 @@ export default async function documentCollaborativeUpdater({
     // Round-trip through the schema so the stored JSON is canonical. The raw
     // y-prosemirror output includes empty `attrs: {}` on every mark, and outputs
     // properties in a different order - resulting in spurious "edits"
-    const content = Node.fromJSON(
-      schema,
-      yDocToProsemirrorJSON(ydoc, "default")
-    ).toJSON() as ProsemirrorData;
+    const content = normalizeBlockColorAttrs(
+      Node.fromJSON(
+        schema,
+        yDocToProsemirrorJSON(ydoc, "default")
+      ).toJSON() as ProsemirrorData
+    );
     const isUnchanged = isEqual(document.content, content);
     const isDeleted = !!document.deletedAt;
     const lastModifiedById = isDeleted

@@ -80,7 +80,7 @@ function DocumentCard(props: Props) {
 
   const updatedAt = (
     <>
-      <Clock size={18} />
+      <Clock size={14} />
       <Time dateTime={document.updatedAt} addSuffix shorten />
     </>
   );
@@ -116,18 +116,7 @@ function DocumentCard(props: Props) {
             },
           }}
         >
-          <Content justify="space-between" column>
-            <Fold
-              width="20"
-              height="21"
-              viewBox="0 0 20 21"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M19.5 20.5H6C2.96243 20.5 0.5 18.0376 0.5 15V0.5H0.792893L19.5 19.2071V20.5Z" />
-              <path d="M19.5 19.5H6C2.96243 19.5 0.5 17.0376 0.5 14V0.5H0.792893L19.5 19.2071V19.5Z" />
-            </Fold>
-
+          <Content>
             {document.icon ? (
               <DocumentSquircle
                 icon={document.icon}
@@ -136,6 +125,7 @@ function DocumentCard(props: Props) {
               />
             ) : (
               <Squircle
+                size={32}
                 color={
                   collection?.color ??
                   (pinnedToHome ? theme.slateLight : theme.slateDark)
@@ -151,7 +141,7 @@ function DocumentCard(props: Props) {
                 )}
               </Squircle>
             )}
-            <div>
+            <Details>
               <Heading dir={document.dir}>
                 {hasEmojiInTitle
                   ? document.titleWithDefault.replace(document.icon!, "")
@@ -166,7 +156,7 @@ function DocumentCard(props: Props) {
                   </Suspense>
                 )}
               </DocumentMeta>
-            </div>
+            </Details>
           </Content>
           {canUpdatePin && (
             <Actions dir={document.dir} gap={4}>
@@ -202,7 +192,7 @@ const DocumentSquircle = ({
   } as React.CSSProperties;
 
   return (
-    <Squircle color={squircleColor} style={style}>
+    <Squircle size={32} color={squircleColor} style={style}>
       <Icon value={icon} color={theme.white} initial={initial} forceColor />
     </Squircle>
   );
@@ -217,32 +207,38 @@ const AnimatePresence = styled(m.div)`
   height: 100%;
 `;
 
-const Fold = styled.svg`
-  fill: ${s("background")};
-  stroke: ${s("inputBorder")};
-  background: ${s("background")};
-
-  position: absolute;
-  top: -1px;
-  right: -2px;
-`;
-
 const PinButton = styled(NudeButton)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: ${s("background")};
+  box-shadow: 0 0 0 1px ${s("divider")};
   color: ${s("textTertiary")};
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
 
   &:${hover},
   &:active {
+    background: ${s("backgroundSecondary")};
     color: ${s("text")};
+    box-shadow: 0 0 0 1px ${s("inputBorder")};
   }
 `;
 
 const Actions = styled(Flex)`
   position: absolute;
-  top: 4px;
-  right: ${(props) => (props.dir === "rtl" ? "auto" : "4px")};
-  left: ${(props) => (props.dir === "rtl" ? "4px" : "auto")};
+  top: 50%;
+  right: ${(props) => (props.dir === "rtl" ? "auto" : "8px")};
+  left: ${(props) => (props.dir === "rtl" ? "8px" : "auto")};
+  transform: translateY(-50%);
   opacity: 0;
   color: ${s("textTertiary")};
+  transition: opacity 120ms ease;
 
   // move actions above content
   z-index: 2;
@@ -252,48 +248,67 @@ const Reorderable = styled.div<{ $isDragging: boolean }>`
   position: relative;
   user-select: none;
   touch-action: none;
-  width: 170px;
-  height: 180px;
-  transition: box-shadow 200ms ease;
+  width: 100%;
+  height: 76px;
+  transition:
+    opacity 150ms ease,
+    box-shadow 150ms ease;
 
   // move above other cards when dragging
   z-index: ${(props) => (props.$isDragging ? 1 : "inherit")};
   pointer-events: ${(props) => (props.$isDragging ? "none" : "inherit")};
 
-  &: ${hover} ${Actions} {
+  &:${hover} ${Actions},
+  &:focus-within ${Actions} {
     opacity: 1;
   }
 `;
 
 const Content = styled(Flex)`
+  align-items: center;
   min-width: 0;
   height: 100%;
+  gap: 10px;
+`;
+
+const Details = styled.div`
+  flex: 1 1 auto;
+  min-width: 0;
 `;
 
 const DocumentMeta = styled(Text)`
   ${ellipsis()}
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   color: ${s("textTertiary")};
-  margin: 0 0 0 -2px;
+  margin: 0;
 `;
 
 const DocumentLink = styled(Link)<{
   $isDragging?: boolean;
 }>`
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
   padding: 12px;
+  padding-inline-end: 40px;
   width: 100%;
   height: 100%;
   border-radius: 8px;
+  overflow: hidden;
   cursor: var(--pointer);
+  text-decoration: none;
   background: ${s("background")};
-  transition: transform 50ms ease-in-out;
-  border: 1px solid ${s("inputBorder")};
-  border-bottom-width: 2px;
-  border-right-width: 2px;
+  border: 1px solid ${s("divider")};
+  box-shadow: ${(props) =>
+    props.$isDragging
+      ? "rgba(0, 0, 0, 0.1) 0px 8px 24px"
+      : "rgba(0, 0, 0, 0.03) 0px 1px 2px"};
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 
   ${Actions} {
     opacity: 0;
@@ -303,30 +318,33 @@ const DocumentLink = styled(Link)<{
   &:active,
   &:focus,
   &:focus-within {
-    transform: ${(props) => (props.$isDragging ? "scale(1.1)" : "scale(1.08)")}
-      rotate(-2deg);
-    box-shadow: ${(props) =>
-      props.$isDragging
-        ? "0 0 20px rgba(0,0,0,0.2);"
-        : "0 0 10px rgba(0,0,0,0.1)"};
+    background: ${s("backgroundSecondary")};
+    border-color: ${s("inputBorder")};
+    box-shadow:
+      rgba(0, 0, 0, 0.08) 0px 2px 4px,
+      rgba(0, 0, 0, 0.06) 0px 8px 20px;
     z-index: 1;
-
-    ${Fold} {
-      display: none;
-    }
 
     ${Actions} {
       opacity: 1;
     }
   }
+
+  &:focus-visible {
+    outline: none;
+    border-color: ${s("inputBorderFocused")};
+    box-shadow:
+      0 0 0 2px ${s("inputBorderFocused")},
+      rgba(0, 0, 0, 0.08) 0px 2px 4px;
+  }
 `;
 
 const Heading = styled.h3`
+  ${ellipsis()}
   margin-top: 0;
-  margin-bottom: 0.35em;
-  line-height: 22px;
-  max-height: 66px; // 3*line-height
-  overflow: hidden;
+  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 20px;
 
   color: ${s("text")};
   font-family: ${s("fontFamily")};

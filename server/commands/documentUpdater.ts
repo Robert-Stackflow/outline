@@ -1,4 +1,5 @@
 import type { TextEditMode } from "@shared/types";
+import { extractFrontmatter } from "@shared/utils/frontmatter";
 import { Event, Document } from "@server/models";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
 import { TextHelper } from "@server/models/helpers/TextHelper";
@@ -92,18 +93,29 @@ export default async function documentUpdater(
   if (coverImage !== undefined) {
     document.coverImage = coverImage;
   }
-  if (properties !== undefined) {
-    document.properties = properties;
+  const extractedFrontmatter =
+    text === undefined ? undefined : extractFrontmatter(text);
+  const textWithoutFrontmatter = extractedFrontmatter?.body ?? text;
+  const documentProperties =
+    properties === undefined ? extractedFrontmatter?.properties : properties;
+
+  if (documentProperties !== undefined) {
+    document.properties = documentProperties;
   }
   if (insightsEnabled !== undefined) {
     document.insightsEnabled = insightsEnabled;
   }
-  if (text !== undefined) {
+  if (textWithoutFrontmatter !== undefined) {
     document = DocumentHelper.applyMarkdownToDocument(
       document,
-      await TextHelper.replaceImagesWithAttachments(ctx, text, user, {
-        base64Only: true,
-      }),
+      await TextHelper.replaceImagesWithAttachments(
+        ctx,
+        textWithoutFrontmatter,
+        user,
+        {
+          base64Only: true,
+        }
+      ),
       editMode,
       findText
     );

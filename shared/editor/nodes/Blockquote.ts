@@ -4,10 +4,11 @@ import type {
   Node as ProsemirrorNode,
   NodeType,
 } from "prosemirror-model";
-import type { Command } from "prosemirror-state";
+import { Plugin, type Command } from "prosemirror-state";
 import toggleWrap from "../commands/toggleWrap";
 import type { MarkdownSerializerState } from "../lib/markdown/serializer";
 import { isNodeActive } from "../queries/isNodeActive";
+import { BlockquoteView } from "./BlockquoteView";
 import Node from "./Node";
 
 export default class Blockquote extends Node {
@@ -27,6 +28,18 @@ export default class Blockquote extends Node {
       ],
       toDOM: () => ["blockquote", 0],
     };
+  }
+
+  get plugins() {
+    return [
+      new Plugin({
+        props: {
+          nodeViews: {
+            [this.name]: (node) => new BlockquoteView(node),
+          },
+        },
+      }),
+    ];
   }
 
   inputRules({ type }: { type: NodeType }) {

@@ -15,9 +15,9 @@ export default styled.button.attrs((props) => ({
   justify-content: center;
   gap: 4px;
   flex: 0;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
   cursor: var(--pointer);
   border: none;
   border-radius: 6px;
@@ -30,6 +30,10 @@ export default styled.button.attrs((props) => ({
   transition:
     opacity 100ms ease-in-out,
     background 100ms ease-in-out;
+
+  svg {
+    flex-shrink: 0;
+  }
 
   &:hover {
     opacity: 1;

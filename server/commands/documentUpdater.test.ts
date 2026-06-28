@@ -117,6 +117,34 @@ describe("documentUpdater", () => {
   });
 
   describe("replace", () => {
+    it("should extract leading frontmatter into document properties", async () => {
+      const user = await buildUser();
+      let document = await buildDocument({
+        teamId: user.teamId,
+        properties: null,
+      });
+
+      document = await withAPIContext(user, (ctx) =>
+        documentUpdater(ctx, {
+          text: `---
+status: draft
+tags:
+  - outline
+  - editor
+---
+
+Changed`,
+          document,
+        })
+      );
+
+      expect(document.properties).toEqual({
+        status: "draft",
+        tags: ["outline", "editor"],
+      });
+      expect(document.text).toBe("Changed");
+    });
+
     it("should update document content when changing text", async () => {
       const user = await buildUser();
       let document = await buildDocument({

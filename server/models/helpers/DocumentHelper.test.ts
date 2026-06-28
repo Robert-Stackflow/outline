@@ -342,6 +342,67 @@ This is a [test paragraph](https://example.net)`,
   });
 
   describe("toMarkdown", () => {
+    it("should migrate legacy frontmatter code blocks into document properties", async () => {
+      const document = await buildDocument({
+        properties: null,
+        text: `\`\`\`yaml
+status: draft
+tags:
+  - outline
+\`\`\`
+
+Body`,
+      });
+
+      const data = await DocumentHelper.toJSON(document);
+      const markdown = await DocumentHelper.toMarkdown(data, {
+        includeTitle: false,
+      });
+
+      expect(document.properties).toEqual({
+        status: "draft",
+        tags: ["outline"],
+      });
+      expect(markdown).toBe("Body");
+    });
+
+    it("should include document properties as frontmatter when requested", async () => {
+      const document = await buildDocument({
+        title: "Frontmatter",
+        text: "Body",
+        properties: {
+          status: "draft",
+          tags: ["outline", "editor"],
+        },
+      });
+      const result = await DocumentHelper.toMarkdown(document, {
+        includeProperties: true,
+      });
+      expect(result).toBe(`---
+status: draft
+tags:
+  - outline
+  - editor
+---
+
+# Frontmatter
+
+Body`);
+    });
+
+    it("should omit document properties from internal markdown by default", async () => {
+      const document = await buildDocument({
+        text: "Body",
+        properties: {
+          status: "draft",
+        },
+      });
+      const result = await DocumentHelper.toMarkdown(document, {
+        includeTitle: false,
+      });
+      expect(result).toBe("Body");
+    });
+
     it("should preserve smart quotes rather than flattening them", async () => {
       const document = await buildDocument({
         content: {

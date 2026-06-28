@@ -231,6 +231,8 @@ export type ImportTaskOutput = {
   createdById?: string;
   /** Original author's email in the source system, used for user remapping. */
   createdByEmail?: string | null;
+  /** Arbitrary key-value document properties parsed from frontmatter. */
+  properties?: Record<string, unknown> | null;
   content: ProsemirrorDoc;
   createdAt?: Date;
   updatedAt?: Date;

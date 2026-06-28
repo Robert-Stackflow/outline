@@ -73,8 +73,10 @@ export default class ExtensionManager {
         )
         .map((node: Node) => [
           node.name,
-          observer(((props: WidgetProps) =>
-            node.widget(props)) as React.FC<WidgetProps>),
+          observer(
+            ((props: WidgetProps) =>
+              node.widget(props) ?? null) as React.FC<WidgetProps>
+          ),
         ])
     );
   }

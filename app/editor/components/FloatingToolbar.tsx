@@ -14,6 +14,10 @@ import useKeyboardStickyOffset from "~/hooks/useKeyboardStickyOffset";
 import useMobile from "~/hooks/useMobile";
 import Logger from "~/utils/Logger";
 import { useEditor } from "./EditorContext";
+import {
+  getFloatingToolbarHorizontalPosition,
+  getTopSelectionLineBounds,
+} from "./floatingToolbarPosition";
 import { ColumnSelection } from "@shared/editor/selection/ColumnSelection";
 import { RowSelection } from "@shared/editor/selection/RowSelection";
 import { isTableSelected } from "@shared/editor/queries/table";
@@ -37,14 +41,36 @@ const defaultPosition = {
   visible: false,
 };
 
+function getBrowserSelectionBounds(editorRoot: HTMLElement) {
+  const selection = editorRoot.ownerDocument.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+    return undefined;
+  }
+
+  const range = selection.getRangeAt(0);
+  const commonAncestor = range.commonAncestorContainer;
+  const selectionRoot =
+    commonAncestor instanceof Element
+      ? commonAncestor
+      : commonAncestor.parentElement;
+
+  if (!selectionRoot || !editorRoot.contains(selectionRoot)) {
+    return undefined;
+  }
+
+  return getTopSelectionLineBounds(Array.from(range.getClientRects()));
+}
+
 function usePosition({
   menuRef,
+  contentRef,
   active,
   align = "center",
   from,
   to,
 }: {
   menuRef: React.RefObject<HTMLDivElement>;
+  contentRef: React.RefObject<HTMLDivElement>;
   active?: boolean;
   align?: Props["align"];
   from?: number;
@@ -52,25 +78,54 @@ function usePosition({
 }) {
   const { view } = useEditor();
   const { selection } = view.state;
-  const [menuWidth, setMenuWidth] = React.useState(0);
-  const [menuHeight, setMenuHeight] = React.useState(36);
+  const [menuSize, setMenuSize] = React.useState({
+    width: 0,
+    height: 36,
+  });
+  const menuWidth = menuSize.width;
+  const menuHeight = menuSize.height;
   const menuGap = 10;
 
-  // Measure the menu after DOM updates. The link editor is taller than the
-  // compact formatting toolbar, so positioning from a fixed height would place
-  // the expanded control over the selected link.
-  React.useLayoutEffect(() => {
-    if (menuRef.current) {
-      const width = menuRef.current.offsetWidth;
-      const height = Math.max(36, menuRef.current.offsetHeight);
-      if (width !== menuWidth) {
-        setMenuWidth(width);
-      }
-      if (height !== menuHeight) {
-        setMenuHeight(height);
-      }
+  const measureMenu = React.useCallback(() => {
+    const element = contentRef.current ?? menuRef.current;
+    if (!element) {
+      return;
     }
-  }, [menuHeight, menuRef, menuWidth]);
+
+    const bounds = element.getBoundingClientRect();
+    const width = element.offsetWidth || Math.round(bounds.width);
+    const height = Math.max(
+      36,
+      element.offsetHeight || Math.round(bounds.height)
+    );
+
+    setMenuSize((current) =>
+      current.width === width && current.height === height
+        ? current
+        : { width, height }
+    );
+  }, [contentRef, menuRef]);
+
+  // Measure the visible menu content after DOM updates. The link editor is
+  // taller than the compact formatting toolbar, so positioning from a fixed
+  // height would place the expanded control over the selected link.
+  React.useLayoutEffect(() => {
+    measureMenu();
+  });
+
+  React.useLayoutEffect(() => {
+    const element = contentRef.current ?? menuRef.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new ResizeObserver(measureMenu);
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [contentRef, measureMenu, menuRef]);
 
   // based on the start and end of the selection calculate the position at
   // the center top
@@ -92,6 +147,18 @@ function usePosition({
     right: Math.max(fromPos.right, toPos.right),
   };
 
+  const browserSelectionBounds =
+    selection instanceof NodeSelection
+      ? undefined
+      : getBrowserSelectionBounds(view.dom);
+
+  if (browserSelectionBounds) {
+    selectionBounds.top = browserSelectionBounds.top;
+    selectionBounds.bottom = browserSelectionBounds.bottom;
+    selectionBounds.left = browserSelectionBounds.left;
+    selectionBounds.right = browserSelectionBounds.right;
+  }
+
   const offsetParent = menuRef.current?.offsetParent
     ? menuRef.current.offsetParent.getBoundingClientRect()
     : ({
@@ -99,6 +166,7 @@ function usePosition({
         height: window.innerHeight,
         top: 0,
         left: 0,
+        x: 0,
       } as DOMRect);
 
   // position at the top right of code blocks
@@ -130,7 +198,7 @@ function usePosition({
     }
   }
 
-  if (!active || !menuRef.current || !menuHeight) {
+  if (!active || !menuRef.current || !menuHeight || menuWidth <= 0) {
     return defaultPosition;
   }
 
@@ -201,29 +269,23 @@ function usePosition({
     }
   }
 
-  // calculate the horizontal center of the selection
-  const halfSelection =
-    Math.abs(selectionBounds.right - selectionBounds.left) / 2;
-  const centerOfSelection = selectionBounds.left + halfSelection;
-
   // position the menu so that it is centered over the selection except in
   // the cases where it would extend off the edge of the screen. In these
   // instances leave a margin
   const margin = 12;
-  const left = Math.min(
-    Math.min(
-      offsetParent.x + offsetParent.width - menuWidth - margin,
-      window.innerWidth - margin
-    ),
-    Math.max(
-      Math.max(offsetParent.x, margin),
-      align === "center"
-        ? centerOfSelection - menuWidth / 2
-        : align === "start"
-          ? selectionBounds.left
-          : selectionBounds.right
-    )
-  );
+  const horizontalPosition = getFloatingToolbarHorizontalPosition({
+    align,
+    margin,
+    menuWidth,
+    offsetParent,
+    selectionBounds,
+    viewportWidth: window.innerWidth,
+  });
+
+  if (!horizontalPosition) {
+    return defaultPosition;
+  }
+
   const top = Math.max(
     HEADER_HEIGHT,
     Math.min(
@@ -232,15 +294,11 @@ function usePosition({
     )
   );
 
-  // if the menu has been offset to not extend offscreen then we should adjust
-  // the position of the triangle underneath to correctly point to the center
-  // of the selection still
-  const offset = left - (centerOfSelection - menuWidth / 2);
   return {
-    left: Math.max(margin, Math.round(left - offsetParent.left)),
+    left: horizontalPosition.left,
     top: Math.round(top - offsetParent.top),
-    offset: Math.round(offset),
-    maxWidth: Math.min(window.innerWidth, offsetParent.width) - margin * 2,
+    offset: horizontalPosition.offset,
+    maxWidth: horizontalPosition.maxWidth,
     blockSelection: !!(
       codeBlock ||
       isColSelection ||
@@ -256,10 +314,12 @@ const FloatingToolbar = React.forwardRef(function FloatingToolbar_(
   ref: React.RefObject<HTMLDivElement>
 ) {
   const menuRef = ref || React.createRef<HTMLDivElement>();
+  const contentRef = React.useRef<HTMLDivElement>(null);
   const [isSelectingText, setSelectingText] = React.useState(false);
 
   let position = usePosition({
     menuRef,
+    contentRef,
     active: props.active,
     align: props.align,
     from: props.from,
@@ -321,7 +381,13 @@ const FloatingToolbar = React.forwardRef(function FloatingToolbar_(
         }}
       >
         {props.children && (
-          <Background align={props.align}>{props.children}</Background>
+          <Background
+            align={props.align}
+            data-floating-toolbar-content
+            ref={contentRef}
+          >
+            {props.children}
+          </Background>
         )}
       </Wrapper>
     </Portal>

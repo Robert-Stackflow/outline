@@ -1,4 +1,5 @@
 import type { Optional } from "utility-types";
+import { extractFrontmatter } from "@shared/utils/frontmatter";
 import { TextHelper } from "@shared/utils/TextHelper";
 import { Collection, Document, type Template } from "@server/models";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
@@ -25,6 +26,7 @@ type Props = Optional<
     | "sourceMetadata"
     | "editorVersion"
     | "publishedAt"
+    | "properties"
     | "createdAt"
     | "updatedAt"
     | "createdById"
@@ -168,6 +170,7 @@ export default async function documentCreator(
     updatedAt,
     editorVersion,
     publishedAt,
+    properties,
     sourceMetadata,
     createdById,
     lastModifiedById,
@@ -201,10 +204,16 @@ export default async function documentCreator(
     title ??
     (template ? TextHelper.replaceTemplateVariables(template.title, user) : "");
 
+  const extractedFrontmatter =
+    content || !text ? undefined : extractFrontmatter(text);
+  const textWithoutFrontmatter = extractedFrontmatter?.body ?? text;
+  const documentProperties =
+    properties === undefined ? extractedFrontmatter?.properties : properties;
+
   const contentWithReplacements = content
     ? content
-    : text
-      ? ProsemirrorHelper.toProsemirror(text).toJSON()
+    : textWithoutFrontmatter
+      ? ProsemirrorHelper.toProsemirror(textWithoutFrontmatter).toJSON()
       : template
         ? ProsemirrorHelper.replaceTemplateVariables(
             await DocumentHelper.toJSON(template),
@@ -233,6 +242,7 @@ export default async function documentCreator(
     color: color ?? template?.color,
     title: titleWithReplacements,
     content: contentWithReplacements,
+    properties: documentProperties,
     state,
   });
 

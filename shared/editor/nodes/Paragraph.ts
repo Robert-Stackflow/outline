@@ -4,10 +4,12 @@ import type {
   NodeType,
   Node as ProsemirrorNode,
 } from "prosemirror-model";
+import { Plugin } from "prosemirror-state";
 import deleteEmptyFirstParagraph from "../commands/deleteEmptyFirstParagraph";
 import type { MarkdownSerializerState } from "../lib/markdown/serializer";
 import Node from "./Node";
 import { EditorStyleHelper } from "../styles/EditorStyleHelper";
+import { TextBlockView } from "./TextBlockView";
 
 export default class Paragraph extends Node {
   get name() {
@@ -44,6 +46,18 @@ export default class Paragraph extends Node {
       "Shift-Ctrl-0": setBlockType(type),
       Backspace: deleteEmptyFirstParagraph,
     };
+  }
+
+  get plugins() {
+    return [
+      new Plugin({
+        props: {
+          nodeViews: {
+            [this.name]: (node) => new TextBlockView(node, "paragraph"),
+          },
+        },
+      }),
+    ];
   }
 
   commands({ type }: { type: NodeType }) {

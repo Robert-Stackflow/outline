@@ -8,11 +8,12 @@ import {
   sinkListItem,
   liftListItem,
 } from "prosemirror-schema-list";
-import type { Command } from "prosemirror-state";
+import { Plugin, type Command } from "prosemirror-state";
 import { TextSelection } from "prosemirror-state";
 import type { MarkdownSerializerState } from "../lib/markdown/serializer";
 import { getParentListItem } from "../queries/getParentListItem";
 import { isInList } from "../queries/isInList";
+import { ListItemView, queueListMarkerRefresh } from "./ListItemView";
 import Node from "./Node";
 
 export default class ListItem extends Node {
@@ -31,7 +32,26 @@ export default class ListItem extends Node {
   }
 
   get plugins() {
-    return [];
+    return [
+      new Plugin({
+        props: {
+          nodeViews: {
+            [this.name]: (node) => new ListItemView(node),
+          },
+        },
+        view: (view) => {
+          queueListMarkerRefresh(view.dom);
+
+          return {
+            update: (currentView, previousState) => {
+              if (previousState.doc !== currentView.state.doc) {
+                queueListMarkerRefresh(currentView.dom);
+              }
+            },
+          };
+        },
+      }),
+    ];
   }
 
   commands({ type }: { type: NodeType }) {

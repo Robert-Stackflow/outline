@@ -489,6 +489,7 @@ export default abstract class ImportsProcessor<
               text: await DocumentHelper.toMarkdown(transformedContent, {
                 includeTitle: false,
               }),
+              properties: output.properties,
               collectionId: collectionInternalId,
               parentDocumentId: isRootDocument ? undefined : parentInternalId,
               createdById: resolvedCreatedById,

@@ -9,6 +9,27 @@ export class EditorStyleHelper {
   /** Block-level color decoration */
   static readonly blockColor = "block-color";
 
+  /** Block view wrapper owned by a ProseMirror NodeView */
+  static readonly blockView = "block-view";
+
+  /** Non-editable chrome column for block indicators and controls */
+  static readonly blockChrome = "block-chrome";
+
+  /** Editable content region inside a block view */
+  static readonly blockContent = "block-content";
+
+  /** Real DOM background/selection layer inside a block view */
+  static readonly blockHalo = "block-selectable-halo";
+
+  /** Visual indicator element inside block chrome */
+  static readonly blockIndicator = "block-indicator";
+
+  /** List marker rendered as real DOM */
+  static readonly blockListMarker = "block-list-marker";
+
+  /** Quote indicator rendered as real DOM */
+  static readonly blockQuoteBar = "block-quote-bar";
+
   // Images
 
   static readonly imageHandle = "image-handle";
@@ -100,8 +121,29 @@ export class EditorStyleHelper {
   /** Table wrapper */
   static readonly table = "table-wrapper";
 
+  /** Overlay layer that owns table controls */
+  static readonly tableControls = "table-controls";
+
+  /** Base class for table control buttons */
+  static readonly tableControl = "table-control";
+
+  /** Inline gutter reserved around table chrome */
+  static readonly tableControlGutter = "0px";
+
+  /** Height for the styled horizontal table scrollbar */
+  static readonly tableScrollbarHeight = "6px";
+
+  /** Opacity for table chrome when it is not being interacted with */
+  static readonly tableControlIdleOpacity = "0";
+
+  /** Opacity for table chrome while hovered, selected, or dragging */
+  static readonly tableControlActiveOpacity = "1";
+
   /** Table grip (circle in top left) */
   static readonly tableGrip = "table-grip";
+
+  /** Real DOM surface inside table controls */
+  static readonly tableControlSurface = "table-control-surface";
 
   /** Table row grip */
   static readonly tableGripRow = "table-grip-row";

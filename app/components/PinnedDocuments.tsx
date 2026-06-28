@@ -19,7 +19,6 @@ import { AnimatePresence } from "framer-motion";
 import { observer } from "mobx-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import styled from "styled-components";
-import breakpoint from "styled-components-breakpoint";
 import type Pin from "~/models/Pin";
 import DocumentCard from "~/components/DocumentCard";
 import useStores from "~/hooks/useStores";
@@ -120,7 +119,7 @@ function PinnedDocuments({
               Array(placeholderCount)
                 .fill(undefined)
                 .map((_, index) => (
-                  <div key={index} style={{ width: 170, height: 180 }} />
+                  <div key={index} style={{ width: "100%", height: 76 }} />
                 ))
             ) : (
               <AnimatePresence initial={false}>
@@ -153,9 +152,9 @@ function PinnedDocuments({
 
 const List = styled.div`
   display: grid;
-  column-gap: 8px;
+  column-gap: 10px;
   row-gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
   padding: 0;
   list-style: none;
   margin: 16px 0 32px;
@@ -163,14 +162,6 @@ const List = styled.div`
   &:empty {
     display: none;
   }
-
-  ${breakpoint("mobileLarge")`
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  `};
-
-  ${breakpoint("tablet")`
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  `};
 `;
 
 export default observer(PinnedDocuments);

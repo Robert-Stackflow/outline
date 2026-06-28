@@ -270,6 +270,7 @@ export const renderShare = async (ctx: Context, next: Next) => {
   if (prefersMarkdown && (document || collection)) {
     let markdown = await DocumentHelper.toMarkdown(document || collection!, {
       includeTitle: true,
+      includeProperties: !!document,
       signedUrls: 86400, // 24 hours
       teamId: team?.id,
     });

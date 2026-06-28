@@ -19,6 +19,7 @@ import toggleBlockType from "../commands/toggleBlockType";
 import type { MarkdownSerializerState } from "../lib/markdown/serializer";
 import Node from "./Node";
 import { EditorStyleHelper } from "../styles/EditorStyleHelper";
+import { TextBlockView } from "./TextBlockView";
 
 export enum HeadingLevel {
   One = 1,
@@ -273,7 +274,16 @@ export default class Heading extends Node<HeadingOptions> {
       },
     });
 
-    return [widgetsPlugin];
+    const nodeViewPlugin: Plugin = new Plugin({
+      props: {
+        nodeViews: {
+          [this.name]: (node) =>
+            new TextBlockView(node, "heading", this.options.offset || 0),
+        },
+      },
+    });
+
+    return [widgetsPlugin, nodeViewPlugin];
   }
 
   inputRules({ type }: { type: NodeType }) {

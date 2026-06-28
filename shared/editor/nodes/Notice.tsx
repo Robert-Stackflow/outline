@@ -6,7 +6,12 @@ import type {
   Node as ProsemirrorNode,
   NodeType,
 } from "prosemirror-model";
-import type { Command, EditorState, Transaction } from "prosemirror-state";
+import {
+  Plugin,
+  type Command,
+  type EditorState,
+  type Transaction,
+} from "prosemirror-state";
 import * as React from "react";
 import ReactDOM from "react-dom";
 import type { Primitive } from "utility-types";
@@ -14,6 +19,7 @@ import toggleWrap from "../commands/toggleWrap";
 import type { MarkdownSerializerState } from "../lib/markdown/serializer";
 import noticesRule from "../rules/notices";
 import Node from "./Node";
+import { NoticeView } from "./NoticeView";
 
 export enum NoticeTypes {
   Info = "info",
@@ -137,6 +143,18 @@ export default class Notice extends Node {
       tip: (): Command => (state, dispatch) =>
         this.handleStyleChange(state, dispatch, NoticeTypes.Tip),
     };
+  }
+
+  get plugins() {
+    return [
+      new Plugin({
+        props: {
+          nodeViews: {
+            [this.name]: (node) => new NoticeView(node),
+          },
+        },
+      }),
+    ];
   }
 
   handleStyleChange = (

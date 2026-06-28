@@ -6,9 +6,12 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { mergeRefs } from "react-merge-refs";
+import styled from "styled-components";
 import type { Optional } from "utility-types";
 import insertFiles from "@shared/editor/commands/insertFiles";
 import EditorContainer from "@shared/editor/components/Styles";
+import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
+import { depths, s } from "@shared/styles";
 import { AttachmentPreset } from "@shared/types";
 import { ProsemirrorHelper } from "@shared/utils/ProsemirrorHelper";
 import { getDataTransferFiles } from "@shared/utils/files";
@@ -20,11 +23,21 @@ import useCurrentUser from "~/hooks/useCurrentUser";
 import useEditorClickHandlers from "~/hooks/useEditorClickHandlers";
 import useEmbeds from "~/hooks/useEmbeds";
 import useStores from "~/hooks/useStores";
+import { ProsemirrorHelper as CommentProsemirrorHelper } from "~/models/helpers/ProsemirrorHelper";
 import { uploadFile, uploadFileFromUrl } from "~/utils/files";
 import lazyWithRetry from "~/utils/lazyWithRetry";
 import useShare from "@shared/hooks/useShare";
 
 const LazyLoadedEditor = lazyWithRetry(() => import("~/editor"));
+
+type CommentPreviewPlacement = "above" | "below";
+
+interface CommentPreview {
+  id: string;
+  left: number;
+  top: number;
+  placement: CommentPreviewPlacement;
+}
 
 export type Props = Optional<
   EditorProps,
@@ -52,6 +65,8 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
   const localRef = React.useRef<SharedEditor>();
   const preferences = useCurrentUser({ rejectOnEmpty: false })?.preferences;
   const previousCommentIds = React.useRef<string[]>();
+  const [commentPreview, setCommentPreview] =
+    React.useState<CommentPreview | null>(null);
 
   // Upload progress tracking for delayed toast
   const progressMap = React.useMemo(() => new Map<string, number>(), []);
@@ -248,6 +263,73 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
     [updateComments]
   );
 
+  const handleCommentPreviewMove = React.useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      if (!props.onClickCommentMark) {
+        return;
+      }
+      if (!(event.target instanceof HTMLElement)) {
+        return;
+      }
+
+      const marker = event.target.closest(
+        `.${EditorStyleHelper.comment}`
+      ) as HTMLElement | null;
+      if (!marker || marker.hasAttribute("data-resolved")) {
+        setCommentPreview(null);
+        return;
+      }
+
+      const commentId = marker.id.replace("comment-", "");
+      if (!commentId || !comments.get(commentId)) {
+        setCommentPreview(null);
+        return;
+      }
+
+      const bounds = marker.getBoundingClientRect();
+      const placement: CommentPreviewPlacement =
+        bounds.top > 140 ? "above" : "below";
+      const left = Math.min(
+        window.innerWidth - 176,
+        Math.max(176, bounds.left + bounds.width / 2)
+      );
+      const top = placement === "above" ? bounds.top - 10 : bounds.bottom + 10;
+
+      setCommentPreview((previous) => {
+        if (
+          previous?.id === commentId &&
+          Math.abs(previous.left - left) < 1 &&
+          Math.abs(previous.top - top) < 1 &&
+          previous.placement === placement
+        ) {
+          return previous;
+        }
+
+        return {
+          id: commentId,
+          left,
+          top,
+          placement,
+        };
+      });
+    },
+    [comments, props.onClickCommentMark]
+  );
+
+  const handleCommentPreviewLeave = React.useCallback(() => {
+    setCommentPreview(null);
+  }, []);
+
+  const commentPreviewThread = commentPreview
+    ? comments.inThread(commentPreview.id)
+    : [];
+  const commentPreviewComment = commentPreview
+    ? comments.get(commentPreview.id)
+    : undefined;
+  const commentPreviewText = commentPreviewComment
+    ? CommentProsemirrorHelper.toPlainText(commentPreviewComment).trim()
+    : "";
+
   const paragraphs = React.useMemo(() => {
     if (props.readOnly && typeof props.value === "object") {
       return ProsemirrorHelper.getPlainParagraphs(props.value);
@@ -257,7 +339,10 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
 
   return (
     <ErrorBoundary component="div" reloadOnChunkMissing>
-      <>
+      <CommentHoverSurface
+        onMouseMove={handleCommentPreviewMove}
+        onMouseLeave={handleCommentPreviewLeave}
+      >
         {paragraphs ? (
           <EditorContainer
             $rtl={props.dir === "rtl"}
@@ -292,6 +377,30 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
             defaultValue={props.defaultValue || ""}
           />
         )}
+        {commentPreview && commentPreviewComment && (
+          <CommentPreviewCard
+            role="tooltip"
+            $placement={commentPreview.placement}
+            style={{
+              left: commentPreview.left,
+              top: commentPreview.top,
+            }}
+          >
+            <CommentPreviewMeta>
+              {commentPreviewComment.createdBy?.name ?? t("Comment")}
+              {commentPreviewThread.length > 1 && (
+                <CommentPreviewCount>
+                  {t("{{ count }} replies", {
+                    count: commentPreviewThread.length - 1,
+                  })}
+                </CommentPreviewCount>
+              )}
+            </CommentPreviewMeta>
+            <CommentPreviewBody>
+              {commentPreviewText || t("No comment text")}
+            </CommentPreviewBody>
+          </CommentPreviewCard>
+        )}
         {props.editorStyle?.paddingBottom && !props.readOnly && (
           <ClickablePadding
             onClick={props.readOnly ? undefined : focusAtEnd}
@@ -300,9 +409,62 @@ function Editor(props: Props, ref: React.RefObject<SharedEditor> | null) {
             minHeight={props.editorStyle.paddingBottom}
           />
         )}
-      </>
+      </CommentHoverSurface>
     </ErrorBoundary>
   );
 }
 
 export default observer(React.forwardRef(Editor));
+
+const CommentHoverSurface = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const CommentPreviewCard = styled.div<{
+  $placement: CommentPreviewPlacement;
+}>`
+  position: fixed;
+  z-index: ${depths.editorToolbar};
+  width: min(340px, calc(100vw - 24px));
+  transform: translate(
+    -50%,
+    ${(props) => (props.$placement === "above" ? "-100%" : "0")}
+  );
+  pointer-events: none;
+  border-radius: 8px;
+  background: ${s("menuBackground")};
+  color: ${s("text")};
+  box-shadow:
+    0 0 0 1px ${s("divider")},
+    0 4px 16px rgba(0, 0, 0, 0.06);
+  padding: 8px 10px;
+`;
+
+const CommentPreviewMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+  color: ${s("textSecondary")};
+  font-size: 12px;
+  font-weight: 600;
+`;
+
+const CommentPreviewCount = styled.span`
+  flex-shrink: 0;
+  color: ${s("textTertiary")};
+  font-weight: 500;
+`;
+
+const CommentPreviewBody = styled.div`
+  display: -webkit-box;
+  overflow: hidden;
+  color: ${s("text")};
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  white-space: pre-wrap;
+`;

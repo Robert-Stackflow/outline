@@ -4,6 +4,7 @@ import { traceFunction } from "@server/logging/tracing";
 import type { Document } from "@server/models";
 import FileOperation from "@server/models/FileOperation";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
+import { can } from "@server/policies";
 import type { APIContext } from "@server/types";
 import presentUser from "./user";
 
@@ -48,6 +49,15 @@ async function presentDocument(
         }
       : undefined
   );
+
+  if (
+    ctx &&
+    ctx.state.auth.user &&
+    can(ctx.state.auth.user, "update", document) &&
+    document.changed()
+  ) {
+    await document.saveWithCtx(ctx, { silent: true }, { name: "update" });
+  }
 
   const text =
     !asData || options?.includeText

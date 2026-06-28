@@ -1,6 +1,21 @@
 import yaml from "js-yaml";
+import type { ProsemirrorData } from "../types";
 
 const FRONTMATTER_REGEX = /^\s*---\n([\s\S]*?)\n---\s*(?:\n|$)/;
+
+export interface ExtractedFrontmatter {
+  /** The parsed frontmatter properties. */
+  properties: Record<string, unknown>;
+  /** The markdown content without the leading frontmatter block. */
+  body: string;
+}
+
+export interface ExtractedProsemirrorFrontmatter {
+  /** The parsed frontmatter properties. */
+  properties: Record<string, unknown>;
+  /** The ProseMirror document without the leading frontmatter block. */
+  body: ProsemirrorData;
+}
 
 /**
  * Parses a leading YAML frontmatter block from a markdown string into a plain
@@ -18,6 +33,10 @@ export function parseFrontmatter(
     return null;
   }
 
+  if (!match[1].trim()) {
+    return {};
+  }
+
   try {
     const parsed = yaml.load(match[1]);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
@@ -28,6 +47,85 @@ export function parseFrontmatter(
   }
 
   return null;
+}
+
+/**
+ * Extracts valid leading YAML frontmatter and returns the remaining markdown.
+ *
+ * @param markdown The markdown source to inspect.
+ * @returns Parsed properties and body, or null if no valid frontmatter exists.
+ */
+export function extractFrontmatter(
+  markdown: string
+): ExtractedFrontmatter | null {
+  const match = markdown.match(FRONTMATTER_REGEX);
+  if (!match) {
+    return null;
+  }
+
+  const properties = parseFrontmatter(markdown);
+  if (!properties) {
+    return null;
+  }
+
+  return {
+    properties,
+    body: markdown.slice(match[0].length),
+  };
+}
+
+/**
+ * Extracts a legacy leading YAML code block from ProseMirror document data.
+ *
+ * @param data The ProseMirror document data to inspect.
+ * @returns Parsed properties and document data without the code block.
+ */
+export function extractProsemirrorFrontmatter(
+  data: ProsemirrorData
+): ExtractedProsemirrorFrontmatter | null {
+  if (data.type !== "doc" || !data.content?.length) {
+    return null;
+  }
+
+  const [firstNode, ...remainingContent] = data.content;
+  if (!isYamlCodeBlock(firstNode)) {
+    return null;
+  }
+
+  const properties = yamlToObject(getTextContent(firstNode));
+  if (properties === null) {
+    return null;
+  }
+
+  return {
+    properties,
+    body: {
+      ...data,
+      content: remainingContent.length
+        ? remainingContent
+        : [{ type: "paragraph" }],
+    },
+  };
+}
+
+function getTextContent(node: ProsemirrorData): string {
+  if (node.text) {
+    return node.text;
+  }
+  return node.content?.map(getTextContent).join("") ?? "";
+}
+
+function isYamlCodeBlock(node: ProsemirrorData): boolean {
+  if (node.type !== "code_fence" && node.type !== "code_block") {
+    return false;
+  }
+
+  const language = node.attrs?.language;
+  if (typeof language !== "string") {
+    return false;
+  }
+
+  return ["yaml", "yml"].includes(language.trim().toLowerCase());
 }
 
 /**

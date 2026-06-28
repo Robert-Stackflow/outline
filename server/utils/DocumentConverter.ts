@@ -1,7 +1,7 @@
 import { escapeRegExp } from "es-toolkit/compat";
 import type { Node } from "prosemirror-model";
 import { DOMParser as ProsemirrorDOMParser } from "prosemirror-model";
-import yaml from "js-yaml";
+import { extractFrontmatter } from "@shared/utils/frontmatter";
 import { schema, serializer } from "@server/editor";
 import { FileImportError } from "@server/errors";
 import { trace, traceFunction } from "@server/logging/tracing";
@@ -16,6 +16,8 @@ export interface ConvertResult {
   title: string;
   /** The extracted emoji/icon from start of document. */
   icon?: string;
+  /** The parsed YAML frontmatter properties, if present. */
+  properties?: Record<string, unknown> | null;
 }
 
 @trace()
@@ -26,7 +28,7 @@ export class DocumentConverter {
    * @param content The content of the file.
    * @param fileName The name of the file, including extension.
    * @param mimeType The mime type of the file.
-   * @returns The converted document with text, data, title, and icon.
+   * @returns The converted document with text, data, title, icon, and properties.
    */
   public static async convert(
     content: Buffer | string,
@@ -34,17 +36,19 @@ export class DocumentConverter {
     mimeType: string
   ): Promise<ConvertResult> {
     let doc: Node;
+    let properties: Record<string, unknown> | null = null;
 
     // Route to appropriate conversion method
     const html = await this.convertToHtml(content, fileName, mimeType);
     if (html !== undefined) {
       doc = await this.htmlToProsemirror(html);
     } else {
-      const markdown = await this.convertToMarkdown(
-        content,
-        fileName,
-        mimeType
-      );
+      let markdown = await this.convertToMarkdown(content, fileName, mimeType);
+      const extractedFrontmatter = extractFrontmatter(markdown);
+      if (extractedFrontmatter) {
+        properties = extractedFrontmatter.properties;
+        markdown = extractedFrontmatter.body;
+      }
       doc = ProsemirrorHelper.toProsemirror(markdown);
     }
 
@@ -62,13 +66,17 @@ export class DocumentConverter {
     doc = docWithoutEmoji;
 
     // Serialize to markdown and trim whitespace
-    const text = serializer.serialize(doc).trim();
+    let text = serializer.serialize(doc).trim();
+    if (/^[\\\s]*$/.test(text)) {
+      text = "";
+    }
 
     return {
       text,
       doc,
       title,
       icon,
+      properties,
     };
   }
 
@@ -247,8 +255,7 @@ export class DocumentConverter {
       }
     }
 
-    // Process frontmatter and convert it to a YAML codeblock
-    return this.processFrontmatter(markdown);
+    return markdown;
   }
 
   /**
@@ -442,39 +449,6 @@ export class DocumentConverter {
    */
   private static bufferToString(content: Buffer | string): string {
     return typeof content === "string" ? content : content.toString("utf8");
-  }
-
-  /**
-   * Parse and convert frontmatter to a YAML codeblock.
-   *
-   * @param content The markdown content that may contain frontmatter.
-   * @returns The markdown content with frontmatter converted to a YAML codeblock.
-   */
-  private static processFrontmatter(content: string): string {
-    // Frontmatter must start at the beginning of the document
-    const frontmatterRegex = /^---\n([\s\S]*?)\n---(?:\n|$)/;
-    const match = content.match(frontmatterRegex);
-
-    if (!match) {
-      return content;
-    }
-
-    const frontmatterContent = match[1];
-    const remainingContent = content.slice(match[0].length);
-
-    // Validate that the frontmatter is valid YAML
-    try {
-      yaml.load(frontmatterContent);
-    } catch {
-      // If it's not valid YAML, return content unchanged
-      return content;
-    }
-
-    // Convert frontmatter to a YAML codeblock
-    const codeBlockDelimiter = "```";
-    const yamlCodeblock = `${codeBlockDelimiter}yaml\n${frontmatterContent}\n${codeBlockDelimiter}\n\n`;
-
-    return yamlCodeblock + remainingContent;
   }
 
   /**

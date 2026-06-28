@@ -417,16 +417,18 @@ export default class MarkdownAPIImportTask extends APIImportTask<Markdown> {
         });
       } else {
         const transformedMarkdown = this.rewriteMarkdown(item);
-        const { doc, title, icon } = await DocumentConverter.convert(
-          transformedMarkdown,
-          path.basename(item.path),
-          "text/markdown"
-        );
+        const { doc, title, icon, properties } =
+          await DocumentConverter.convert(
+            transformedMarkdown,
+            path.basename(item.path),
+            "text/markdown"
+          );
 
         taskOutput.push({
           externalId: item.externalId,
           title: title || item.title,
           icon,
+          properties,
           content: doc.toJSON() as ProsemirrorDoc,
         });
       }

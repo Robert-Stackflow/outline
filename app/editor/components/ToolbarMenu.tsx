@@ -55,7 +55,7 @@ function ToolbarDropdown(props: ToolbarDropdownProps) {
     return resolvedItemChildren
       ? mapMenuItems(resolvedItemChildren, commands, view, state)
       : [];
-  }, [isOpen, commands]);
+  }, [isOpen, item, commands, view, state]);
 
   const handleCloseAutoFocus = useCallback((ev: Event) => {
     ev.stopImmediatePropagation();
@@ -172,8 +172,10 @@ const FlexibleWrapper = styled.div`
   color: ${s("textSecondary")};
   overflow: hidden;
   display: flex;
+  align-items: center;
   gap: 2px;
   padding: 4px;
+  min-height: 36px;
 
   ${breakpoint("mobile", "tablet")`
     justify-content: space-evenly;

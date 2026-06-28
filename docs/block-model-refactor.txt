@@ -1,0 +1,356 @@
+Outline editor block model refactor
+===================================
+
+Status
+------
+
+This document records the code investigation and the target design for a
+first-class block layer in the Outline editor. It intentionally uses a .txt
+extension because this repository should not receive new Markdown files.
+
+
+Problem statement
+-----------------
+
+Outline's current editor is document-first rather than block-first. ProseMirror
+nodes already provide the storage and transaction model, but product behavior
+such as gutter controls, selected block backgrounds, block colors, list markers,
+quote bars, toggle arrows, and drag handles is spread across separate code paths.
+
+The result is that "block" means different things in different files:
+
+- app/editor/extensions/BlockGutterHelpers.ts resolves one action target.
+- app/editor/extensions/BlockGutter.tsx measures DOM, opens menus, writes block
+  colors, duplicates, deletes, comments, and drags.
+- shared/editor/extensions/BlockColor.ts builds its own document scan for color
+  decorations.
+- shared/editor/components/Styles.ts contains visual patches for list items,
+  quotes, toggle blocks, ProseMirror selected nodes, drag ghosts, and block
+  colors.
+- shared/editor/lib/ExtensionManager.ts injects block color attrs based on
+  schema group membership, with special handling for list items.
+
+This produces the failures the UI is showing:
+
+- One row can be interpreted as more than one block when semantic containers
+  contain inner blocks.
+- The background box does not consistently include list markers, quote bars,
+  toggle arrows, or table chrome.
+- Block controls can be positioned from the content node's indentation instead
+  of the page/editor gutter.
+- Some actions select text or a ProseMirror node only to represent a UI state,
+  which causes editor transactions and React NodeView updates.
+- Color changes rebuild block color decorations for the whole document and may
+  also trigger scroll anchoring because the visual box changes layout.
+- CSS fixes are node-specific instead of being driven by a stable block model.
+
+
+Current code findings
+---------------------
+
+1. The editor wrapper re-renders on every transaction.
+
+   app/editor/index.tsx dispatchTransaction applies the transaction, updates
+   state, calls handleChange for doc changes, calls handleEditorInit, calculates
+   direction, then calls forceUpdate(). Every selection-only transaction still
+   causes the Editor React tree and widgets to re-render.
+
+   This means block UI state must avoid editor transactions unless the document
+   or a real ProseMirror selection actually needs to change.
+
+2. The previous gutter active state was a ProseMirror decoration.
+
+   app/editor/extensions/BlockGutter.tsx stores activePos in plugin state and
+   dispatches a transaction to set or clear it. The decoration applies
+   block-gutter-active to the target node.
+
+   This still creates a ProseMirror transaction for a purely visual state, which
+   then hits app/editor/index.tsx forceUpdate(). The new implementation keeps
+   menu-open highlight in an independent overlay. Hover and menu-open visual
+   state should stay outside EditorState.
+
+3. The current block target resolver is gutter-specific.
+
+   app/editor/extensions/BlockGutterHelpers.ts has useful concepts, but it is
+   named after the gutter and mixes action selection with insertion behavior.
+   The resolver also treats some containers as semantic blocks and others as
+   structural containers without a shared vocabulary for the rest of the editor.
+
+4. Block colors have their own independent document scan.
+
+   shared/editor/extensions/BlockColor.ts scans every block on docChanged and
+   stops descending once a colored block is decorated. It does not share the same
+   target rules as BlockGutter, so color and gutter can disagree about what a
+   block is.
+
+5. Selection is currently overused for block commands.
+
+   Block menu conversions and comments call selectionForBlockGutterTarget,
+   which uses a TextSelection for non-leaf blocks. Dragging uses NodeSelection.
+   These selection changes can visually select text or selected nodes and cause
+   the full editor wrapper to re-render.
+
+   The new model should distinguish "UI active block" from "ProseMirror
+   selection required to run an existing command."
+
+   Temporary selection transactions that exist only to let legacy commands or
+   drag/drop mechanics run should be tagged so app/editor/index.tsx does not
+   force a React render for them.
+
+6. The current CSS draws block visuals as node-specific pseudo-elements.
+
+   shared/editor/components/Styles.ts draws block-color and block-gutter-active
+   backgrounds with ::after. List items, blockquotes, toggle blocks, selected
+   nodes, and drag ghosts all have custom rules.
+
+   The visual box must be stable in normal and selected states. Selected state
+   must not add padding or change margins; otherwise color changes and menu open
+   events can create page jumps.
+
+7. Block color attrs are persistable data.
+
+   shared/editor/lib/ExtensionManager.ts injects blockBackgroundColor and
+   blockTextColor attrs into block nodes. Because document JSON is persisted,
+   these attrs should be written only on the chosen block target and only when
+   non-empty values are meaningful. Empty defaults should not become noisy data
+   across the document.
+
+
+Target concepts
+---------------
+
+The refactor introduces one shared editor concept: BlockModelTarget.
+
+A BlockModelTarget has:
+
+- pos: the document position before the action node.
+- node: the ProseMirror node that receives commands and attrs.
+- depth: the node depth.
+- parentPos and parentNode: parent metadata when the parent is not doc.
+- ancestors: semantic and structural ancestry from outermost to innermost.
+- role: one of text, container, listItem, taskItem, media, table, atom.
+- selectionMode: node or content.
+
+Two related but separate ideas are important:
+
+1. Action target
+
+   The action target is the single ProseMirror node that commands should operate
+   on. A pointer row must resolve to exactly one action target.
+
+2. Visual envelope
+
+   The visual envelope is the on-screen region that should receive hover,
+   selected, dragging, and color backgrounds. It may include UI chrome associated
+   with the action target: list markers, checkbox controls, quote indicators,
+   toggle arrows, and table handles.
+
+   The envelope must be implemented without adding layout-changing padding in
+   selected or colored states.
+
+
+Block resolution rules
+----------------------
+
+The resolver must be deterministic and shared by gutter, color, deletion,
+duplication, link copy, and future block UI:
+
+1. Ignore structural list containers as action blocks.
+
+   bullet_list, ordered_list, and checkbox_list are layout containers. Their
+   list_item or checkbox_item children are action blocks.
+
+2. Prefer the deepest actionable block on the pointer row.
+
+   When a quote, notice, or toggle contains inner blocks, the inner block wins
+   for that row except for a toggle title row. This prevents the same line from
+   getting both outer and inner block controls.
+
+3. Treat semantic containers as action blocks only when the row belongs to the
+   container's own block surface.
+
+   Examples:
+   - A simple blockquote with direct paragraph content resolves to blockquote.
+   - A blockquote containing a list resolves to each list item while hovering
+     list rows.
+   - A toggle block resolves to the whole toggle block when hovering the title
+     row, including the arrow.
+   - Rows inside an expanded toggle body resolve to the corresponding inner
+     block.
+
+4. Treat list items as atomic action blocks.
+
+   A list item includes its marker or checkbox and its content. Nested list
+   items are separate blocks; the deepest list item wins.
+
+5. Treat table as a block envelope, with cell editing left to table tools.
+
+   The gutter should target the table as a block from the table edge or chrome.
+   Inline editing inside cells should not constantly switch the document block
+   target unless a future cell-block model explicitly supports that.
+
+6. Use stable tie-breaking.
+
+   If multiple candidates are found from posAtCoords probes, prefer:
+   - candidate whose measured rect contains the pointer Y;
+   - deepest actionable depth;
+   - smaller measured height at the same depth;
+   - earlier document position as final deterministic tie-breaker.
+
+
+Visual rules
+------------
+
+1. The rendered block envelope is a real DOM structure.
+
+   Editor block nodes should render through a BlockView skeleton:
+
+   - block-view: the visual envelope that receives selection, drag, hover, and
+     block color backgrounds.
+   - block-chrome: the non-editable area for owned indicators and controls.
+   - block-indicator: the real DOM element for bullets, numbers, checkboxes,
+     quote bars, toggle arrows, and future block chrome.
+   - block-content: the editable content region owned by ProseMirror.
+   - block-selectable-halo: the real DOM layer that paints selection and block
+     color behind chrome and content, similar to Notion's selectable halo.
+
+   The ProseMirror schema and stored JSON remain unchanged. The custom DOM is
+   view-layer only. Static serialization can keep semantic HTML until a separate
+   export pass is designed.
+
+2. Native indicators and pseudo-element block backgrounds are not the target
+   rendering model.
+
+   List markers, quote bars, toggle arrows, and checkbox controls must be real
+   DOM inside the block envelope. Block backgrounds should be direct background
+   on the envelope. Do not implement these through ::marker, ::before, or
+   ::after because those cannot reliably include owned chrome in the same visual
+   box.
+
+3. Block controls are positioned in the page/editor gutter.
+
+   The x-coordinate is derived from the editor root's left or right edge, not
+   from the target node's indentation. The y-coordinate follows the target's
+   first editable line or first chrome line.
+
+4. Block backgrounds are page-width-relative, not text-width-relative.
+
+   The selected/color background should extend across the editor text column
+   and include owned chrome. It should not be clipped to inline text.
+   Menu-open selection uses an overlay outside the ProseMirror content DOM so
+   the UI can cover the full block envelope without causing document mutations.
+
+5. List marker, checkbox, quote bar, and toggle arrow belong inside the block
+   visual.
+
+   CSS should express this through shared variables/classes rather than one-off
+   selected-node borders.
+
+6. Selected and colored states must not change layout.
+
+   Use the stable BlockView envelope, outlines, or box shadows. Do not add
+   selected-only padding/margins.
+
+7. Dragging must not rely on native selected-node styling.
+
+   Dragging may use NodeSelection for ProseMirror drag/drop mechanics, but the
+   visible selected-node outline and text selection should be hidden while the
+   drag is active. The drag image should be low-opacity and free of selection
+   shadows.
+
+
+Persistence rules
+-----------------
+
+1. Block background and text colors are block attrs.
+
+   The chosen BlockModelTarget receives blockBackgroundColor and
+   blockTextColor. Legacy block-scoped highlight marks can be read for
+   compatibility but should be removed when writing the new attrs.
+
+2. Only one level owns the block color.
+
+   When a container receives a color, descendant block color attrs should be
+   cleared so the visual model has one owner. When an inner block receives a
+   color, it owns its own visual on that row.
+
+3. Empty attrs must stay quiet.
+
+   Null/default attrs are allowed by schema but should not be written
+   unnecessarily. This avoids JSON noise and spurious collaborative updates.
+
+
+Implementation plan
+-------------------
+
+Phase 1: Shared block model
+
+- Add shared/editor/lib/blockModel.ts.
+- Move the resolver vocabulary out of BlockGutterHelpers.
+- Export BlockModelTarget, BlockModelAncestor, resolveBlockModelTarget,
+  isBlockModelActionNode, selectionForBlockModelTarget, and helper predicates.
+- Keep BlockGutterHelpers as the place for gutter-specific insertion if that
+  keeps the first patch smaller, but make it depend on the shared model.
+
+Phase 2: Gutter state and responsiveness
+
+- Use BlockModelTarget in BlockGutter.
+- Keep hover state in React refs/state only; do not dispatch transactions for
+  hover.
+- Keep menu-open selected background in an external overlay; do not mutate the
+  ProseMirror document DOM and do not dispatch visual-only transactions.
+- Prevent mousedown on gutter controls from changing native selection.
+- Hide ProseMirror selected-node styling while dragging.
+- Tag gutter-internal selection transactions so the outer React editor tree does
+  not re-render for purely mechanical selection moves.
+- Keep controls fixed to the editor/page gutter and measure y from the target
+  first-line envelope.
+
+Phase 3: Block visuals
+
+- Introduce shared CSS classes/variables for block visual background, active
+  background, color background, and drag state.
+- Replace list selected-node border rules with the same block visual rule.
+- Ensure list item baseline padding is normal in the default state so selected
+  state does not cause height changes.
+- Ensure blockquote and toggle chrome sit above/in the background correctly.
+
+Phase 4: Color integration
+
+- Make BlockColor use the shared model predicate for deciding which nodes can
+  own colors.
+- Continue to map decorations on non-doc-changing transactions.
+- On document-changing transactions, map existing decorations and rebuild only
+  the changed document range instead of rescanning the whole document.
+
+Phase 5: Command integration
+
+- For duplicate, delete, copy link, and color, operate directly on the
+  BlockModelTarget without changing selection.
+- For existing conversion/comment commands that still require selection, create
+  a temporary command selection and tag the transaction as UI-driven so scroll
+  and visual selected-node side effects can be suppressed.
+
+Phase 6: Cleanup
+
+- Remove block-specific CSS patches that duplicate the shared visual model.
+- Remove old gutter-specific target vocabulary once all consumers use the shared
+  model.
+- Keep ProseMirror as the editor core; this is a block layer refactor, not a
+  TipTap migration.
+
+
+Verification checklist
+----------------------
+
+- Hovering a row shows exactly one gutter.
+- Gutter x-position stays fixed at the editor/page gutter regardless of list,
+  quote, toggle, or table indentation.
+- Block selected/active background includes list markers, checkboxes, quote
+  bars, toggle arrows, and content.
+- Selected/active/color states do not change block height or document scroll.
+- Clicking the drag/menu handle does not create a text selection.
+- Drag ghost has no selection border/shadow and uses lower opacity.
+- Color changes update only the intended block target and do not jump the page.
+- Existing persisted ProseMirror JSON continues to load.
+- No new test/spec files are created.

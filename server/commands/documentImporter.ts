@@ -20,6 +20,7 @@ type Props = {
 
 type ImportResult = {
   icon?: string;
+  properties?: Record<string, unknown> | null;
   text: string;
   title: string;
   state: Buffer;
@@ -70,6 +71,7 @@ async function documentImporter({
     doc,
     title: extractedTitle,
     icon,
+    properties,
   } = await DocumentConverter.convert(content, fileName, mimeType);
 
   // Use extracted title or fall back to filename
@@ -93,7 +95,7 @@ async function documentImporter({
   title = truncate(title, { length: DocumentValidation.maxTitleLength });
   const state = convertToState(processedDoc.toJSON() as ProsemirrorData, title);
 
-  return { text, state, title, icon };
+  return { text, state, title, icon, properties };
 }
 
 export default traceFunction({

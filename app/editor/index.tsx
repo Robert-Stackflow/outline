@@ -33,6 +33,7 @@ import type { AnyExtension, AnyExtensionClass } from "@shared/editor/lib/types";
 import ExtensionManager from "@shared/editor/lib/ExtensionManager";
 import type { MarkdownSerializer } from "@shared/editor/lib/markdown/serializer";
 import textBetween from "@shared/editor/lib/textBetween";
+import { skipReactUpdateMeta } from "@shared/editor/lib/transactionMeta";
 import { basicExtensions as extensions } from "@shared/editor/nodes";
 import type ReactNode from "@shared/editor/nodes/ReactNode";
 import type {
@@ -545,6 +546,14 @@ export class Editor extends React.PureComponent<
         self.handleEditorInit();
 
         self.calculateDir();
+
+        const shouldSkipReactUpdate =
+          !transactions.some((tr) => tr.docChanged) &&
+          transactions.every((tr) => tr.getMeta(skipReactUpdateMeta) === true);
+
+        if (shouldSkipReactUpdate) {
+          return;
+        }
 
         // Because Prosemirror and React are not linked we must tell React that
         // a render is needed whenever the Prosemirror state changes.

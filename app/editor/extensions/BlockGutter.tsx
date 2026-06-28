@@ -20,13 +20,13 @@ import {
   TodoListIcon,
   TrashIcon,
 } from "outline-icons";
-import { NodeSelection, Plugin, PluginKey } from "prosemirror-state";
-import { Decoration, DecorationSet } from "prosemirror-view";
+import { NodeSelection, TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { RemoveScroll } from "react-remove-scroll";
 import { toast } from "sonner";
+import { transparentize } from "polished";
 import styled from "styled-components";
 import EventBoundary from "@shared/components/EventBoundary";
 import { closeHistory } from "@shared/editor/lib/closeHistory";
@@ -43,6 +43,7 @@ import Highlight from "@shared/editor/marks/Highlight";
 import { ProsemirrorHelper } from "@shared/utils/ProsemirrorHelper";
 import { depths, s } from "@shared/styles";
 import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
+import { skipReactUpdateMeta } from "@shared/editor/lib/transactionMeta";
 import CircleIcon from "~/components/Icons/CircleIcon";
 import { DottedCircleIcon } from "~/components/Icons/DottedCircleIcon";
 import { toMenuItems } from "~/components/Menu/transformer";
@@ -59,14 +60,12 @@ import {
   selectionForBlockGutterTarget,
 } from "./BlockGutterHelpers";
 
-type BlockGutterPluginState = {
-  activePos: number | null;
-};
-
 type MenuAnchor = {
   left: number;
   top: number;
 };
+
+type MenuSide = "left" | "right";
 
 type BlockColorState = {
   backgroundColor: string | null;
@@ -74,11 +73,6 @@ type BlockColorState = {
 };
 
 type BlockColorPatch = Partial<BlockColorState>;
-
-/** Plugin key used to decorate the block whose gutter menu is open. */
-export const blockGutterKey = new PluginKey<BlockGutterPluginState>(
-  "block-gutter"
-);
 
 const controlSize = 28;
 const controlsGap = 4;
@@ -102,71 +96,8 @@ export default class BlockGutterExtension extends Extension {
     return "block-gutter";
   }
 
-  get plugins(): Plugin[] {
-    return [
-      new Plugin<BlockGutterPluginState>({
-        key: blockGutterKey,
-        state: {
-          init: () => ({ activePos: null }),
-          apply: (tr, value) => {
-            const meta = tr.getMeta(blockGutterKey);
-            if (isBlockGutterPluginState(meta)) {
-              return meta;
-            }
-
-            if (value.activePos === null) {
-              return value;
-            }
-
-            if (!tr.mapping.maps.length) {
-              return value;
-            }
-
-            const mapped = tr.mapping.mapResult(value.activePos);
-            const activePos = mapped.deleted ? null : mapped.pos;
-            return activePos === value.activePos ? value : { activePos };
-          },
-        },
-        props: {
-          decorations: (state) => {
-            const pluginState = blockGutterKey.getState(state);
-            const pos = pluginState?.activePos;
-            if (pos === null || pos === undefined) {
-              return null;
-            }
-
-            const node = state.doc.nodeAt(pos);
-            if (!node) {
-              return null;
-            }
-
-            return DecorationSet.create(state.doc, [
-              Decoration.node(pos, pos + node.nodeSize, {
-                class: "block-gutter-active",
-              }),
-            ]);
-          },
-        },
-      }),
-    ];
-  }
-
   widget = ({ readOnly, rtl }: WidgetProps) =>
     readOnly ? undefined : <BlockGutter rtl={rtl} />;
-}
-
-function isBlockGutterPluginState(
-  value: unknown
-): value is BlockGutterPluginState {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  if (!("activePos" in value)) {
-    return false;
-  }
-
-  return value.activePos === null || typeof value.activePos === "number";
 }
 
 function BlockGutter({ rtl }: { rtl: boolean }) {
@@ -183,6 +114,8 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
   const handleRef = React.useRef<HTMLButtonElement | null>(null);
   const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const draggingRef = React.useRef(false);
+  const dragStartDocRef = React.useRef(view.state.doc);
+  const dragStartSelectionRef = React.useRef<{ from: number } | null>(null);
   const mouseFrameRef = React.useRef<number | null>(null);
   const latestMousePointRef = React.useRef<{
     left: number;
@@ -211,17 +144,6 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
     clearHideTimer();
     hideTimerRef.current = setTimeout(hide, hideDelay);
   }, [clearHideTimer, hide]);
-
-  const setActivePos = React.useCallback(
-    (activePos: number | null) => {
-      view.dispatch(
-        view.state.tr
-          .setMeta(blockGutterKey, { activePos })
-          .setMeta("addToHistory", false)
-      );
-    },
-    [view]
-  );
 
   const updateTarget = React.useCallback(
     (nextTarget: BlockGutterTarget | null) => {
@@ -321,7 +243,12 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
     };
   }, [target, view]);
 
-  React.useEffect(() => () => clearHideTimer(), [clearHideTimer]);
+  React.useEffect(
+    () => () => {
+      clearHideTimer();
+    },
+    [clearHideTimer]
+  );
 
   const handleAddBlock = React.useCallback(() => {
     if (!target) {
@@ -337,6 +264,22 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
     commands.openBlockMenu?.({});
   }, [commands, target, view]);
 
+  const handleAddMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    []
+  );
+
+  const handleDragHandleMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    []
+  );
+
   const handleDragStart = React.useCallback(
     (event: React.DragEvent<HTMLButtonElement>) => {
       if (!target) {
@@ -344,10 +287,18 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
       }
 
       draggingRef.current = true;
+      dragStartDocRef.current = view.state.doc;
+      dragStartSelectionRef.current = { from: view.state.selection.from };
       const selection = selectionForBlockGutterDrag(view, target);
-      view.dispatch(view.state.tr.setSelection(selection));
+      view.dispatch(
+        view.state.tr
+          .setSelection(selection)
+          .setMeta(skipReactUpdateMeta, true)
+          .setMeta("addToHistory", false)
+      );
       view.dragging = { slice: view.state.selection.content(), move: true };
       view.dom.classList.add("block-gutter-dragging");
+      view.dom.classList.add("ProseMirror-hideselection");
 
       const dom = view.nodeDOM(target.pos);
       if (dom instanceof HTMLElement) {
@@ -363,6 +314,23 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
   const handleDragEnd = React.useCallback(() => {
     draggingRef.current = false;
     view.dom.classList.remove("block-gutter-dragging");
+    view.dom.classList.remove("ProseMirror-hideselection");
+    if (
+      dragStartSelectionRef.current &&
+      dragStartDocRef.current.eq(view.state.doc)
+    ) {
+      const restorePos = Math.min(
+        dragStartSelectionRef.current.from,
+        view.state.doc.content.size
+      );
+      view.dispatch(
+        view.state.tr
+          .setSelection(TextSelection.near(view.state.doc.resolve(restorePos)))
+          .setMeta(skipReactUpdateMeta, true)
+          .setMeta("addToHistory", false)
+      );
+    }
+    dragStartSelectionRef.current = null;
     setTarget(null);
     setTargetRect(null);
   }, [view]);
@@ -372,14 +340,15 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
       return;
     }
 
-    setActivePos(target.pos);
-
     const rect = handleRef.current?.getBoundingClientRect();
     if (rect) {
-      setMenuAnchor({ left: rect.left, top: rect.bottom + 4 });
+      setMenuAnchor({
+        left: rtl ? rect.right : rect.left,
+        top: rect.top,
+      });
     }
     setMenuOpen(true);
-  }, [setActivePos, target]);
+  }, [rtl, target]);
 
   const handleMenuOpenChange = React.useCallback(
     (open: boolean) => {
@@ -387,10 +356,9 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
       if (open) {
         return;
       }
-      setActivePos(null);
       scheduleHide();
     },
-    [scheduleHide, setActivePos]
+    [scheduleHide]
   );
 
   const handleCloseAutoFocus = React.useCallback((event: Event) => {
@@ -409,12 +377,11 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
       view,
       onAfterAction: () => {
         setMenuOpen(false);
-        setActivePos(null);
       },
     });
 
     return mapMenuItems(items, commands, view, view.state);
-  }, [commands, menuOpen, setActivePos, t, target, view]);
+  }, [commands, menuOpen, t, target, view]);
 
   if (!target || !targetRect) {
     return (
@@ -424,12 +391,16 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
         onCloseAutoFocus={handleCloseAutoFocus}
         onOpenChange={handleMenuOpenChange}
         open={menuOpen}
+        side={rtl ? "right" : "left"}
       />
     );
   }
 
   return (
     <>
+      {menuOpen && targetRect && (
+        <BlockActiveOverlay style={activeOverlayPosition(targetRect, view)} />
+      )}
       <GutterControls
         $rtl={rtl}
         contentEditable={false}
@@ -441,6 +412,7 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
           <GutterButton
             type="button"
             aria-label={addBlockLabel}
+            onMouseDown={handleAddMouseDown}
             onClick={handleAddBlock}
           >
             <PlusIcon size={18} />
@@ -452,6 +424,7 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
             type="button"
             aria-label={dragHandleLabel}
             draggable
+            onMouseDown={handleDragHandleMouseDown}
             onClick={handleMenuClick}
             onDragEnd={handleDragEnd}
             onDragStart={handleDragStart}
@@ -468,6 +441,7 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
         onCloseAutoFocus={handleCloseAutoFocus}
         onOpenChange={handleMenuOpenChange}
         open={menuOpen}
+        side={rtl ? "right" : "left"}
       />
     </>
   );
@@ -479,12 +453,14 @@ function BlockOptionsMenu({
   onCloseAutoFocus,
   onOpenChange,
   open,
+  side,
 }: {
   anchor: MenuAnchor;
   items: PrimitiveMenuItem[];
   onCloseAutoFocus: (event: Event) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  side: MenuSide;
 }) {
   const { t } = useTranslation();
 
@@ -509,9 +485,9 @@ function BlockOptionsMenu({
         </DropdownMenuPrimitive.Trigger>
         <DropdownMenuPrimitive.Portal>
           <DropdownMenuPrimitive.Content
-            side="bottom"
+            side={side}
             align="start"
-            sideOffset={4}
+            sideOffset={8}
             collisionPadding={8}
             aria-label={t("Show menu")}
             onCloseAutoFocus={onCloseAutoFocus}
@@ -709,6 +685,7 @@ function executeCommandOnTarget({
   view.dispatch(
     view.state.tr
       .setSelection(selectionForBlockGutterTarget(view.state, target))
+      .setMeta(skipReactUpdateMeta, true)
       .setMeta("addToHistory", false)
   );
   command(attrs);
@@ -1138,6 +1115,22 @@ function controlPosition(
   };
 }
 
+function activeOverlayPosition(
+  rect: DOMRect,
+  view: EditorView
+): React.CSSProperties {
+  const geometry = editorGeometry(view);
+  const left = Math.min(geometry.blockLeft, rect.left) - 6;
+  const right = Math.max(geometry.blockRight, rect.right) + 6;
+
+  return {
+    left,
+    top: rect.top - 2,
+    width: right - left,
+    height: rect.height + 4,
+  };
+}
+
 function firstLineOffset(view: EditorView, target: BlockGutterTarget) {
   const dom = view.nodeDOM(target.pos);
   if (!(dom instanceof HTMLElement)) {
@@ -1156,17 +1149,21 @@ function firstLineOffset(view: EditorView, target: BlockGutterTarget) {
 }
 
 function firstLineElement(dom: HTMLElement) {
+  const textContentSelector = `.${EditorStyleHelper.blockContent}:is(p, h1, h2, h3, h4, h5, h6)`;
+
   if (dom.classList.contains(EditorStyleHelper.toggleBlock)) {
     return dom.querySelector<HTMLElement>(
-      `.${EditorStyleHelper.toggleBlockHead} > :first-child`
+      `:scope > .${EditorStyleHelper.toggleBlockContent} > .${EditorStyleHelper.toggleBlockHead} > ${textContentSelector}`
     );
   }
 
   return dom.querySelector<HTMLElement>(
     [
+      `:scope > ${textContentSelector}`,
+      `:scope > .${EditorStyleHelper.blockContent} > .${EditorStyleHelper.blockView} > ${textContentSelector}`,
+      `:scope > .${EditorStyleHelper.blockContent} > .${EditorStyleHelper.toggleBlock}`,
+      `:scope > .${EditorStyleHelper.blockContent} > blockquote.${EditorStyleHelper.blockView}`,
       ":scope > div > :is(p, h1, h2, h3, h4, h5, h6, blockquote)",
-      `:scope > div > .${EditorStyleHelper.toggleBlock}`,
-      ":scope > :is(p, h1, h2, h3, h4, h5, h6, blockquote)",
       `:scope > .${EditorStyleHelper.toggleBlock}`,
     ].join(", ")
   );
@@ -1195,6 +1192,14 @@ const GutterControls = styled.div<{ $rtl: boolean }>`
   @media print {
     display: none;
   }
+`;
+
+const BlockActiveOverlay = styled.div`
+  position: fixed;
+  z-index: ${depths.editorToolbar - 1};
+  border-radius: ${EditorStyleHelper.blockRadius};
+  background: ${(props) => transparentize(0.88, props.theme.accent)};
+  pointer-events: none;
 `;
 
 const GutterButton = styled.button<{ $dragHandle?: boolean }>`

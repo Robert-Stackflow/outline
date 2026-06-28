@@ -1,7 +1,7 @@
 import { chainCommands } from "prosemirror-commands";
 import { InputRule } from "prosemirror-inputrules";
 import type { NodeSpec, Node as ProsemirrorNode } from "prosemirror-model";
-import { TextSelection } from "prosemirror-state";
+import { Plugin, TextSelection } from "prosemirror-state";
 import {
   columnResizing,
   deleteColumn,
@@ -166,6 +166,16 @@ export default class Table extends Node {
         defaultCellMinWidth: 25,
       }),
       tableEditing(),
+      new Plugin({
+        view: (view) => ({
+          update: () => {
+            TableView.updateControlsForEditor(view);
+          },
+          destroy: () => {
+            TableView.updateControlsForEditor(view);
+          },
+        }),
+      }),
       new FixTablesPlugin(),
       new TableLayoutPlugin(),
     ];

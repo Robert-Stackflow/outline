@@ -56,6 +56,7 @@ import {
 import { EditorStyleHelper } from "../styles/EditorStyleHelper";
 import { getMarkRange } from "../queries/getMarkRange";
 import { isInCode } from "../queries/isInCode";
+import { CodeBlockView } from "./CodeBlockView";
 import Node from "./Node";
 
 const DEFAULT_LANGUAGE = "javascript";
@@ -615,6 +616,14 @@ export default class CodeFence extends Node<CodeFenceOptions> {
     };
 
     return [
+      new Plugin({
+        props: {
+          nodeViews: {
+            [this.name]: (node) =>
+              new CodeBlockView(node, this.showLineNumbers),
+          },
+        },
+      }),
       CodeHighlighting({
         name: this.name,
         lineNumbers: this.showLineNumbers,

@@ -1,8 +1,9 @@
 import { MathView } from "@benrbray/prosemirror-math";
 import { isNode } from "@shared/utils/browser";
-import type { PluginSpec } from "prosemirror-state";
+import type { PluginSpec, Transaction } from "prosemirror-state";
 import { Plugin, PluginKey } from "prosemirror-state";
 import type { NodeViewConstructor } from "prosemirror-view";
+import { attachBlockViewHalo } from "../lib/blockView";
 
 export interface IMathPluginState {
   macros: { [cmd: string]: string };
@@ -11,95 +12,224 @@ export interface IMathPluginState {
 }
 
 const MATH_PLUGIN_KEY = new PluginKey<IMathPluginState>("prosemirror-math");
-const MIN_BLOCK_SCALE = 0.68;
-const BLOCK_MATH_SELECTOR = "math-block.math-node, math-display.math-node";
+const PREVIEW_OFFSET = 10;
+const PREVIEW_VIEWPORT_MARGIN = 12;
 
-function fitBlockMath(root: HTMLElement) {
-  const nodes = [
-    ...(root.matches(BLOCK_MATH_SELECTOR) ? [root] : []),
-    ...Array.from(root.querySelectorAll<HTMLElement>(BLOCK_MATH_SELECTOR)),
-  ];
+class PreviewMathView extends MathView {
+  private previewElement?: HTMLElement;
+  private positionFrame?: number;
+  private isTrackingPosition = false;
 
-  nodes.forEach((node) => {
-    const render = node.querySelector<HTMLElement>(".math-render");
-    const katex = render?.querySelector<HTMLElement>(".katex");
+  public destroy() {
+    this.destroyPreview();
+    super.destroy();
+  }
 
-    if (!render || !katex) {
+  public selectNode() {
+    super.selectNode();
+    this.showPreview();
+  }
+
+  public deselectNode() {
+    this.hidePreview();
+    super.deselectNode();
+  }
+
+  public renderMath() {
+    super.renderMath();
+    this.syncPreview();
+  }
+
+  public dispatchInner(tr: Transaction) {
+    super.dispatchInner(tr);
+
+    if (tr.docChanged && !tr.getMeta("fromOutside")) {
+      this.renderMath();
+    }
+  }
+
+  private showPreview() {
+    this.syncPreview();
+    this.startTrackingPosition();
+    this.schedulePreviewPosition();
+  }
+
+  private hidePreview() {
+    this.stopTrackingPosition();
+    this.cancelPreviewPosition();
+    this.previewElement?.classList.remove("is-visible");
+    if (this.previewElement) {
+      this.previewElement.hidden = true;
+    }
+  }
+
+  private syncPreview() {
+    if (!this.dom.classList.contains("ProseMirror-selectednode")) {
       return;
     }
 
-    const availableWidth = render.clientWidth || node.clientWidth;
-    const renderedWidth = katex.scrollWidth;
-    if (!availableWidth || renderedWidth <= availableWidth) {
-      node.classList.remove("math-fit");
-      setStyleIfChanged(render, "height", "");
-      setStyleIfChanged(katex, "display", "");
-      setStyleIfChanged(katex, "transform", "");
-      setStyleIfChanged(katex, "transformOrigin", "");
-      return;
-    }
-
-    const scale = Math.max(MIN_BLOCK_SCALE, availableWidth / renderedWidth);
-    setStyleIfChanged(katex, "display", "inline-block");
-    setStyleIfChanged(katex, "transform", `scale(${scale})`);
-    setStyleIfChanged(katex, "transformOrigin", "center top");
-    setStyleIfChanged(
-      render,
-      "height",
-      `${Math.ceil(katex.getBoundingClientRect().height)}px`
+    const renderElement = this.dom.querySelector<HTMLElement>(
+      ":scope > .math-render"
     );
-    node.classList.add("math-fit");
-  });
-}
-
-type MathStyleProperty = "height" | "display" | "transform" | "transformOrigin";
-
-function setStyleIfChanged(
-  element: HTMLElement,
-  property: MathStyleProperty,
-  value: string
-) {
-  if (element.style[property] === value) {
-    return;
-  }
-
-  element.style[property] = value;
-}
-
-function scheduleFitBlockMath(root: HTMLElement): () => void {
-  if (typeof window === "undefined") {
-    return () => undefined;
-  }
-
-  let frame: number | undefined;
-  const timeouts = new Set<number>();
-
-  const fit = () => fitBlockMath(root);
-  const schedule = (delay: number) => {
-    const timeout = window.setTimeout(() => {
-      timeouts.delete(timeout);
-      fit();
-    }, delay);
-    timeouts.add(timeout);
-  };
-
-  frame = window.requestAnimationFrame(() => {
-    frame = undefined;
-    fit();
-    // KaTeX can finish after the ProseMirror view update, especially on first
-    // paint. A couple of delayed passes keep long formulas from keeping their
-    // initial horizontal scrollbar.
-    schedule(80);
-    schedule(240);
-  });
-
-  return () => {
-    if (frame !== undefined) {
-      window.cancelAnimationFrame(frame);
+    if (!renderElement) {
+      this.hidePreview();
+      return;
     }
-    timeouts.forEach((timeout) => window.clearTimeout(timeout));
-    timeouts.clear();
+
+    const previewElement = this.ensurePreviewElement();
+    if (!previewElement) {
+      return;
+    }
+
+    previewElement.classList.toggle(
+      "parse-error",
+      renderElement.classList.contains("parse-error")
+    );
+    previewElement.classList.toggle(
+      "empty-math",
+      this.dom.classList.contains("empty-math")
+    );
+    previewElement.classList.toggle(
+      "math-inline-preview",
+      this.dom.tagName.toLowerCase() === "math-inline"
+    );
+    previewElement.replaceChildren(
+      ...Array.from(renderElement.childNodes).map((child) =>
+        child.cloneNode(true)
+      )
+    );
+    previewElement.hidden = false;
+    previewElement.classList.add("is-visible");
+    this.schedulePreviewPosition();
+  }
+
+  private ensurePreviewElement() {
+    if (this.previewElement) {
+      return this.previewElement;
+    }
+
+    const previewRoot = this.getPreviewRoot();
+    if (!previewRoot) {
+      return undefined;
+    }
+
+    const previewElement = this.dom.ownerDocument.createElement("div");
+    previewElement.classList.add("math-preview-popover");
+    previewElement.setAttribute("contenteditable", "false");
+    previewElement.setAttribute("role", "tooltip");
+    previewElement.hidden = true;
+    previewRoot.appendChild(previewElement);
+    this.previewElement = previewElement;
+    return previewElement;
+  }
+
+  private getPreviewRoot() {
+    const editorRoot = this.dom.closest(".ProseMirror");
+    if (editorRoot?.parentElement) {
+      return editorRoot.parentElement;
+    }
+
+    return this.dom.ownerDocument.body;
+  }
+
+  private schedulePreviewPosition = () => {
+    const previewWindow = this.dom.ownerDocument.defaultView;
+    if (!previewWindow || this.positionFrame !== undefined) {
+      return;
+    }
+
+    this.positionFrame = previewWindow.requestAnimationFrame(() => {
+      this.positionFrame = undefined;
+      this.updatePreviewPosition();
+    });
   };
+
+  private updatePreviewPosition() {
+    if (!this.previewElement || this.previewElement.hidden) {
+      return;
+    }
+
+    const previewWindow = this.dom.ownerDocument.defaultView;
+    if (!previewWindow) {
+      return;
+    }
+
+    const anchorRect = this.dom.getBoundingClientRect();
+    const previewRect = this.previewElement.getBoundingClientRect();
+    const left = clamp(
+      anchorRect.left + anchorRect.width / 2,
+      PREVIEW_VIEWPORT_MARGIN + previewRect.width / 2,
+      previewWindow.innerWidth - PREVIEW_VIEWPORT_MARGIN - previewRect.width / 2
+    );
+    const canPlaceAbove =
+      anchorRect.top - previewRect.height - PREVIEW_OFFSET >
+      PREVIEW_VIEWPORT_MARGIN;
+    const top = canPlaceAbove
+      ? anchorRect.top - PREVIEW_OFFSET
+      : Math.min(
+          previewWindow.innerHeight - PREVIEW_VIEWPORT_MARGIN,
+          anchorRect.bottom + PREVIEW_OFFSET
+        );
+
+    this.previewElement.classList.toggle("placement-below", !canPlaceAbove);
+    this.previewElement.style.left = `${left}px`;
+    this.previewElement.style.top = `${top}px`;
+  }
+
+  private startTrackingPosition() {
+    const previewWindow = this.dom.ownerDocument.defaultView;
+    if (!previewWindow || this.isTrackingPosition) {
+      return;
+    }
+
+    previewWindow.addEventListener("resize", this.schedulePreviewPosition);
+    previewWindow.addEventListener(
+      "scroll",
+      this.schedulePreviewPosition,
+      true
+    );
+    this.isTrackingPosition = true;
+  }
+
+  private stopTrackingPosition() {
+    const previewWindow = this.dom.ownerDocument.defaultView;
+    if (!previewWindow || !this.isTrackingPosition) {
+      return;
+    }
+
+    previewWindow.removeEventListener("resize", this.schedulePreviewPosition);
+    previewWindow.removeEventListener(
+      "scroll",
+      this.schedulePreviewPosition,
+      true
+    );
+    this.isTrackingPosition = false;
+  }
+
+  private cancelPreviewPosition() {
+    const previewWindow = this.dom.ownerDocument.defaultView;
+    if (!previewWindow || this.positionFrame === undefined) {
+      return;
+    }
+
+    previewWindow.cancelAnimationFrame(this.positionFrame);
+    this.positionFrame = undefined;
+  }
+
+  private destroyPreview() {
+    this.stopTrackingPosition();
+    this.cancelPreviewPosition();
+    this.previewElement?.remove();
+    this.previewElement = undefined;
+  }
+}
+
+function clamp(value: number, min: number, max: number) {
+  if (min > max) {
+    return value;
+  }
+
+  return Math.min(Math.max(value, min), max);
 }
 
 export function createMathView(displayMode: boolean): NodeViewConstructor {
@@ -116,7 +246,7 @@ export function createMathView(displayMode: boolean): NodeViewConstructor {
     const nodeViews = pluginState.activeNodeViews;
 
     // set up NodeView
-    const nodeView = new MathView(
+    const nodeView = new PreviewMathView(
       node,
       view,
       getPos as () => number,
@@ -135,12 +265,10 @@ export function createMathView(displayMode: boolean): NodeViewConstructor {
 
     nodeViews.push(nodeView);
     if (displayMode) {
-      const cleanup = scheduleFitBlockMath(nodeView.dom);
-      const destroy = nodeView.destroy?.bind(nodeView);
-      nodeView.destroy = () => {
-        cleanup();
-        destroy?.();
-      };
+      attachBlockViewHalo(nodeView.dom, {
+        nodeName: "math_block",
+        role: "math",
+      });
     }
     return nodeView;
   };

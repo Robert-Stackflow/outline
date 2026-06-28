@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useHistory } from "react-router-dom";
 import { toast } from "sonner";
 import { errToString } from "@shared/utils/error";
+import { normalizeBlockColorAttrs } from "@shared/editor/lib/blockColor";
 import { ProsemirrorHelper } from "@shared/utils/ProsemirrorHelper";
 import { TextHelper } from "@shared/utils/TextHelper";
 import type Document from "~/models/Document";
@@ -113,7 +114,10 @@ export function useDocumentSave({
 
   const updateIsDirty = useCallback(() => {
     const doc = editorRef.current?.view.state.doc;
-    const dirty = !isEqual(doc?.toJSON(), document.data);
+    const dirty = !isEqual(
+      doc ? normalizeBlockColorAttrs(doc.toJSON()) : undefined,
+      document.data ? normalizeBlockColorAttrs(document.data) : document.data
+    );
     setIsEditorDirty(dirty);
     isEditorDirtyRef.current = dirty;
     const empty = (!doc || ProsemirrorHelper.isEmpty(doc)) && !titleRef.current;
@@ -149,7 +153,7 @@ export function useDocumentSave({
         return;
       }
 
-      document.data = doc.toJSON();
+      document.data = normalizeBlockColorAttrs(doc.toJSON());
       document.tasks = ProsemirrorHelper.getTasksSummary(doc);
 
       // prevent autosave if nothing has changed

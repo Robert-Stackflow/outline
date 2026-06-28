@@ -57,6 +57,33 @@ describe("documentCreator", () => {
       expect(document.text).toContain("This is plain text");
     });
 
+    it("should extract leading frontmatter into document properties", async () => {
+      const user = await buildUser();
+      const collection = await buildCollection({
+        userId: user.id,
+        teamId: user.teamId,
+      });
+
+      const document = await withAPIContext(user, (ctx) =>
+        documentCreator(ctx, {
+          title: "Frontmatter Document",
+          text: `---
+status: draft
+priority: high
+---
+
+Body content`,
+          collectionId: collection.id,
+        })
+      );
+
+      expect(document.properties).toEqual({
+        priority: "high",
+        status: "draft",
+      });
+      expect(document.text).toBe("Body content");
+    });
+
     it("should create empty document when neither content nor text is provided", async () => {
       const user = await buildUser();
       const collection = await buildCollection({

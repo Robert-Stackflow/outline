@@ -870,6 +870,7 @@ router.post(
 
     const toMarkdown = async () =>
       DocumentHelper.toMarkdown(document, {
+        includeProperties: true,
         signedUrls,
         teamId: user.teamId,
       });

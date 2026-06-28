@@ -344,18 +344,26 @@ const StyledScrollable = styled(Scrollable)`
 `;
 
 export const StyledButton = styled(Button)`
+  display: inline-flex;
+  align-items: center;
   box-shadow: none;
   text-transform: none;
   border-color: transparent;
-  height: auto;
+  height: 32px;
+  vertical-align: middle;
 
   &:hover {
     background: transparent;
   }
 
   ${Inner} {
-    line-height: 28px;
-    min-height: auto;
+    align-items: center;
+    min-height: 32px;
+    line-height: 1;
+  }
+
+  svg {
+    display: block;
   }
 `;
 

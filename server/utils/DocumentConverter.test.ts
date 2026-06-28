@@ -149,7 +149,7 @@ Jane,24,`;
         expect(result.text).toContain("Subtitle");
       });
 
-      it("should convert frontmatter to yaml codeblock", async () => {
+      it("should extract frontmatter into document properties", async () => {
         const md = `---
 title: Test Document
 date: 2024-01-15
@@ -165,12 +165,15 @@ Content after frontmatter`;
           "text/markdown"
         );
 
-        // Frontmatter should be converted to a YAML codeblock
-        expect(result.text).toContain("```yaml");
-        expect(result.text).toContain("title: Test Document");
-        expect(result.text).toContain("date: 2024-01-15");
-        expect(result.text).toContain("tags: [test, markdown]");
-        expect(result.text).toContain("```");
+        expect(result.properties).toEqual(
+          expect.objectContaining({
+            title: "Test Document",
+            date: expect.any(Date),
+            tags: ["test", "markdown"],
+          })
+        );
+        expect(result.text).not.toContain("```yaml");
+        expect(result.text).not.toContain("title: Test Document");
         // Content should still be present
         expect(result.text).toContain("Content after frontmatter");
         // H1 should be extracted as title
@@ -188,6 +191,7 @@ Content after frontmatter`;
         expect(result.title).toEqual("Title");
         expect(result.text).toContain("Regular content");
         expect(result.text).not.toContain("```yaml");
+        expect(result.properties).toBeNull();
       });
 
       it("should handle frontmatter with no content after", async () => {
@@ -200,9 +204,8 @@ title: Only Frontmatter
           "text/markdown"
         );
 
-        expect(result.text).toContain("```yaml");
-        expect(result.text).toContain("title: Only Frontmatter");
-        expect(result.text).toContain("```");
+        expect(result.text).toEqual("");
+        expect(result.properties).toEqual({ title: "Only Frontmatter" });
         expect(result.title).toEqual("");
       });
 
@@ -216,9 +219,9 @@ Content without closing delimiter`;
           "text/markdown"
         );
 
-        // Should not convert as it's not proper frontmatter
         expect(result.text).not.toContain("```yaml");
         expect(result.text).toContain("title: Test");
+        expect(result.properties).toBeNull();
       });
 
       it("should not convert frontmatter if not at start", async () => {
@@ -237,13 +240,13 @@ More content`;
           "text/markdown"
         );
 
-        // Should not convert as frontmatter must be at the start
         expect(result.text).not.toContain("```yaml");
+        expect(result.properties).toBeNull();
       });
 
       it("should handle invalid YAML in frontmatter", async () => {
         const md = `---
-invalid: yaml: content: here
+invalid: [unterminated
 ---
 
 Content`;
@@ -253,8 +256,9 @@ Content`;
           "text/markdown"
         );
 
-        // Should not convert invalid YAML
         expect(result.text).not.toContain("```yaml");
+        expect(result.text).toContain("invalid: [unterminated");
+        expect(result.properties).toBeNull();
       });
     });
   });

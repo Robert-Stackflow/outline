@@ -7,12 +7,22 @@ import type {
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import Extension from "../lib/Extension";
+import { isBlockModelActionNode } from "../lib/blockModel";
 import type { BlockColorAttrs } from "../lib/blockColor";
 import { getBlockColorAttrs, hasBlockColorAttrs } from "../lib/blockColor";
 import { EditorStyleHelper } from "../styles/EditorStyleHelper";
 
 const blockColorOpacity = 0.16;
-const blockColorPluginKey = new PluginKey<DecorationSet>("block-color");
+const blockColorPluginKey = new PluginKey<BlockColorPluginState>("block-color");
+
+interface BlockColorPluginState {
+  decorations: DecorationSet;
+}
+
+interface ChangedRange {
+  from: number;
+  to: number;
+}
 
 /**
  * Renders whole-block background and text colors saved on block nodes.
@@ -28,24 +38,39 @@ export class BlockColor extends Extension {
 
   get plugins() {
     return [
-      new Plugin<DecorationSet>({
+      new Plugin<BlockColorPluginState>({
         key: blockColorPluginKey,
         state: {
-          init: (_, state) => createBlockColorDecorations(state.doc),
-          apply: (tr, value, _oldState, newState) => {
-            if (tr.docChanged) {
-              return createBlockColorDecorations(newState.doc);
-            }
-
+          init: (_, state) => ({
+            decorations: createBlockColorDecorations(state.doc),
+          }),
+          apply: (tr, value, _oldState, _newState) => {
             if (!tr.mapping.maps.length) {
               return value;
             }
 
-            return value.map(tr.mapping, tr.doc);
+            const decorations = value.decorations.map(tr.mapping, tr.doc);
+            if (!tr.docChanged) {
+              return { decorations };
+            }
+
+            const changedRange = changedRangeForTransaction(tr.before, tr.doc);
+            if (!changedRange) {
+              return { decorations };
+            }
+
+            return {
+              decorations: refreshBlockColorDecorations(
+                tr.doc,
+                decorations,
+                changedRange
+              ),
+            };
           },
         },
         props: {
-          decorations: (state) => blockColorPluginKey.getState(state),
+          decorations: (state) =>
+            blockColorPluginKey.getState(state)?.decorations,
         },
       }),
     ];
@@ -56,7 +81,7 @@ function createBlockColorDecorations(doc: ProsemirrorNode): DecorationSet {
   const decorations: Decoration[] = [];
 
   doc.descendants((node, pos) => {
-    if (!node.isBlock) {
+    if (!isBlockModelActionNode(node)) {
       return true;
     }
 
@@ -72,10 +97,80 @@ function createBlockColorDecorations(doc: ProsemirrorNode): DecorationSet {
       })
     );
 
-    return false;
+    return true;
   });
 
   return DecorationSet.create(doc, decorations);
+}
+
+function refreshBlockColorDecorations(
+  doc: ProsemirrorNode,
+  decorations: DecorationSet,
+  changedRange: ChangedRange
+): DecorationSet {
+  const staleDecorations = decorations.find(changedRange.from, changedRange.to);
+  const nextDecorations = staleDecorations.length
+    ? decorations.remove(staleDecorations)
+    : decorations;
+  const refreshedDecorations = createBlockColorDecorationsBetween(
+    doc,
+    changedRange.from,
+    changedRange.to
+  );
+
+  return refreshedDecorations.length
+    ? nextDecorations.add(doc, refreshedDecorations)
+    : nextDecorations;
+}
+
+function createBlockColorDecorationsBetween(
+  doc: ProsemirrorNode,
+  from: number,
+  to: number
+): Decoration[] {
+  const decorations: Decoration[] = [];
+
+  doc.nodesBetween(from, to, (node, pos) => {
+    if (!isBlockModelActionNode(node)) {
+      return true;
+    }
+
+    const attrs = getNodeOrLegacyBlockColorAttrs(node);
+    if (!attrs.backgroundColor && !attrs.textColor) {
+      return true;
+    }
+
+    decorations.push(
+      Decoration.node(pos, pos + node.nodeSize, {
+        class: EditorStyleHelper.blockColor,
+        style: blockColorStyle(attrs),
+      })
+    );
+
+    return true;
+  });
+
+  return decorations;
+}
+
+function changedRangeForTransaction(
+  before: ProsemirrorNode,
+  doc: ProsemirrorNode
+): ChangedRange | null {
+  const start = before.content.findDiffStart(doc.content);
+  if (start === null) {
+    return null;
+  }
+
+  const end = before.content.findDiffEnd(doc.content);
+  const docSize = doc.content.size;
+  const from = Math.max(0, Math.min(start - 1, docSize));
+  const to = Math.max(from, Math.min((end ? end.b : start) + 1, docSize));
+
+  return {
+    from,
+    to,
+  };
 }
 
 function getNodeOrLegacyBlockColorAttrs(

@@ -1526,6 +1526,7 @@ export const openDocumentInsights = createAction({
     stores.dialogs.openModal({
       title: t("Insights"),
       content: <Insights document={document} />,
+      width: "560px",
     });
   },
 });
