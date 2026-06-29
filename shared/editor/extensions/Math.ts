@@ -15,6 +15,13 @@ const MATH_PLUGIN_KEY = new PluginKey<IMathPluginState>("prosemirror-math");
 const PREVIEW_OFFSET = 10;
 const PREVIEW_VIEWPORT_MARGIN = 12;
 
+interface PreviewBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 class PreviewMathView extends MathView {
   private previewElement?: HTMLElement;
   private positionFrame?: number;
@@ -155,25 +162,94 @@ class PreviewMathView extends MathView {
     }
 
     const anchorRect = this.dom.getBoundingClientRect();
-    const previewRect = this.previewElement.getBoundingClientRect();
-    const left = clamp(
-      anchorRect.left + anchorRect.width / 2,
-      PREVIEW_VIEWPORT_MARGIN + previewRect.width / 2,
-      previewWindow.innerWidth - PREVIEW_VIEWPORT_MARGIN - previewRect.width / 2
-    );
-    const canPlaceAbove =
-      anchorRect.top - previewRect.height - PREVIEW_OFFSET >
-      PREVIEW_VIEWPORT_MARGIN;
-    const top = canPlaceAbove
-      ? anchorRect.top - PREVIEW_OFFSET
-      : Math.min(
-          previewWindow.innerHeight - PREVIEW_VIEWPORT_MARGIN,
-          anchorRect.bottom + PREVIEW_OFFSET
-        );
+    const bounds = this.getPreviewBounds(previewWindow);
+    const maxWidth = Math.max(1, Math.round(bounds.right - bounds.left));
+    const maxHeight = Math.max(1, Math.round(bounds.bottom - bounds.top));
 
-    this.previewElement.classList.toggle("placement-below", !canPlaceAbove);
+    this.previewElement.style.maxWidth = `${maxWidth}px`;
+    this.previewElement.style.maxHeight = `${maxHeight}px`;
+
+    const previewRect = this.previewElement.getBoundingClientRect();
+    const desiredLeft =
+      anchorRect.left + anchorRect.width / 2 - previewRect.width / 2;
+    const left = clamp(
+      desiredLeft,
+      bounds.left,
+      bounds.right - previewRect.width
+    );
+    const spaceAbove = anchorRect.top - bounds.top - PREVIEW_OFFSET;
+    const spaceBelow = bounds.bottom - anchorRect.bottom - PREVIEW_OFFSET;
+    const shouldPlaceAbove =
+      spaceAbove >= previewRect.height || spaceAbove >= spaceBelow;
+    const desiredTop = shouldPlaceAbove
+      ? anchorRect.top - previewRect.height - PREVIEW_OFFSET
+      : anchorRect.bottom + PREVIEW_OFFSET;
+    const top = clamp(
+      desiredTop,
+      bounds.top,
+      bounds.bottom - previewRect.height
+    );
+
+    this.previewElement.classList.toggle("placement-below", !shouldPlaceAbove);
     this.previewElement.style.left = `${left}px`;
     this.previewElement.style.top = `${top}px`;
+  }
+
+  private getPreviewBounds(previewWindow: Window): PreviewBounds {
+    const viewportBounds = this.getViewportBounds(previewWindow);
+    const previewRoot = this.previewElement?.parentElement;
+    if (!previewRoot) {
+      return viewportBounds;
+    }
+
+    const rootRect = previewRoot.getBoundingClientRect();
+    if (rootRect.width <= PREVIEW_VIEWPORT_MARGIN * 2) {
+      return viewportBounds;
+    }
+
+    const boundedRoot = {
+      left: Math.max(
+        viewportBounds.left,
+        rootRect.left + PREVIEW_VIEWPORT_MARGIN
+      ),
+      right: Math.min(
+        viewportBounds.right,
+        rootRect.right - PREVIEW_VIEWPORT_MARGIN
+      ),
+      top: viewportBounds.top,
+      bottom: viewportBounds.bottom,
+    };
+
+    if (boundedRoot.right <= boundedRoot.left) {
+      return viewportBounds;
+    }
+
+    return boundedRoot;
+  }
+
+  private getViewportBounds(previewWindow: Window): PreviewBounds {
+    const visualViewport = previewWindow.visualViewport;
+    if (!visualViewport) {
+      return {
+        left: PREVIEW_VIEWPORT_MARGIN,
+        right: previewWindow.innerWidth - PREVIEW_VIEWPORT_MARGIN,
+        top: PREVIEW_VIEWPORT_MARGIN,
+        bottom: previewWindow.innerHeight - PREVIEW_VIEWPORT_MARGIN,
+      };
+    }
+
+    return {
+      left: visualViewport.offsetLeft + PREVIEW_VIEWPORT_MARGIN,
+      right:
+        visualViewport.offsetLeft +
+        visualViewport.width -
+        PREVIEW_VIEWPORT_MARGIN,
+      top: visualViewport.offsetTop + PREVIEW_VIEWPORT_MARGIN,
+      bottom:
+        visualViewport.offsetTop +
+        visualViewport.height -
+        PREVIEW_VIEWPORT_MARGIN,
+    };
   }
 
   private startTrackingPosition() {
@@ -187,6 +263,14 @@ class PreviewMathView extends MathView {
       "scroll",
       this.schedulePreviewPosition,
       true
+    );
+    previewWindow.visualViewport?.addEventListener(
+      "resize",
+      this.schedulePreviewPosition
+    );
+    previewWindow.visualViewport?.addEventListener(
+      "scroll",
+      this.schedulePreviewPosition
     );
     this.isTrackingPosition = true;
   }
@@ -202,6 +286,14 @@ class PreviewMathView extends MathView {
       "scroll",
       this.schedulePreviewPosition,
       true
+    );
+    previewWindow.visualViewport?.removeEventListener(
+      "resize",
+      this.schedulePreviewPosition
+    );
+    previewWindow.visualViewport?.removeEventListener(
+      "scroll",
+      this.schedulePreviewPosition
     );
     this.isTrackingPosition = false;
   }
@@ -226,7 +318,7 @@ class PreviewMathView extends MathView {
 
 function clamp(value: number, min: number, max: number) {
   if (min > max) {
-    return value;
+    return min;
   }
 
   return Math.min(Math.max(value, min), max);

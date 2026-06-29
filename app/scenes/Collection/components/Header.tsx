@@ -1,6 +1,5 @@
 import { IconTitleWrapper } from "@shared/components/Icon";
 import breakpoint from "styled-components-breakpoint";
-import { first } from "es-toolkit/compat";
 import { Suspense, useCallback } from "react";
 import styled from "styled-components";
 import { CollectionValidation } from "@shared/validations";
@@ -13,6 +12,7 @@ import { colorPalette } from "@shared/utils/collections";
 import usePolicy from "~/hooks/usePolicy";
 import { observer } from "mobx-react";
 import lazyWithRetry from "~/utils/lazyWithRetry";
+import { useTranslation } from "react-i18next";
 
 const IconPicker = lazyWithRetry(() => import("~/components/IconPicker"));
 
@@ -27,6 +27,7 @@ export const Header = observer(function Header_({
   collection,
   isEditing,
 }: Props) {
+  const { t } = useTranslation();
   const can = usePolicy(collection);
   const canEdit = can.update && isEditing;
   const handleIconChange = useCallback(
@@ -58,11 +59,13 @@ export const Header = observer(function Header_({
           <Suspense fallback={fallbackIcon}>
             <IconPicker
               icon={collection.icon ?? "collection"}
-              color={collection.color ?? (first(colorPalette) as string)}
+              color={collection.color ?? colorPalette[0]}
               initial={collection.initial}
               size={40}
+              ariaLabel={t("Icon Picker")}
               popoverPosition="bottom-start"
               onChange={handleIconChange}
+              allowDelete={!!collection.icon}
               borderOnHover
             >
               {fallbackIcon}

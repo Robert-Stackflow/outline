@@ -96,13 +96,13 @@ function usePosition({
     const width = element.offsetWidth || Math.round(bounds.width);
     const height = Math.max(
       36,
-      element.offsetHeight || Math.round(bounds.height)
+      element.offsetHeight || Math.round(bounds.height),
     );
 
     setMenuSize((current) =>
       current.width === width && current.height === height
         ? current
-        : { width, height }
+        : { width, height },
     );
   }, [contentRef, menuRef]);
 
@@ -176,7 +176,7 @@ function usePosition({
     ? { pos: selection.from, node: selection.node }
     : findParentNode(isCode)(view.state.selection);
   const noticeBlock = findParentNode(
-    (node) => node.type.name === "container_notice"
+    (node) => node.type.name === "container_notice",
   )(view.state.selection);
 
   if (
@@ -219,7 +219,7 @@ function usePosition({
     const rect = selectedRect(view.state);
     const table = view.domAtPos(rect.tableStart);
     const element = (table.node as HTMLElement).querySelector(
-      `tr > *:nth-child(${rect.left + 1})`
+      `tr > *:nth-child(${rect.left + 1})`,
     );
     if (element instanceof HTMLElement) {
       const bounds = element.getBoundingClientRect();
@@ -231,7 +231,7 @@ function usePosition({
     const rect = selectedRect(view.state);
     const table = view.domAtPos(rect.tableStart);
     const element = (table.node as HTMLElement).querySelector(
-      `tr:nth-child(${rect.top + 1}) > *`
+      `tr:nth-child(${rect.top + 1}) > *`,
     );
     if (element instanceof HTMLElement) {
       const bounds = element.getBoundingClientRect();
@@ -252,7 +252,7 @@ function usePosition({
     // specifically tagged as the handle
     const imageElement = element
       ? (element as HTMLElement).getElementsByClassName(
-          EditorStyleHelper.imageHandle
+          EditorStyleHelper.imageHandle,
         )[0]
       : undefined;
     if (imageElement) {
@@ -290,8 +290,8 @@ function usePosition({
     HEADER_HEIGHT,
     Math.min(
       window.innerHeight - menuHeight - margin,
-      Math.max(margin, selectionBounds.top - menuHeight - menuGap)
-    )
+      Math.max(margin, selectionBounds.top - menuHeight - menuGap),
+    ),
   );
 
   return {
@@ -311,7 +311,7 @@ function usePosition({
 
 const FloatingToolbar = React.forwardRef(function FloatingToolbar_(
   props: Props,
-  ref: React.RefObject<HTMLDivElement>
+  ref: React.RefObject<HTMLDivElement>,
 ) {
   const menuRef = ref || React.createRef<HTMLDivElement>();
   const contentRef = React.useRef<HTMLDivElement>(null);
@@ -341,7 +341,8 @@ const FloatingToolbar = React.forwardRef(function FloatingToolbar_(
   });
 
   const isMobile = useMobile();
-  const isMobileToolbarVisible = isMobile && !!props.active && position.visible;
+  const hasChildren = React.Children.count(props.children) > 0;
+  const isMobileToolbarVisible = isMobile && !!props.active && hasChildren;
 
   // Keep the mobile toolbar glued to the top of the on-screen keyboard. The
   // hook tracks the visual viewport directly — see its implementation for the
@@ -430,7 +431,8 @@ const MobileWrapper = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   z-index: ${depths.editorToolbar};
   will-change: transform;
@@ -443,6 +445,9 @@ const MobileWrapper = styled.div`
 const MobileBackground = styled.div`
   padding: 10px 6px;
   height: 60px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   background-color: ${s("menuBackground")};
   border-top: 1px solid ${s("divider")};
 
@@ -452,7 +457,6 @@ const MobileBackground = styled.div`
     left: 0;
     right: 0;
     height: 100px;
-    background-color: ${s("menuBackground")};
   }
 `;
 

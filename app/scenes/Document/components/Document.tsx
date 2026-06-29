@@ -87,7 +87,7 @@ function DocumentScene({
   onCreateLink,
   children,
 }: Props) {
-  const { auth, ui, dialogs } = useStores();
+  const { ai, auth, ui, dialogs } = useStores();
   const { t } = useTranslation();
   const history = useHistory();
   const location = useLocation<LocationState>();
@@ -96,6 +96,12 @@ function DocumentScene({
   const { team, user } = auth;
 
   const editorRef = useRef<TEditor>(null);
+
+  React.useEffect(() => {
+    if (!ai.config) {
+      void ai.fetchConfig();
+    }
+  }, [ai]);
 
   const {
     isUploading,
@@ -351,18 +357,21 @@ function DocumentScene({
             </ExitReadingMode>
           </Tooltip>
         )}
-        {!isShare && !ui.isReadingMode && ui.rightSidebar !== "ai" && (
-          <Tooltip content={t("Ask AI")} placement="left">
-            <FloatingAi
-              type="button"
-              onClick={() => ui.set({ rightSidebar: "ai" })}
-              aria-label={t("Ask AI")}
-            >
-              <SparklesIcon />
-            </FloatingAi>
-          </Tooltip>
-        )}
-        <Container column>
+        {!isShare &&
+          !ui.isReadingMode &&
+          ui.rightSidebar !== "ai" &&
+          ai.config?.configured === true && (
+            <Tooltip content={t("Ask AI")} placement="left">
+              <FloatingAi
+                type="button"
+                onClick={() => ui.set({ rightSidebar: "ai" })}
+                aria-label={t("Ask AI")}
+              >
+                <SparklesIcon />
+              </FloatingAi>
+            </Tooltip>
+          )}
+        <Container column shrink={false}>
           {!readOnly && (
             <Prompt
               when={isUploading && !isEditorDirty}
@@ -391,9 +400,7 @@ function DocumentScene({
             />
           )}
           <Main style={fullWidthTransformOffsetStyle}>
-            {!isShare && (
-              <DocumentCover document={document} readOnly={readOnly} />
-            )}
+            <DocumentCover document={document} readOnly={readOnly || isShare} />
             <BodyWrapper>
               <React.Suspense
                 fallback={

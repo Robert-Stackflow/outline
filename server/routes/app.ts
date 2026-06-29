@@ -11,7 +11,9 @@ import {
   type NavigationNode,
 } from "@shared/types";
 import { unicodeCLDRtoISO639 } from "@shared/utils/date";
+import { toError } from "@shared/utils/error";
 import env from "@server/env";
+import Logger from "@server/logging/Logger";
 import { Integration } from "@server/models";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
 import presentEnv from "@server/presenters/env";
@@ -155,8 +157,13 @@ export const renderApp = async (
     `;
   } else {
     headTags += prefetchTags;
-    headTags += `
+    if (env.isProduction) {
+      headTags += `
     <link rel="manifest" href="/static/manifest.webmanifest" />
+    `;
+    }
+
+    headTags += `
     <link
       rel="apple-touch-icon"
       type="image/png"
@@ -256,6 +263,12 @@ export const renderShare = async (ctx: Context, next: Next) => {
   } catch (_err) {
     // If the share or document does not exist, return a 404.
     ctx.status = 404;
+    return renderApp(ctx, next, {
+      title: "Not found",
+      allowIndexing: false,
+      isShare: true,
+      rootShareId,
+    });
   }
 
   // If the client explicitly requests markdown and prefers it over HTML,
@@ -312,15 +325,23 @@ export const renderShare = async (ctx: Context, next: Next) => {
         ? team.name
         : undefined;
 
-  const content =
-    document || collection
-      ? await DocumentHelper.toHTML(document || collection!, {
-          includeStyles: false,
-          includeHead: false,
-          includeTitle: true,
-          signedUrls: true,
-        })
-      : undefined;
+  let content: string | undefined;
+
+  if (document || collection) {
+    try {
+      content = await DocumentHelper.toHTML(document || collection!, {
+        includeStyles: false,
+        includeHead: false,
+        includeTitle: true,
+        signedUrls: true,
+      });
+    } catch (err) {
+      Logger.warn("Failed to pre-render shared document HTML", {
+        error: toError(err).message,
+        shareId,
+      });
+    }
+  }
 
   const canonicalUrl =
     share && share.canonicalUrl !== ctx.request.origin + ctx.request.url

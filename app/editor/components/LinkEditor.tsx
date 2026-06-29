@@ -284,8 +284,9 @@ const InputWrapper = styled(Flex)`
   pointer-events: all;
   gap: 8px;
   min-height: 44px;
-  padding: 8px;
+  padding: 5px 8px;
   align-items: center;
+  box-sizing: border-box;
 
   ${Input} {
     height: 34px;

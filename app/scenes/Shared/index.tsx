@@ -37,6 +37,7 @@ import DelayedMount from "~/components/DelayedMount";
 import lazyWithRetry from "~/utils/lazyWithRetry";
 import { ShareContext } from "@shared/hooks/useShare";
 import ClickablePadding from "~/components/ClickablePadding";
+import { loadSharedSceneModels } from "./loadSharedSceneModels";
 
 const Login = lazyWithRetry(() => import("../Login"));
 
@@ -147,10 +148,13 @@ function SharedScene() {
   const { request, error, loading, loaded } = useRequest(
     useCallback(
       () =>
-        Promise.all([
-          shares.fetch(shareId),
-          documentSlug ? documents.fetch(documentSlug) : undefined,
-        ]),
+        loadSharedSceneModels({
+          shareId,
+          documentSlug,
+          shares,
+          documents,
+          client,
+        }),
       [shares, documents, shareId, documentSlug]
     )
   );

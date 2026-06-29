@@ -50,6 +50,7 @@ import { toMenuItems } from "~/components/Menu/transformer";
 import * as Components from "~/components/primitives/components/Menu";
 import { MenuProvider } from "~/components/primitives/Menu/MenuContext";
 import Tooltip from "~/components/Tooltip";
+import useMobile from "~/hooks/useMobile";
 import type { MenuItem as PrimitiveMenuItem } from "~/types";
 import { useEditor } from "../components/EditorContext";
 import { mapMenuItems } from "../menus/mapMenuItems";
@@ -103,6 +104,7 @@ export default class BlockGutterExtension extends Extension {
 function BlockGutter({ rtl }: { rtl: boolean }) {
   const { t } = useTranslation();
   const editor = useEditor();
+  const isMobile = useMobile();
   const { commands, view } = editor;
   const [target, setTarget] = React.useState<BlockGutterTarget | null>(null);
   const [targetRect, setTargetRect] = React.useState<DOMRect | null>(null);
@@ -169,6 +171,10 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
   );
 
   React.useEffect(() => {
+    if (isMobile) {
+      return undefined;
+    }
+
     const updateFromMousePoint = () => {
       mouseFrameRef.current = null;
       const point = latestMousePointRef.current;
@@ -223,7 +229,7 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
         mouseFrameRef.current = null;
       }
     };
-  }, [clearHideTimer, menuOpen, rtl, scheduleHide, updateTarget, view]);
+  }, [clearHideTimer, isMobile, menuOpen, rtl, scheduleHide, updateTarget, view]);
 
   React.useEffect(() => {
     if (!target) {
@@ -382,6 +388,10 @@ function BlockGutter({ rtl }: { rtl: boolean }) {
 
     return mapMenuItems(items, commands, view, view.state);
   }, [commands, menuOpen, t, target, view]);
+
+  if (isMobile) {
+    return null;
+  }
 
   if (!target || !targetRect) {
     return (

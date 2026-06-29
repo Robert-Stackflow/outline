@@ -1,6 +1,7 @@
 import { throttle } from "es-toolkit/compat";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Minute } from "@shared/utils/time";
+import { useScrollContext } from "~/components/ScrollContext";
 import useIsMounted from "./useIsMounted";
 
 const activityEvents = [
@@ -9,6 +10,8 @@ const activityEvents = [
   "keydown",
   "DOMMouseScroll",
   "mousewheel",
+  "wheel",
+  "scroll",
   "mousedown",
   "touchstart",
   "touchmove",
@@ -27,6 +30,7 @@ export default function useIdle(
   events = activityEvents
 ) {
   const isMounted = useIsMounted();
+  const scrollContainerRef = useScrollContext();
   const [isIdle, setIsIdle] = useState(false);
   const timeout = useRef<ReturnType<typeof setTimeout>>();
 
@@ -50,15 +54,27 @@ export default function useIdle(
       }
     }, 1000);
 
-    events.forEach((eventName) =>
-      window.addEventListener(eventName, handleUserActivityEvent)
-    );
-    return () => {
+    const targets: EventTarget[] = [window];
+    const scrollContainer = scrollContainerRef?.current;
+    if (scrollContainer) {
+      targets.push(scrollContainer);
+    }
+
+    targets.forEach((target) => {
       events.forEach((eventName) =>
-        window.removeEventListener(eventName, handleUserActivityEvent)
+        target.addEventListener(eventName, handleUserActivityEvent)
       );
+    });
+
+    return () => {
+      targets.forEach((target) => {
+        events.forEach((eventName) =>
+          target.removeEventListener(eventName, handleUserActivityEvent)
+        );
+      });
+      handleUserActivityEvent.cancel();
     };
-  }, [events, isMounted, onActivity]);
+  }, [events, isMounted, onActivity, scrollContainerRef]);
 
   return isIdle;
 }

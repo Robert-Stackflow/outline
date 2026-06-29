@@ -126,6 +126,7 @@ export const DropdownMenu = observer(
             items={menuItems}
             trigger={children}
             ariaLabel={ariaLabel}
+            prepend={prepend}
             append={append}
           />
         );
@@ -169,7 +170,7 @@ type MobileDropdownProps = {
   onOpenChange: (open: boolean) => void;
   items: MenuItem[];
   trigger: React.ReactNode;
-} & Pick<Props, "ariaLabel" | "append">;
+} & Pick<Props, "ariaLabel" | "append" | "prepend">;
 
 function MobileDropdown({
   open,
@@ -177,6 +178,7 @@ function MobileDropdown({
   items,
   trigger,
   ariaLabel,
+  prepend,
   append,
 }: MobileDropdownProps) {
   const [submenuName, setSubmenuName] = React.useState<string>();
@@ -219,6 +221,8 @@ function MobileDropdown({
   }, [items, submenuName]);
 
   const content = toMobileMenuItems(menuItems, closeDrawer, setSubmenuName);
+  const prependContent =
+    typeof prepend === "function" ? prepend({ close: closeDrawer }) : prepend;
 
   return (
     <Drawer
@@ -238,6 +242,7 @@ function MobileDropdown({
       >
         <DrawerTitle>{ariaLabel}</DrawerTitle>
         <StyledScrollable hiddenScrollbars>
+          {!submenuName ? prependContent : null}
           {content}
           {!submenuName ? append : null}
         </StyledScrollable>

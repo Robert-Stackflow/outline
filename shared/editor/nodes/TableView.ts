@@ -228,7 +228,7 @@ export class TableView extends ProsemirrorTableView {
   }
 
   private updateControls(): void {
-    if (!this.editorView) {
+    if (!this.editorView || !this.editorView.editable) {
       this.controlsLayer.replaceChildren();
       return;
     }

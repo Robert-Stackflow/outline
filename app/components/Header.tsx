@@ -1,4 +1,3 @@
-import { throttle } from "es-toolkit/compat";
 import { observer } from "mobx-react";
 import { MenuIcon } from "outline-icons";
 import { transparentize } from "polished";
@@ -10,17 +9,17 @@ import breakpoint from "styled-components-breakpoint";
 import useMeasure from "react-use-measure";
 import { depths, s } from "@shared/styles";
 import { metaDisplay } from "@shared/utils/keyboard";
-import { supportsPassiveListener } from "@shared/utils/browser";
 import Button from "~/components/Button";
 import Fade from "~/components/Fade";
 import Flex from "~/components/Flex";
 import NudeButton from "~/components/NudeButton";
 import Tooltip from "~/components/Tooltip";
-import useEventListener from "~/hooks/useEventListener";
 import useMobile from "~/hooks/useMobile";
 import useStores from "~/hooks/useStores";
+import useWindowScrollPosition from "~/hooks/useWindowScrollPosition";
 import { draggableOnDesktop, fadeOnDesktopBackgrounded } from "~/styles";
 import Desktop from "~/utils/Desktop";
+import { useScrollContext } from "./ScrollContext";
 import { TooltipProvider } from "./TooltipContext";
 
 export const HEADER_HEIGHT = 64;
@@ -46,26 +45,17 @@ function Header(
   const [internalMeasureRef, size] = useMeasure();
   const [breadcrumbsMeasureRef, breadcrumbsSize] = useMeasure();
   const passThrough = !actions && !left && !title;
-
-  const [isScrolled, setScrolled] = React.useState(false);
-  const handleScroll = React.useMemo(
-    () => throttle(() => setScrolled(window.scrollY > 75), 50),
-    []
-  );
-
-  useEventListener(
-    "scroll",
-    handleScroll,
-    window,
-    supportsPassiveListener ? { passive: true } : { capture: false }
-  );
+  const scrollRef = useScrollContext();
+  const scrollPosition = useWindowScrollPosition({ throttle: 50 });
+  const isScrolled = scrollPosition.y > 75;
 
   const handleClickTitle = React.useCallback(() => {
-    window.scrollTo({
+    const target = scrollRef?.current ?? window;
+    target.scrollTo({
       top: 0,
       behavior: "smooth",
     });
-  }, []);
+  }, [scrollRef]);
 
   const setBreadcrumbRef = React.useCallback(
     (node: HTMLDivElement | null) => {

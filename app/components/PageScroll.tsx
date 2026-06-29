@@ -12,9 +12,12 @@ const StableWrapper = styled.div<{ $shouldApplyMobileStyles: boolean }>`
   ${({ $shouldApplyMobileStyles }) =>
     $shouldApplyMobileStyles
       ? `
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        max-width: 100%;
+        min-height: 100vh;
+        height: 100dvh;
         overflow: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
       `
       : `

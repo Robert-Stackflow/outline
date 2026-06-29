@@ -8,6 +8,7 @@ import ArrowKeyNavigation from "~/components/ArrowKeyNavigation";
 import DelayedMount from "~/components/DelayedMount";
 import PlaceholderList from "~/components/List/Placeholder";
 import useCurrentUser from "~/hooks/useCurrentUser";
+import useIsMounted from "~/hooks/useIsMounted";
 import usePrevious from "~/hooks/usePrevious";
 import { dateToHeading } from "~/utils/date";
 
@@ -122,6 +123,7 @@ const PaginatedList = <T extends PaginatedItem>({
   ...rest
 }: Props<T>): JSX.Element | null => {
   const user = useCurrentUser({ rejectOnEmpty: false });
+  const isMounted = useIsMounted();
   const { t } = useTranslation();
 
   const [error, setError] = React.useState<Error | undefined>();
@@ -131,6 +133,7 @@ const PaginatedList = <T extends PaginatedItem>({
     !items?.length
   );
   const [fetchCounter, setFetchCounter] = React.useState(0);
+  const fetchCounterRef = React.useRef(0);
   const [renderCount, setRenderCount] = React.useState(Pagination.defaultLimit);
   const [offset, setOffset] = React.useState(0);
   const [allowLoadMore, setAllowLoadMore] = React.useState(true);
@@ -150,7 +153,8 @@ const PaginatedList = <T extends PaginatedItem>({
     }
 
     setIsFetching(true);
-    const counter = fetchCounter + 1;
+    const counter = fetchCounterRef.current + 1;
+    fetchCounterRef.current = counter;
     setFetchCounter(counter);
     const limit = options?.limit ?? Pagination.defaultLimit;
     setError(undefined);
@@ -162,6 +166,10 @@ const PaginatedList = <T extends PaginatedItem>({
         ...options,
       });
       if (!results) {
+        return;
+      }
+
+      if (!isMounted()) {
         return;
       }
 
@@ -177,15 +185,23 @@ const PaginatedList = <T extends PaginatedItem>({
 
       setIsFetchingInitial(false);
     } catch (err) {
-      setError(toError(err));
+      if (isMounted()) {
+        setError(toError(err));
+      }
     } finally {
       // only the most recent fetch should end the loading state
-      if (counter >= fetchCounter) {
+      if (isMounted() && counter === fetchCounterRef.current) {
         setIsFetching(false);
         setIsFetchingMore(false);
       }
     }
-  }, [fetch, fetchCounter, offset, options]);
+  }, [fetch, isMounted, offset, options]);
+
+  const fetchResultsRef = React.useRef(fetchResults);
+
+  React.useEffect(() => {
+    fetchResultsRef.current = fetchResults;
+  }, [fetchResults]);
 
   const loadMoreResults = React.useCallback(async () => {
     // Don't paginate if there aren't more results or we're currently fetching
@@ -215,7 +231,7 @@ const PaginatedList = <T extends PaginatedItem>({
   // Initial fetch on mount
   React.useEffect(() => {
     if (fetch) {
-      void fetchResults();
+      void fetchResultsRef.current();
     }
   }, [fetch]);
 

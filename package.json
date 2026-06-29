@@ -394,7 +394,8 @@
     "i18next-parser/i18next": "^23.16.8",
     "ws@npm:~8.17.1": "^8.21.0",
     "uuid": "^11.1.1",
-    "nodemailer@npm:9.0.0": "^9.0.1"
+    "nodemailer@npm:9.0.0": "^9.0.1",
+    "buffer-equal-constant-time@npm:^1.0.1": "patch:buffer-equal-constant-time@npm%3A1.0.1#~/.yarn/patches/buffer-equal-constant-time-npm-1.0.1-41826f3419.patch"
   },
   "version": "1.8.1",
   "packageManager": "yarn@4.11.0"

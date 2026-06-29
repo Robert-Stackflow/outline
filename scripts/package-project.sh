@@ -55,7 +55,6 @@ EXCLUDES=(
   "$PROJECT_NAME/.turbo/*"
   "$PROJECT_NAME/.vite/*"
   "$PROJECT_NAME/data/*"
-  "$PROJECT_NAME/plugins/storage/*"
   "$PROJECT_NAME/public/uploads/*"
   "$PROJECT_NAME/tmp/*"
   "$PROJECT_NAME/temp/*"

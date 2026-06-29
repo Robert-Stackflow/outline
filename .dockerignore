@@ -16,7 +16,9 @@ lint-staged.config.mjs
 build
 docker-compose.yml
 node_modules
-.yarn
+.yarn/*
+!.yarn/patches
+!.yarn/patches/**
 **/*.test.ts
 **/*.test.tsx
 **/*.test.js

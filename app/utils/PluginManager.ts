@@ -143,7 +143,24 @@ export class PluginManager {
     }
 
     const r = import.meta.glob("../../plugins/*/client/index.{ts,js,tsx,jsx}");
-    await Promise.all(Object.keys(r).map((key: string) => r[key]()));
+    const entries = Object.entries(r);
+    const results = await Promise.allSettled(
+      entries.map(([, load]) => load())
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled") {
+        return;
+      }
+
+      Logger.warn("Failed to load client plugin", {
+        plugin: entries[index][0],
+        error:
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason),
+      });
+    });
     this.loaded = true;
   }
 

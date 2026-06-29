@@ -6,7 +6,8 @@ import {
   SidebarIcon,
   SidebarReverseIcon,
 } from "outline-icons";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   DragActiveProvider,
   SidebarScrollProvider,
@@ -16,6 +17,7 @@ import styled from "styled-components";
 import { s } from "@shared/styles";
 import { metaDisplay } from "@shared/utils/keyboard";
 import { undraggableOnDesktop } from "~/styles";
+import { AvatarSize } from "~/components/Avatar";
 import Scrollable from "~/components/Scrollable";
 import Notifications from "~/components/Notifications/Notifications";
 import useCurrentTeam from "~/hooks/useCurrentTeam";
@@ -25,6 +27,7 @@ import useStores from "~/hooks/useStores";
 import TeamMenu from "~/menus/TeamMenu";
 import {
   archivePath,
+  aiPath,
   draftsPath,
   homePath,
 } from "~/utils/routeHelpers";
@@ -43,16 +46,20 @@ import {
   SidebarPanelProvider,
   useSidebarPanel,
 } from "./components/SidebarPanelContext";
+import {
+  getSidebarPanelAfterRouteChange,
+  getSidebarScrollAreaForPanel,
+  shouldShowAiEntry,
+} from "./components/sidebarPanelRouting";
 import Starred from "./components/Starred";
 import TrashEntry from "./components/TrashEntry";
 import useMobile from "~/hooks/useMobile";
 
 function AppSidebar() {
   const { t } = useTranslation();
-  const { documents, ui, collections } = useStores();
+  const { ai, documents, ui, collections } = useStores();
   const team = useCurrentTeam();
   const user = useCurrentUser();
-  const can = usePolicy(team);
   const isMobile = useMobile();
 
   useEffect(() => {
@@ -62,6 +69,12 @@ function AppSidebar() {
       void documents.fetchDrafts();
     }
   }, [documents, collections, user.isViewer]);
+
+  useEffect(() => {
+    if (!ai.config) {
+      void ai.fetchConfig();
+    }
+  }, [ai]);
 
   // Scrollable reads ref.current internally for its shadow/ResizeObserver
   // logic, so we must pass an object ref — a callback ref would leave those
@@ -76,54 +89,63 @@ function AppSidebar() {
   return (
     <Sidebar hidden={!ui.readyToShow}>
       <SidebarPanelProvider>
+        <SidebarPanelRouteSync />
         <DragActiveProvider>
           <DragPlaceholder />
 
           <WorkspaceRow>
-          <TeamMenu>
-            <WorkspaceTrigger type="button" aria-label={team.name}>
-              <TeamLogo model={team} size={22} alt={t("Logo")} />
-              <WorkspaceName>{team.name}</WorkspaceName>
-              {!isMobile && (
-                <Tooltip
-                  content={t("Toggle sidebar")}
-                  shortcut={`${metaDisplay}+.`}
-                >
-                  <CollapseSlot
-                    onPointerDown={(event: React.PointerEvent) => {
-                      // Radix DropdownMenu opens on pointerdown; stop here so
-                      // the trigger doesn't see the event.
-                      event.stopPropagation();
-                    }}
-                    onMouseDown={(event: React.MouseEvent) => {
-                      event.stopPropagation();
-                    }}
-                    onClick={(event: React.MouseEvent) => {
-                      event.stopPropagation();
-                      ui.toggleCollapsedSidebar();
-                      (document.activeElement as HTMLElement)?.blur();
-                    }}
-                    aria-label={
-                      ui.sidebarCollapsed
-                        ? t("Expand sidebar")
-                        : t("Collapse sidebar")
-                    }
+            <TeamMenu>
+              <WorkspaceTrigger type="button" aria-label={team.name}>
+                <TeamLogo
+                  model={team}
+                  size={AvatarSize.Medium}
+                  alt={t("Logo")}
+                />
+                <WorkspaceName>{team.name}</WorkspaceName>
+                {!isMobile && (
+                  <Tooltip
+                    content={t("Toggle sidebar")}
+                    shortcut={`${metaDisplay}+.`}
                   >
-                    {ui.sidebarIsClosed ? (
-                      <SidebarReverseIcon />
-                    ) : (
-                      <SidebarIcon />
-                    )}
-                  </CollapseSlot>
-                </Tooltip>
-              )}
-            </WorkspaceTrigger>
-          </TeamMenu>
-        </WorkspaceRow>
+                    <CollapseSlot
+                      onPointerDown={(event: React.PointerEvent) => {
+                        // Radix DropdownMenu opens on pointerdown; stop here so
+                        // the trigger doesn't see the event.
+                        event.stopPropagation();
+                      }}
+                      onMouseDown={(event: React.MouseEvent) => {
+                        event.stopPropagation();
+                      }}
+                      onClick={(event: React.MouseEvent) => {
+                        event.stopPropagation();
+                        ui.toggleCollapsedSidebar();
+                        (document.activeElement as HTMLElement)?.blur();
+                      }}
+                      aria-label={
+                        ui.sidebarCollapsed
+                          ? t("Expand sidebar")
+                          : t("Collapse sidebar")
+                      }
+                    >
+                      {ui.sidebarIsClosed ? (
+                        <SidebarReverseIcon />
+                      ) : (
+                        <SidebarIcon />
+                      )}
+                    </CollapseSlot>
+                  </Tooltip>
+                )}
+              </WorkspaceTrigger>
+            </TeamMenu>
+          </WorkspaceRow>
           <Overflow>
             <CompactNav />
           </Overflow>
-          <PanelBody scrollRef={scrollRef} scrollArea={scrollArea} />
+          <PanelBody
+            scrollRef={scrollRef}
+            scrollArea={scrollArea}
+            onScrollAreaChange={setScrollArea}
+          />
         </DragActiveProvider>
       </SidebarPanelProvider>
       <HistoryNavigation />
@@ -135,14 +157,31 @@ function AppSidebar() {
 const PanelBody = observer(function PanelBody_({
   scrollRef,
   scrollArea,
+  onScrollAreaChange,
 }: {
   scrollRef: React.RefObject<HTMLDivElement>;
   scrollArea: HTMLElement | null;
+  onScrollAreaChange: (scrollArea: HTMLElement | null) => void;
 }) {
   const { t } = useTranslation();
   const { panel, setPanel } = useSidebarPanel();
-  const { auth, documents } = useStores();
+  const { ai, auth, documents } = useStores();
   const can = usePolicy(auth.team?.id);
+
+  useLayoutEffect(() => {
+    onScrollAreaChange(
+      getSidebarScrollAreaForPanel({
+        panel,
+        scrollArea: scrollRef.current,
+      })
+    );
+
+    return () => {
+      if (panel === "home") {
+        onScrollAreaChange(null);
+      }
+    };
+  }, [onScrollAreaChange, panel, scrollRef]);
 
   if (panel === "notifications") {
     return (
@@ -152,7 +191,7 @@ const PanelBody = observer(function PanelBody_({
     );
   }
 
-  if (panel === "ai") {
+  if (panel === "ai" && shouldShowAiEntry(ai.config)) {
     return <AiPanel />;
   }
 
@@ -200,6 +239,43 @@ const PanelBody = observer(function PanelBody_({
       </SidebarScrollProvider>
     </Scrollable>
   );
+});
+
+/** Keeps the compact sidebar panel in sync with AI availability and route exits. */
+const SidebarPanelRouteSync = observer(function SidebarPanelRouteSync_() {
+  const { ai } = useStores();
+  const { panel, setPanel } = useSidebarPanel();
+  const location = useLocation();
+  const previousPathname = useRef(location.pathname);
+  const handledAiRoute = useRef(false);
+  const showAiEntry = shouldShowAiEntry(ai.config);
+
+  useEffect(() => {
+    const isAiRoute = location.pathname === aiPath();
+    if (!isAiRoute) {
+      handledAiRoute.current = false;
+    }
+    if (isAiRoute && showAiEntry && panel === "ai") {
+      handledAiRoute.current = true;
+    }
+
+    const nextPanel = getSidebarPanelAfterRouteChange({
+      panel,
+      previousPathname: previousPathname.current,
+      pathname: location.pathname,
+      aiPathname: aiPath(),
+      showAiEntry,
+      aiRouteHandled: handledAiRoute.current,
+    });
+
+    previousPathname.current = location.pathname;
+
+    if (nextPanel !== panel) {
+      setPanel(nextPanel);
+    }
+  }, [location.pathname, panel, setPanel, showAiEntry]);
+
+  return null;
 });
 
 const Overflow = styled.div`
@@ -275,8 +351,7 @@ const WorkspaceName = styled.span`
 `;
 
 const WorkspaceRow = styled.div`
-  &:hover ${CollapseSlot},
-  &:focus-within ${CollapseSlot} {
+  &:hover ${CollapseSlot}, &:focus-within ${CollapseSlot} {
     opacity: 1;
   }
 `;

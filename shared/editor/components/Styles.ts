@@ -112,10 +112,11 @@ const mathStyle = (props: Props) => css`
     position: fixed;
     z-index: ${depths.editorToolbar};
     display: block;
+    box-sizing: border-box;
     width: max-content;
     max-width: min(560px, calc(100vw - 24px));
     max-height: min(260px, calc(100vh - 24px));
-    transform: translate(-50%, -100%);
+    transform: none;
     overflow: auto;
     overscroll-behavior: contain;
     border-radius: 8px;
@@ -136,7 +137,7 @@ const mathStyle = (props: Props) => css`
   }
 
   .math-preview-popover.placement-below {
-    transform: translate(-50%, 0);
+    transform: none;
   }
 
   .math-preview-popover::-webkit-scrollbar {

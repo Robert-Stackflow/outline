@@ -83,7 +83,7 @@ const DocumentSidebarContent = observer(function DocumentSidebarContent({
  * and clears it when closed or on unmount.
  */
 export default function useDocumentSidebar() {
-  const { ui, documents } = useStores();
+  const { ai, ui, documents } = useStores();
   const location = useLocation();
   const setSidebar = useSetRightSidebar();
   const isHistoryRoute = !!matchPath(location.pathname, {
@@ -99,6 +99,18 @@ export default function useDocumentSidebar() {
       ui.set({ rightSidebar: null });
     }
   }, [isHistoryRoute, ui]);
+
+  React.useEffect(() => {
+    if (!ai.config) {
+      void ai.fetchConfig();
+    }
+  }, [ai]);
+
+  React.useEffect(() => {
+    if (ui.rightSidebar === "ai" && ai.config?.configured === false) {
+      ui.set({ rightSidebar: null });
+    }
+  }, [ai.config?.configured, ui]);
 
   // When the sidebar switches away from history while still on a /history URL,
   // update the URL to remove the /history suffix.

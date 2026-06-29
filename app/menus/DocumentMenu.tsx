@@ -13,7 +13,6 @@ import { OverflowMenuButton } from "~/components/Menu/OverflowMenuButton";
 import Switch from "~/components/Switch";
 import { ActionContextProvider } from "~/hooks/useActionContext";
 import { useDocumentDisplay } from "~/hooks/useDocumentDisplay";
-import useMobile from "~/hooks/useMobile";
 import usePolicy from "~/hooks/usePolicy";
 import useRequest from "~/hooks/useRequest";
 import useStores from "~/hooks/useStores";
@@ -56,7 +55,6 @@ function DocumentMenu({
   onFindAndReplace,
 }: Props) {
   const { t } = useTranslation();
-  const isMobile = useMobile();
   const can = usePolicy(document);
   const { state: display, set: setDisplay } = useDocumentDisplay(document.id);
 
@@ -155,7 +153,7 @@ function DocumentMenu({
   });
 
   const renderAppearanceGroup = React.useCallback(() => {
-    if (!can.update || !showDisplayOptions || isMobile) {
+    if (!can.update || !showDisplayOptions) {
       return null;
     }
 
@@ -230,7 +228,6 @@ function DocumentMenu({
   }, [
     t,
     can.update,
-    isMobile,
     showDisplayOptions,
     display.fontFamily,
     display.smallerText,

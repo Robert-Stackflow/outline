@@ -8,6 +8,7 @@ import NotificationIcon from "~/components/Notifications/NotificationIcon";
 import Tooltip from "~/components/Tooltip";
 import useStores from "~/hooks/useStores";
 import { useSidebarPanel } from "./SidebarPanelContext";
+import { shouldShowAiEntry } from "./sidebarPanelRouting";
 
 /**
  * Notion-style compact horizontal navigation: Home / Notifications act as
@@ -18,8 +19,9 @@ import { useSidebarPanel } from "./SidebarPanelContext";
  */
 function CompactNav() {
   const { t } = useTranslation();
-  const { ui } = useStores();
+  const { ai, ui } = useStores();
   const { panel, setPanel } = useSidebarPanel();
+  const showAiEntry = shouldShowAiEntry(ai.config);
 
   const handleSearch = React.useCallback(() => {
     ui.openSearchDialog();
@@ -61,24 +63,22 @@ function CompactNav() {
         </Pill>
       </Tooltip>
 
-      <Tooltip
-        content={t("AI")}
-        placement="bottom"
-        disabled={panel === "ai"}
-      >
-        <Pill
-          type="button"
-          $active={panel === "ai"}
-          onClick={() => setPanel("ai")}
-          aria-pressed={panel === "ai"}
-          aria-label={t("AI")}
-        >
-          <IconBox>
-            <SparklesIcon />
-          </IconBox>
-          <Label $active={panel === "ai"}>{t("AI")}</Label>
-        </Pill>
-      </Tooltip>
+      {showAiEntry && (
+        <Tooltip content={t("AI")} placement="bottom" disabled={panel === "ai"}>
+          <Pill
+            type="button"
+            $active={panel === "ai"}
+            onClick={() => setPanel("ai")}
+            aria-pressed={panel === "ai"}
+            aria-label={t("AI")}
+          >
+            <IconBox>
+              <SparklesIcon />
+            </IconBox>
+            <Label $active={panel === "ai"}>{t("AI")}</Label>
+          </Pill>
+        </Tooltip>
+      )}
 
       <Spacer />
       <Tooltip content={t("Search")} placement="bottom" shortcut="/">

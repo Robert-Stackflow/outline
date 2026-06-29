@@ -5,6 +5,7 @@ import type { EditorView } from "prosemirror-view";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import styled from "styled-components";
+import { breakpoints } from "@shared/styles";
 import Flex from "~/components/Flex";
 import Tooltip from "~/components/Tooltip";
 import Input from "~/editor/components/Input";
@@ -44,7 +45,7 @@ export function MediaLinkEditor({
     const nextSelection = Selection.findFrom(
       state.tr.doc.resolve(state.selection.from),
       1,
-      true
+      true,
     );
 
     const selection = nextSelection ?? TextSelection.create(state.tr.doc, 0);
@@ -98,7 +99,7 @@ export function MediaLinkEditor({
         }
       }
     },
-    [update, moveSelectionToEnd, onEscape]
+    [update, moveSelectionToEnd, onEscape],
   );
 
   if (!node) {
@@ -140,4 +141,25 @@ const Wrapper = styled(Flex)`
   gap: 6px;
   padding: 6px;
   min-width: 350px;
+  box-sizing: border-box;
+
+  ${Input} {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    line-height: 34px;
+  }
+
+  ${ToolbarButton} {
+    flex: 0 0 32px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  @media (max-width: ${breakpoints.tablet - 1}px) {
+    width: 100%;
+    min-width: 0;
+  }
 `;

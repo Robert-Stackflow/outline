@@ -1,15 +1,16 @@
 import { observer } from "mobx-react";
-import { PlusIcon } from "outline-icons";
+import { PlusIcon, TrashIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useHistory, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { s } from "@shared/styles";
+import NudeButton from "~/components/NudeButton";
 import Scrollable from "~/components/Scrollable";
 import Text from "~/components/Text";
 import Tooltip from "~/components/Tooltip";
 import useStores from "~/hooks/useStores";
-import { aiPath } from "~/utils/routeHelpers";
+import { getAiConversationPath } from "~/scenes/Ai/aiNavigation";
 
 /**
  * Sidebar panel listing the user's AI conversation history. Surfaced from the
@@ -18,6 +19,12 @@ import { aiPath } from "~/utils/routeHelpers";
 function AiPanel() {
   const { i18n, t } = useTranslation();
   const { ai } = useStores();
+  const history = useHistory();
+  const location = useLocation();
+  const activeConversationId = React.useMemo(
+    () => new URLSearchParams(location.search).get("c"),
+    [location.search]
+  );
 
   React.useEffect(() => {
     void ai.fetchConfig();
@@ -30,13 +37,30 @@ function AiPanel() {
       ? `${t("Chat")}${t("Lists")}`
       : `${t("Chat")} ${t("List").toLowerCase()}`;
 
+  const handleDelete = React.useCallback(
+    async (id: string) => {
+      await ai.deleteConversation(id);
+      if (activeConversationId === id) {
+        history.replace(getAiConversationPath());
+      }
+    },
+    [activeConversationId, ai, history]
+  );
+
   return (
     <Scrollable flex shadow>
       <Inner>
         <Header>
           <Title>{conversationListTitle}</Title>
           <Tooltip content={t("New conversation")} placement="bottom">
-            <NewLink to={aiPath()} aria-label={t("New conversation")}>
+            <NewLink
+              to={getAiConversationPath()}
+              aria-label={t("New conversation")}
+              $active={
+                !activeConversationId &&
+                location.pathname === getAiConversationPath()
+              }
+            >
               <PlusIcon size={18} />
             </NewLink>
           </Tooltip>
@@ -51,8 +75,18 @@ function AiPanel() {
         ) : (
           <List>
             {conversations.map((c) => (
-              <Item key={c.id} to={`${aiPath()}?c=${c.id}`}>
-                {c.title || t("Untitled")}
+              <Item key={c.id} $active={c.id === activeConversationId}>
+                <ItemLink to={getAiConversationPath(c.id)}>
+                  {c.title || t("Untitled")}
+                </ItemLink>
+                <Tooltip content={t("Delete")}>
+                  <DeleteButton
+                    aria-label={t("Delete")}
+                    onClick={() => void handleDelete(c.id)}
+                  >
+                    <TrashIcon size={15} />
+                  </DeleteButton>
+                </Tooltip>
               </Item>
             ))}
           </List>
@@ -82,7 +116,7 @@ const Title = styled.div`
   color: ${s("text")};
 `;
 
-const NewLink = styled(Link)`
+const NewLink = styled(Link)<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -91,6 +125,8 @@ const NewLink = styled(Link)`
   flex-shrink: 0;
   color: ${s("textTertiary")};
   border-radius: 6px;
+  background: ${(props) =>
+    props.$active ? props.theme.sidebarActiveBackground : "transparent"};
 
   &:hover {
     background: ${s("sidebarControlHoverBackground")};
@@ -104,10 +140,24 @@ const List = styled.div`
   gap: 1px;
 `;
 
-const Item = styled(Link)`
-  display: block;
-  padding: 7px 8px;
+const Item = styled.div<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
   border-radius: 6px;
+  background: ${(props) =>
+    props.$active ? props.theme.sidebarActiveBackground : "transparent"};
+
+  &:hover {
+    background: ${s("sidebarHoverBackground")};
+  }
+`;
+
+const ItemLink = styled(Link)`
+  display: block;
+  min-width: 0;
+  flex: 1;
+  padding: 7px 8px;
   font-size: 14px;
   color: ${s("textSecondary")};
   white-space: nowrap;
@@ -115,8 +165,29 @@ const Item = styled(Link)`
   text-overflow: ellipsis;
 
   &:hover {
-    background: ${s("sidebarHoverBackground")};
     color: ${s("text")};
+  }
+`;
+
+const DeleteButton = styled(NudeButton)`
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-inline-end: 3px;
+  color: ${s("textTertiary")};
+  opacity: 0;
+
+  ${Item}:hover &,
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: ${s("text")};
+    background: ${s("sidebarControlHoverBackground")};
   }
 `;
 
