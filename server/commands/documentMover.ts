@@ -159,10 +159,8 @@ async function documentMover(
     }
 
     // We must reload from the database to get the relationship data
-    const documents = await Document.findAll({
-      where: {
-        id: childDocumentIds,
-      },
+    const documents = await Document.findByIds(childDocumentIds, {
+      userId: user.id,
       transaction,
     });
 
