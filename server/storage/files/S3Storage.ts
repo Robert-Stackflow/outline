@@ -144,6 +144,10 @@ export default class S3Storage extends BaseStorage {
       return host;
     }
 
+    if (!env.AWS_S3_FORCE_PATH_STYLE) {
+      return this.getVirtualHostEndpoint(host);
+    }
+
     return `${host}/${isServerUpload && isDocker ? "s3/" : ""}${
       env.AWS_S3_UPLOAD_BUCKET_NAME
     }`;
@@ -342,6 +346,12 @@ export default class S3Storage extends BaseStorage {
     }
 
     return Buffer.from(key, "base64").toString("utf-8");
+  }
+
+  private getVirtualHostEndpoint(host: string): string {
+    const url = new URL(host);
+    url.hostname = `${env.AWS_S3_UPLOAD_BUCKET_NAME}.${url.hostname}`;
+    return url.toString().replace(/\/$/, "");
   }
 
   private getS3PresignedUrl = async (

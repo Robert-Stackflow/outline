@@ -11,7 +11,7 @@ import { validateIndexCharacters } from "@shared/utils/indexCharacters";
 import parseMentionUrl from "@shared/utils/parseMentionUrl";
 import { isUrl } from "@shared/utils/urls";
 import { ParamRequiredError, ValidationError } from "./errors";
-import { Buckets } from "./models/helpers/AttachmentHelper";
+import { Buckets, StorageKeyRoot } from "./models/helpers/AttachmentHelper";
 
 type IncomingValue = Primitive | string[];
 
@@ -186,20 +186,23 @@ export const assertCollectionPermission = (
 export class ValidateKey {
   /**
    * Checks if key is valid. A valid key is of the form
-   * <bucket>/<uuid>/<uuid>/<name>?
+   * outline/<bucket>/<uuid>/<uuid>/<name>?
    *
    * @param key
    * @returns true if key is valid, false otherwise
    */
   public static isValid = (key: string) => {
     let parts = key.split("/");
+    const bucketIndex = parts[0] === StorageKeyRoot ? 1 : 0;
+    const minParts = bucketIndex === 1 ? 4 : 3;
+    const maxParts = bucketIndex === 1 ? 5 : 4;
 
     return (
-      parts.length >= 3 &&
-      parts.length <= 4 &&
-      isIn(parts[0], Object.values(Buckets)) &&
-      isUUID(parts[1]) &&
-      isUUID(parts[2])
+      parts.length >= minParts &&
+      parts.length <= maxParts &&
+      isIn(parts[bucketIndex] ?? "", Object.values(Buckets)) &&
+      isUUID(parts[bucketIndex + 1] ?? "") &&
+      isUUID(parts[bucketIndex + 2] ?? "")
     );
   };
 
@@ -219,7 +222,8 @@ export class ValidateKey {
       .concat(`/${sanitize(filename.replace(/#/g, ""))}`);
   };
 
-  public static message = "Must be of the form <bucket>/<uuid>/<uuid>/<name>?";
+  public static message =
+    "Must be of the form outline/<bucket>/<uuid>/<uuid>/<name>?";
 }
 
 export class ValidateDocumentId {

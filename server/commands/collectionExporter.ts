@@ -7,7 +7,10 @@ import {
 import { traceFunction } from "@server/logging/tracing";
 import type { Collection, Team, User } from "@server/models";
 import { FileOperation } from "@server/models";
-import { Buckets } from "@server/models/helpers/AttachmentHelper";
+import {
+  Buckets,
+  StorageKeyRoot,
+} from "@server/models/helpers/AttachmentHelper";
 import { type APIContext } from "@server/types";
 
 type Props = {
@@ -25,7 +28,7 @@ function getKeyForFileOp(
   format: FileOperationFormat,
   name: string
 ) {
-  return `${
+  return `${StorageKeyRoot}/${
     Buckets.uploads
   }/${teamId}/${randomUUID()}/${name}-export.${format.replace(/outline-/, "")}.zip`;
 }

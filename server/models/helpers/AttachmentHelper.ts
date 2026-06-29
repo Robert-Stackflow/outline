@@ -4,6 +4,8 @@ import env from "@server/env";
 import { ValidateKey } from "@server/validation";
 import { AttachmentValidation } from "@shared/validations";
 
+export const StorageKeyRoot = "outline";
+
 export enum Buckets {
   public = "public",
   uploads = "uploads",
@@ -29,7 +31,7 @@ export default class AttachmentHelper {
     name: string;
     userId: string;
   }) {
-    const keyPrefix = `${Buckets.uploads}/${userId}/${id}`;
+    const keyPrefix = `${StorageKeyRoot}/${Buckets.uploads}/${userId}/${id}`;
     return ValidateKey.sanitize(
       `${keyPrefix}/${name.slice(0, this.maximumFileNameLength)}`
     );
@@ -49,10 +51,11 @@ export default class AttachmentHelper {
     isPublicBucket: boolean;
   } {
     const parts = key.split("/");
-    const bucket = parts[0];
-    const userId = parts[1];
-    const id = parts[2];
-    const [fileName] = parts.length > 3 ? parts.slice(-1) : [];
+    const bucketIndex = parts[0] === StorageKeyRoot ? 1 : 0;
+    const bucket = parts[bucketIndex] ?? "";
+    const userId = parts[bucketIndex + 1] ?? "";
+    const id = parts[bucketIndex + 2] ?? "";
+    const [fileName] = parts.length > bucketIndex + 3 ? parts.slice(-1) : [];
 
     return {
       bucket,

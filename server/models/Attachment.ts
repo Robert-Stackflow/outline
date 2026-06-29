@@ -33,7 +33,7 @@ import { SkipChangeset } from "./decorators/Changeset";
 import Fix from "./decorators/Fix";
 import Length from "./validators/Length";
 import Logger from "@server/logging/Logger";
-import { Buckets } from "./helpers/AttachmentHelper";
+import AttachmentHelper from "./helpers/AttachmentHelper";
 
 @Table({ tableName: "attachments", modelName: "attachment" })
 @Fix
@@ -87,8 +87,7 @@ class Attachment extends IdModel<
    * bucket and ACL is checked per attachment.
    */
   get isStoredInPublicBucket() {
-    const bucket = this.key.split("/")[0];
-    return [Buckets.avatars, Buckets.public].includes(bucket as Buckets);
+    return AttachmentHelper.parseKey(this.key).isPublicBucket;
   }
 
   /**

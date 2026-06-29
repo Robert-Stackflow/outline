@@ -20,6 +20,7 @@ import type { ImportTask } from "@server/models";
 import { Attachment } from "@server/models";
 import AttachmentHelper, {
   Buckets,
+  StorageKeyRoot,
 } from "@server/models/helpers/AttachmentHelper";
 import { ProsemirrorHelper } from "@server/models/helpers/ProsemirrorHelper";
 import { sequelize } from "@server/storage/database";
@@ -55,9 +56,10 @@ interface AttachmentRef {
 
 /**
  * Rewrites local attachment paths in markdown text into `<<attachmentId>>`
- * placeholders. Supports legacy bucket layouts (`uploads/`, `public/`),
- * arbitrary nested folder names, and `./attachments/...` rooted paths. Both
- * encoded and unencoded path forms are matched.
+ * placeholders. Supports the current root layout (`outline/uploads/`), legacy
+ * bucket layouts (`uploads/`, `public/`), arbitrary nested folder names, and
+ * `./attachments/...` rooted paths. Both encoded and unencoded path forms are
+ * matched.
  *
  * Exported for tests; not part of the module's public surface.
  *
@@ -76,9 +78,27 @@ export function rewriteAttachmentPaths(
     const attachmentFileName = path.basename(attachment.pathInZip);
     const reference = `<<${attachment.id}>>`;
 
-    const normalizedAttachmentPath = encodedPath
-      .replace(new RegExp(`(.*)/${Buckets.uploads}/`), `${Buckets.uploads}/`)
-      .replace(new RegExp(`(.*)/${Buckets.public}/`), `${Buckets.public}/`);
+    const bucketPaths = [
+      `${StorageKeyRoot}/${Buckets.uploads}`,
+      `${StorageKeyRoot}/${Buckets.public}`,
+      `${StorageKeyRoot}/${Buckets.avatars}`,
+      Buckets.uploads,
+      Buckets.public,
+      Buckets.avatars,
+    ];
+    const normalizedAttachmentPath = bucketPaths.reduce(
+      (normalizedPath, bucketPath) => {
+        if (normalizedPath !== encodedPath) {
+          return normalizedPath;
+        }
+
+        return normalizedPath.replace(
+          new RegExp(`(.*)/${escapeRegExp(bucketPath)}/`),
+          `${bucketPath}/`
+        );
+      },
+      encodedPath
+    );
 
     const attachmentDir = path.basename(path.dirname(attachment.pathInZip));
     const genericNormalizedPath = `${attachmentDir}/${encodeURI(attachmentFileName)}`;

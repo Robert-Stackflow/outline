@@ -23,7 +23,7 @@ import Team from "./Team";
 import User from "./User";
 import ParanoidModel from "./base/ParanoidModel";
 import Fix from "./decorators/Fix";
-import { Buckets } from "./helpers/AttachmentHelper";
+import { Buckets, StorageKeyRoot } from "./helpers/AttachmentHelper";
 
 export type FileOperationOptions = {
   includeAttachments?: boolean;
@@ -189,7 +189,7 @@ class FileOperation extends ParanoidModel<
     teamId: string;
     format: FileOperationFormat;
   }) {
-    return `${
+    return `${StorageKeyRoot}/${
       Buckets.uploads
     }/${teamId}/${uuidv4()}/${name}-export.${format.replace(/outline-/, "")}.zip`;
   }
