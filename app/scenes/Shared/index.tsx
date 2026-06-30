@@ -36,7 +36,6 @@ import { Document as DocumentScene } from "./Document";
 import DelayedMount from "~/components/DelayedMount";
 import lazyWithRetry from "~/utils/lazyWithRetry";
 import { ShareContext } from "@shared/hooks/useShare";
-import ClickablePadding from "~/components/ClickablePadding";
 import { loadSharedSceneModels } from "./loadSharedSceneModels";
 
 const Login = lazyWithRetry(() => import("../Login"));
@@ -272,14 +271,16 @@ function SharedScene() {
               sidebar={hasSidebar ? <Sidebar share={share} /> : null}
               sidebarCanCollapse={false}
             >
-              {model instanceof Document ? (
-                <DocumentScene document={model} />
-              ) : model instanceof Collection ? (
-                <CollectionScene collection={model} />
-              ) : null}
+              <SharedScrollContent>
+                {model instanceof Document ? (
+                  <DocumentScene document={model} />
+                ) : model instanceof Collection ? (
+                  <CollectionScene collection={model} />
+                ) : null}
+                <SharedScrollPadding aria-hidden />
+              </SharedScrollContent>
             </Layout>
             <SharedCommandBar />
-            <ClickablePadding minHeight="20vh" />
           </DocumentContextProvider>
         </ThemeProvider>
       </TeamContext.Provider>
@@ -291,6 +292,19 @@ const Content = styled(Text)`
   color: ${s("textSecondary")};
   text-align: center;
   margin-top: -8px;
+`;
+
+const SharedScrollContent = styled.div`
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+`;
+
+const SharedScrollPadding = styled.div`
+  flex: 0 0 auto;
+  min-height: 20vh;
 `;
 
 export default observer(SharedScene);
