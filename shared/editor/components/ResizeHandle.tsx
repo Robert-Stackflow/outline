@@ -1,7 +1,17 @@
 import styled from "styled-components";
 import { s } from "../../styles";
 
-export const ResizeLeft = styled.div<{ $dragging: boolean }>`
+/** Data attribute applied to resize handles so editor NodeViews can identify them. */
+export const ResizeHandleDataAttribute = "data-resize-handle";
+
+const resizeHandleAttrs = {
+  [ResizeHandleDataAttribute]: "true",
+  draggable: false,
+};
+
+export const ResizeLeft = styled.div.attrs(resizeHandleAttrs)<{
+  $dragging: boolean;
+}>`
   cursor: ew-resize;
   position: absolute;
   left: -4px;
@@ -9,6 +19,9 @@ export const ResizeLeft = styled.div<{ $dragging: boolean }>`
   bottom: 30%;
   width: 8px;
   user-select: none;
+  touch-action: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
   opacity: ${(props) => (props.$dragging ? 1 : 0)};
   transition: opacity 150ms ease-in-out;
 
@@ -62,13 +75,18 @@ export const ResizeBottom = styled(ResizeLeft)`
   }
 `;
 
-export const ResizeCorner = styled.div<{ $dragging: boolean }>`
+export const ResizeCorner = styled.div.attrs(resizeHandleAttrs)<{
+  $dragging: boolean;
+}>`
   position: absolute;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   z-index: 10;
   user-select: none;
+  touch-action: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
   opacity: ${(props) => (props.$dragging ? 1 : 0)};
   transition: opacity 150ms ease-in-out;
 

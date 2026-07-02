@@ -8,8 +8,8 @@ import {
   TableView as ProsemirrorTableView,
 } from "prosemirror-tables";
 import {
-  addColumnBefore,
-  addRowBefore,
+  addColumnAfter,
+  addRowAfter,
   selectColumn,
   selectRow,
   selectTable,
@@ -289,25 +289,19 @@ export class TableView extends ProsemirrorTableView {
         this.createRowGrip(
           row,
           box,
+          tableBox,
           selectedTable && isRowSelected(row.index)(this.editorView.state)
         )
       );
 
       if (!isDragging && !isMobile()) {
-        if (row.index === 0 && !addRows.has(0)) {
-          addRows.add(0);
-          fragment.appendChild(
-            this.createAddRowControl(row, 0, tableBox, tableBox.top)
-          );
-        }
-
-        const nextIndex = row.index + row.rowspan;
-        if (!addRows.has(nextIndex)) {
-          addRows.add(nextIndex);
+        const afterIndex = row.index + row.rowspan - 1;
+        if (!addRows.has(afterIndex)) {
+          addRows.add(afterIndex);
           fragment.appendChild(
             this.createAddRowControl(
               row,
-              nextIndex,
+              afterIndex,
               tableBox,
               box.top + box.height
             )
@@ -328,25 +322,19 @@ export class TableView extends ProsemirrorTableView {
         this.createColumnGrip(
           column,
           box,
+          tableBox,
           selectedTable && isColumnSelected(column.index)(this.editorView.state)
         )
       );
 
       if (!isDragging && !isMobile()) {
-        if (column.index === 0 && !addColumns.has(0)) {
-          addColumns.add(0);
-          fragment.appendChild(
-            this.createAddColumnControl(column, 0, tableBox, box.left)
-          );
-        }
-
-        const nextIndex = column.index + 1;
-        if (!addColumns.has(nextIndex)) {
-          addColumns.add(nextIndex);
+        const afterIndex = column.index;
+        if (!addColumns.has(afterIndex)) {
+          addColumns.add(afterIndex);
           fragment.appendChild(
             this.createAddColumnControl(
               column,
-              nextIndex,
+              afterIndex,
               tableBox,
               box.left + box.width
             )
@@ -361,8 +349,13 @@ export class TableView extends ProsemirrorTableView {
   private createRowGrip(
     cell: TableRowControlCell,
     box: TableControlBox,
+    tableBox: TableControlBox,
     selected: boolean
   ): HTMLButtonElement {
+    const width = 16;
+    const height = 24;
+    const top = box.top + box.height / 2 - height / 2;
+
     return this.createControl(
       "row-grip",
       cn(EditorStyleHelper.tableGripRow, {
@@ -373,10 +366,10 @@ export class TableView extends ProsemirrorTableView {
       cell,
       cell.index,
       {
-        left: box.left,
-        top: box.top,
-        width: 12,
-        height: box.height,
+        left: tableBox.left - width / 2,
+        top,
+        width,
+        height,
       }
     );
   }
@@ -384,8 +377,18 @@ export class TableView extends ProsemirrorTableView {
   private createColumnGrip(
     cell: TableControlCell,
     box: TableControlBox,
+    tableBox: TableControlBox,
     selected: boolean
   ): HTMLButtonElement {
+    const width = 24;
+    const height = 16;
+    const minLeft = tableBox.left;
+    const maxLeft = tableBox.left + Math.max(0, tableBox.width - width);
+    const left = Math.min(
+      Math.max(box.left + box.width / 2 - width / 2, minLeft),
+      maxLeft
+    );
+
     return this.createControl(
       "column-grip",
       cn(EditorStyleHelper.tableGripColumn, {
@@ -396,10 +399,10 @@ export class TableView extends ProsemirrorTableView {
       cell,
       cell.index,
       {
-        left: box.left,
-        top: box.top - 12,
-        width: box.width,
-        height: 12,
+        left,
+        top: tableBox.top - height / 2,
+        width,
+        height,
       }
     );
   }
@@ -417,9 +420,9 @@ export class TableView extends ProsemirrorTableView {
       index,
       {
         left: tableBox.left,
-        top: y - 9,
+        top: y - 8,
         width: tableBox.width,
-        height: 18,
+        height: 16,
       }
     );
   }
@@ -430,9 +433,9 @@ export class TableView extends ProsemirrorTableView {
     tableBox: TableControlBox,
     x: number
   ): HTMLButtonElement {
-    const width = 18;
+    const width = 16;
     const minLeft = tableBox.left;
-    const maxLeft = tableBox.left + Math.max(0, tableBox.width - width);
+    const maxLeft = tableBox.left + Math.max(0, tableBox.width - width / 2);
     const left = Math.min(Math.max(x - width / 2, minLeft), maxLeft);
 
     return this.createControl(
@@ -442,9 +445,9 @@ export class TableView extends ProsemirrorTableView {
       index,
       {
         left,
-        top: tableBox.top - 18,
+        top: tableBox.top - 8,
         width,
-        height: 26,
+        height: tableBox.height + 16,
       }
     );
   }
@@ -461,9 +464,9 @@ export class TableView extends ProsemirrorTableView {
     control.tabIndex = -1;
     control.contentEditable = "false";
     control.className = cn(EditorStyleHelper.tableControl, className);
+    setTableControlData(control, cell);
     control.dataset.controlKind = kind;
     control.dataset.index = index.toString();
-    setTableControlData(control, cell);
     this.applyBox(control, box);
 
     const surface = document.createElement("span");
@@ -596,7 +599,7 @@ export class TableView extends ProsemirrorTableView {
 
     switch (control.dataset.controlKind) {
       case "add-row":
-        addRowBefore({ index })(
+        addRowAfter({ index })(
           this.editorView.state,
           this.editorView.dispatch
         );
@@ -604,7 +607,7 @@ export class TableView extends ProsemirrorTableView {
         return;
 
       case "add-column":
-        addColumnBefore({ index })(
+        addColumnAfter({ index })(
           this.editorView.state,
           this.editorView.dispatch
         );

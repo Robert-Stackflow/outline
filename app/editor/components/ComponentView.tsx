@@ -1,6 +1,7 @@
 import type { Node as ProsemirrorNode } from "prosemirror-model";
 import type { EditorView, Decoration } from "prosemirror-view";
 import type { FunctionComponent } from "react";
+import { ResizeHandleDataAttribute } from "@shared/editor/components/ResizeHandle";
 import type Extension from "@shared/editor/lib/Extension";
 import { createBlockViewElements } from "@shared/editor/lib/blockView";
 import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
@@ -210,6 +211,10 @@ export default class ComponentView {
   }
 
   stopEvent(event: Event) {
+    if (isResizeHandleEvent(event)) {
+      return true;
+    }
+
     return (
       event.type !== "mousedown" &&
       !event.type.startsWith("drag") &&
@@ -241,4 +246,13 @@ export default class ComponentView {
 
 function shouldUseBlockComponentView(node: ProsemirrorNode) {
   return !node.type.spec.inline || blockLikeInlineNodeNames.has(node.type.name);
+}
+
+function isResizeHandleEvent(event: Event) {
+  const target = event.target;
+
+  return (
+    target instanceof Element &&
+    !!target.closest(`[${ResizeHandleDataAttribute}="true"]`)
+  );
 }

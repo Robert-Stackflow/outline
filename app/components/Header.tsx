@@ -1,6 +1,5 @@
 import { observer } from "mobx-react";
 import { MenuIcon } from "outline-icons";
-import { transparentize } from "polished";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { mergeRefs } from "react-merge-refs";
@@ -221,8 +220,8 @@ const Wrapper = styled(Flex)<WrapperProps>`
       pointer-events: none;
       `
       : `
-      background: ${transparentize(0.2, props.theme.background)};
-      backdrop-filter: blur(20px);
+      background: ${props.theme.background};
+      box-shadow: inset 0 -1px 0 ${props.theme.divider};
       `};
 
   padding: 12px 16px;
@@ -234,11 +233,6 @@ const Wrapper = styled(Flex)<WrapperProps>`
   button,
   [role="button"] {
     ${fadeOnDesktopBackgrounded()}
-  }
-
-  @supports (backdrop-filter: blur(20px)) {
-    backdrop-filter: blur(20px);
-    background: ${(props) => transparentize(0.2, props.theme.background)};
   }
 
   @media print {

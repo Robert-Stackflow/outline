@@ -910,8 +910,8 @@ iframe.embed {
   clear: both;
   position: relative;
   z-index: 1;
-  margin-top: 1.4em;
-  margin-bottom: 1.4em;
+  margin-top: 0.65em;
+  margin-bottom: 0.65em;
 
   img,
   video {
@@ -2416,8 +2416,8 @@ table {
   width: 100%;
   border-collapse: separate;
   border-radius: ${EditorStyleHelper.blockRadius};
-  margin-top: 1.4em;
-  margin-bottom: 1.4em;
+  margin-top: 0.65em;
+  margin-bottom: 0.65em;
   box-sizing: border-box;
   border: 1px solid ${props.theme.divider};
   border-left: 0;
@@ -2624,9 +2624,9 @@ table {
 
   .${EditorStyleHelper.tableControlSurface} {
     top: 3px;
-    bottom: 3px;
-    left: 1px;
-    width: 4px;
+    left: 7px;
+    width: 2px;
+    height: 18px;
     border-radius: 999px;
     background: ${props.theme.accent};
   }
@@ -2641,10 +2641,10 @@ table {
   cursor: grab;
 
   .${EditorStyleHelper.tableControlSurface} {
-    top: 4px;
+    top: 7px;
     left: 3px;
-    right: 3px;
-    height: 4px;
+    width: 18px;
+    height: 2px;
     border-radius: 999px;
     background: ${props.theme.accent};
   }
@@ -2684,14 +2684,15 @@ table {
   &::before {
     content: "";
     position: absolute;
-    top: 4px;
-    left: 3px;
+    top: 3px;
+    left: -5px;
     width: 10px;
     height: 10px;
     border-radius: 999px;
     background: ${props.theme.accent};
     box-shadow: 0 0 0 2px ${props.theme.background};
     opacity: ${EditorStyleHelper.tableControlIdleOpacity};
+    z-index: 1;
     transition:
       box-shadow 120ms ease,
       opacity 120ms ease,
@@ -2699,13 +2700,12 @@ table {
   }
 
   .${EditorStyleHelper.tableControlSurface} {
-    top: 8px;
-    left: 10px;
-    right: 10px;
+    top: 7px;
+    left: 0;
+    right: 0;
     height: 2px;
     border-radius: 999px;
     background: ${props.theme.accent};
-    transform: scaleX(0.985);
   }
 
   &:hover::before,
@@ -2721,13 +2721,14 @@ table {
     content: "";
     position: absolute;
     top: 3px;
-    left: 4px;
+    left: 3px;
     width: 10px;
     height: 10px;
     border-radius: 999px;
     background: ${props.theme.accent};
     box-shadow: 0 0 0 2px ${props.theme.background};
     opacity: ${EditorStyleHelper.tableControlIdleOpacity};
+    z-index: 1;
     transition:
       box-shadow 120ms ease,
       opacity 120ms ease,
@@ -2735,19 +2736,25 @@ table {
   }
 
   .${EditorStyleHelper.tableControlSurface} {
-    top: 10px;
-    bottom: 10px;
-    left: 8px;
+    top: 8px;
+    bottom: 0;
+    left: 7px;
     width: 2px;
     border-radius: 999px;
     background: ${props.theme.accent};
-    transform: scaleY(0.985);
   }
 
   &:hover::before,
   &:hover .${EditorStyleHelper.tableControlSurface} {
     opacity: ${EditorStyleHelper.tableControlActiveOpacity};
   }
+}
+
+.${EditorStyleHelper.tableAddRow}:hover::before,
+.${EditorStyleHelper.tableAddRow}:hover .${EditorStyleHelper.tableControlSurface},
+.${EditorStyleHelper.tableAddColumn}:hover::before,
+.${EditorStyleHelper.tableAddColumn}:hover .${EditorStyleHelper.tableControlSurface} {
+  opacity: ${EditorStyleHelper.tableControlActiveOpacity};
 }
 
 body.${EditorStyleHelper.tableDragging} .${EditorStyleHelper.tableControl}.selected .${EditorStyleHelper.tableControlSurface},
@@ -2767,11 +2774,11 @@ body.${EditorStyleHelper.tableDragging} .${EditorStyleHelper.tableControl}.selec
 .${EditorStyleHelper.tableStickyHeader} {
   > .${EditorStyleHelper.tableScrollable} > table > tbody > tr:first-child {
     position: relative;
-    z-index: 2;
+    z-index: 5;
 
     > th {
       // Safari requires the header cell to have raised z-index too
-      z-index: 2;
+      z-index: 5;
     }
   }
 
@@ -2783,6 +2790,7 @@ body.${EditorStyleHelper.tableDragging} .${EditorStyleHelper.tableControl}.selec
     // border avoids changing the row height when the sticky class toggles, which
     // otherwise causes a flicker loop at the bottom of the table via scroll anchoring.
     box-shadow: 0 -1px 0 ${props.theme.divider}, 0 1px 0 ${props.theme.divider};
+    background: ${props.theme.backgroundSecondary};
     border-radius: 0 !important;
 
   }
@@ -2790,7 +2798,7 @@ body.${EditorStyleHelper.tableDragging} .${EditorStyleHelper.tableControl}.selec
 
 .${EditorStyleHelper.tableScrollable} {
   position: relative;
-  margin: -1em 0 -0.5em;
+  margin: -0.35em 0 -0.25em;
   scrollbar-width: thin;
   scrollbar-color: ${transparentize(
     0.58,
@@ -2799,8 +2807,8 @@ body.${EditorStyleHelper.tableDragging} .${EditorStyleHelper.tableControl}.selec
   overflow-y: hidden;
   overflow-x: auto;
   overflow-anchor: none;
-  padding-top: 1em;
-  padding-bottom: calc(0.5em + var(--table-scrollbar-height));
+  padding-top: 0.35em;
+  padding-bottom: calc(0.25em + var(--table-scrollbar-height));
   padding-left: 0;
   padding-right: 0;
   transition:
@@ -2839,8 +2847,8 @@ body.${EditorStyleHelper.tableDragging} .${EditorStyleHelper.tableControl}.selec
 .${EditorStyleHelper.tableShadowRight}::after {
   content: "";
   position: absolute;
-  top: 1em;
-  bottom: calc(0.5em + var(--table-scrollbar-height));
+  top: 0.35em;
+  bottom: calc(0.25em + var(--table-scrollbar-height));
   width: 30px;
   z-index: 2;
   pointer-events: none;

@@ -80,13 +80,17 @@ const Image = (props: Props) => {
   const sanitizedSrc = sanitizeImageSrc(src);
 
   React.useEffect(() => {
+    if (dragging) {
+      return;
+    }
+
     if (node.attrs.width && node.attrs.width !== width) {
       setSize({
         width: node.attrs.width,
         height: node.attrs.height,
       });
     }
-  }, [node.attrs.height, node.attrs.width, setSize, width]);
+  }, [dragging, node.attrs.height, node.attrs.width, setSize, width]);
 
   const handleImageLoad = React.useCallback(
     (image: HTMLImageElement) => {

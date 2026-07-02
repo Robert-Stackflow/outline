@@ -24,6 +24,36 @@ import { addLink } from "../commands/link";
 import { commentedImagePlugin } from "../plugins/CommentedImagePlugin";
 
 const imageSizeRegex = /\s=(\d+)?x(\d+)?$/;
+const resizeDebugStorageKey = "DEBUG_MEDIA_RESIZE";
+
+function isResizeDebugEnabled() {
+  if (process.env.NODE_ENV === "development") {
+    return true;
+  }
+
+  try {
+    return window.localStorage.getItem(resizeDebugStorageKey) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function debugResize(event: string, payload: object) {
+  if (!isResizeDebugEnabled()) {
+    return;
+  }
+
+  // oxlint-disable-next-line no-console
+  console.debug(`[media-resize] ${event}`, serializeResizePayload(payload));
+}
+
+function serializeResizePayload(payload: object) {
+  try {
+    return JSON.stringify(payload);
+  } catch {
+    return "[unserializable payload]";
+  }
+}
 
 type TitleAttributes = {
   layoutClass?: string;
@@ -318,11 +348,22 @@ export default class Image extends SimpleImage {
 
       const pos = getPos();
       const $pos = doc.resolve(pos);
+      const nextHeight = height || node.attrs.height;
+
+      debugResize("image:onChangeSize", {
+        pos,
+        nodeWidth: node.attrs.width,
+        nodeHeight: node.attrs.height,
+        width,
+        height,
+        nextHeight,
+        selectionBefore: view.state.selection.constructor.name,
+      });
 
       view.dispatch(tr.setSelection(new NodeSelection($pos)));
       commands["resizeImage"]({
         width,
-        height: height || node.attrs.height,
+        height: nextHeight,
       });
     };
 
@@ -573,10 +614,22 @@ export default class Image extends SimpleImage {
         ({ width, height }: { width: number; height: number }): Command =>
         (state, dispatch) => {
           if (!(state.selection instanceof NodeSelection)) {
+            debugResize("resizeImage:skipped", {
+              width,
+              height,
+              selection: state.selection.constructor.name,
+            });
             return false;
           }
 
           const { selection } = state;
+          debugResize("resizeImage:dispatch", {
+            width,
+            height,
+            from: selection.from,
+            previousWidth: selection.node.attrs.width,
+            previousHeight: selection.node.attrs.height,
+          });
           const transformedAttrs = {
             ...state.selection.node.attrs,
             width,
