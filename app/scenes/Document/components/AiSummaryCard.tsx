@@ -47,8 +47,8 @@ function AiSummaryCard({ document }: Props) {
     [ai, document.id, t]
   );
 
-  // Only surface the card when AI is configured for the workspace.
-  if (!ai.config?.configured) {
+  // Only surface the card when AI is configured and available to this user.
+  if (!ai.config?.configured || !ai.config.canManage) {
     return null;
   }
 
@@ -56,7 +56,10 @@ function AiSummaryCard({ document }: Props) {
 
   return (
     <Card>
-      <Header onClick={() => hasBody && setCollapsed((c) => !c)} $clickable={hasBody}>
+      <Header
+        onClick={() => hasBody && setCollapsed((c) => !c)}
+        $clickable={hasBody}
+      >
         <Title>
           {hasBody && <Chevron $collapsed={collapsed} size={18} />}
           <SparklesIcon size={16} />
@@ -71,9 +74,7 @@ function AiSummaryCard({ document }: Props) {
         </Action>
       </Header>
       {hasBody && !collapsed && (
-        <Body>
-          {summary || <Muted>{t("Generating")}…</Muted>}
-        </Body>
+        <Body>{summary || <Muted>{t("Generating")}…</Muted>}</Body>
       )}
     </Card>
   );

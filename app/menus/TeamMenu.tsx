@@ -14,6 +14,7 @@ import {
   ProfileIcon,
   SettingsIcon,
   SunIcon,
+  UserIcon,
   UserAddIcon,
   WarningIcon,
 } from "outline-icons";
@@ -57,7 +58,9 @@ const TeamMenu: React.FC<Props> = ({ children }) => {
   const history = useHistory();
   const { auth, dialogs, policies, ui } = useStores();
   const team = useCurrentTeam();
-  const canCreateTeam = policies.abilities(team.id).createTeam;
+  const teamAbilities = policies.abilities(team.id);
+  const canCreateTeam = teamAbilities.createTeam;
+  const canUpdateTeam = teamAbilities.update;
   const user = useCurrentUser();
   const context = useActionContext({ isMenu: true });
   const [open, setOpen] = React.useState(false);
@@ -65,9 +68,11 @@ const TeamMenu: React.FC<Props> = ({ children }) => {
   const close = React.useCallback(() => setOpen(false), []);
 
   const handleSettings = React.useCallback(() => {
-    history.push(settingsPath("details"));
+    history.push(
+      canUpdateTeam ? settingsPath("details") : settingsPath("members")
+    );
     close();
-  }, [history, close]);
+  }, [canUpdateTeam, history, close]);
 
   const handleInvite = React.useCallback(
     (event: React.MouseEvent) => {
@@ -92,8 +97,7 @@ const TeamMenu: React.FC<Props> = ({ children }) => {
     await auth.logout({ savePath: false });
   }, [auth, close]);
 
-  const otherTeams =
-    auth.availableTeams?.filter((s) => s.id !== team.id) ?? [];
+  const otherTeams = auth.availableTeams?.filter((s) => s.id !== team.id) ?? [];
 
   return (
     <DropdownMenuPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -118,15 +122,19 @@ const TeamMenu: React.FC<Props> = ({ children }) => {
               <WorkspaceMeta>
                 <WorkspaceName>{team.name}</WorkspaceName>
                 <WorkspaceSubtitle>
-                  {t("{{count}} member", { count: team.memberCount ?? 1 })}
+                  {t("{{ count }} member", { count: team.memberCount ?? 1 })}
                 </WorkspaceSubtitle>
               </WorkspaceMeta>
             </WorkspaceCard>
 
             <ActionRow>
               <ActionButton type="button" onClick={handleSettings}>
-                <SettingsIcon size={18} />
-                <span>{t("Settings")}</span>
+                {canUpdateTeam ? (
+                  <SettingsIcon size={18} />
+                ) : (
+                  <UserIcon size={18} />
+                )}
+                <span>{canUpdateTeam ? t("Settings") : t("Members")}</span>
               </ActionButton>
               <ActionButton type="button" onClick={handleInvite}>
                 <UserAddIcon size={18} />
@@ -267,7 +275,10 @@ const AccountSubmenu: React.FC<{
             transformOriginVar={SUB_ORIGIN_VAR}
             hiddenScrollbars
           >
-            <DropdownMenuPrimitive.Item asChild onSelect={go(settingsPath("profile"))}>
+            <DropdownMenuPrimitive.Item
+              asChild
+              onSelect={go(settingsPath("profile"))}
+            >
               <QuietMenuButton>
                 <Components.MenuIconWrapper>
                   <ProfileIcon size={18} />
@@ -294,7 +305,9 @@ const AccountSubmenu: React.FC<{
                 <Components.MenuIconWrapper>
                   <EmailIcon size={18} />
                 </Components.MenuIconWrapper>
-                <Components.MenuLabel>{t("Notifications")}</Components.MenuLabel>
+                <Components.MenuLabel>
+                  {t("Notifications")}
+                </Components.MenuLabel>
               </QuietMenuButton>
             </DropdownMenuPrimitive.Item>
 
@@ -330,7 +343,9 @@ const AccountSubmenu: React.FC<{
                         <Components.MenuIconWrapper>
                           <SunIcon size={18} />
                         </Components.MenuIconWrapper>
-                        <Components.MenuLabel>{t("Light")}</Components.MenuLabel>
+                        <Components.MenuLabel>
+                          {t("Light")}
+                        </Components.MenuLabel>
                         <Components.SelectedIconWrapper aria-hidden>
                           {ui.theme === Theme.Light ? (
                             <CheckmarkIcon size={18} />
@@ -362,7 +377,9 @@ const AccountSubmenu: React.FC<{
                         <Components.MenuIconWrapper>
                           <BrowserIcon size={18} />
                         </Components.MenuIconWrapper>
-                        <Components.MenuLabel>{t("System")}</Components.MenuLabel>
+                        <Components.MenuLabel>
+                          {t("System")}
+                        </Components.MenuLabel>
                         <Components.SelectedIconWrapper aria-hidden>
                           {ui.theme === Theme.System ? (
                             <CheckmarkIcon size={18} />
@@ -388,12 +405,17 @@ const AccountSubmenu: React.FC<{
 
             <Components.MenuSeparator />
 
-            <DropdownMenuPrimitive.Item asChild onSelect={external(UrlHelper.guide)}>
+            <DropdownMenuPrimitive.Item
+              asChild
+              onSelect={external(UrlHelper.guide)}
+            >
               <QuietMenuButton>
                 <Components.MenuIconWrapper>
                   <DocumentIcon size={18} />
                 </Components.MenuIconWrapper>
-                <Components.MenuLabel>{t("Documentation")}</Components.MenuLabel>
+                <Components.MenuLabel>
+                  {t("Documentation")}
+                </Components.MenuLabel>
               </QuietMenuButton>
             </DropdownMenuPrimitive.Item>
             <DropdownMenuPrimitive.Item
@@ -431,7 +453,9 @@ const AccountSubmenu: React.FC<{
                 <Components.MenuIconWrapper>
                   <EmailIcon size={18} />
                 </Components.MenuIconWrapper>
-                <Components.MenuLabel>{t("Send us feedback")}</Components.MenuLabel>
+                <Components.MenuLabel>
+                  {t("Send us feedback")}
+                </Components.MenuLabel>
               </QuietMenuButton>
             </DropdownMenuPrimitive.Item>
             <DropdownMenuPrimitive.Item

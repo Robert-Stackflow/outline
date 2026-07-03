@@ -31,6 +31,7 @@ import Length from "./validators/Length";
 import AzureClient from "plugins/azure/server/azure";
 import GoogleClient from "plugins/google/server/google";
 import OIDCClient from "plugins/oidc/server/oidc";
+import { getOAuthClientForProvider } from "plugins/oauth/server/oauth";
 import type { APIContext } from "@server/types";
 import type { DestroyOptions } from "sequelize";
 
@@ -128,6 +129,10 @@ class AuthenticationProvider extends Model<
       case "oidc":
         return new OIDCClient();
       default:
+        if (this.name.startsWith("oauth")) {
+          return getOAuthClientForProvider(this.name);
+        }
+
         return undefined;
     }
   }

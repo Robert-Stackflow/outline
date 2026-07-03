@@ -95,7 +95,8 @@ router.get(
   async (ctx: APIContext<T.FilesGetReq>) => {
     const actor = ctx.state.auth.user;
     const key = getKeyFromContext(ctx);
-    const forceDownload = !!ctx.input.query.download;
+    const forceDownload =
+      ctx.input.query.download === "true" || ctx.input.query.download === "1";
     const isSignedRequest = !!ctx.input.query.sig;
     const { isPublicBucket, fileName } = AttachmentHelper.parseKey(key);
     const cacheHeader = "max-age=604800, immutable";

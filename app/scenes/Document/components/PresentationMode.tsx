@@ -39,6 +39,9 @@ type Slide =
   | { type: "content"; content: ProsemirrorData[] }
   | { type: "instructions" };
 
+const maxSlideWeight = 16;
+const minPresentationScale = 0.25;
+
 interface Props {
   /** The document title. */
   title: string;
@@ -65,11 +68,211 @@ function isContentEmpty(nodes: ProsemirrorData[]): boolean {
   );
 }
 
+function textContent(node: ProsemirrorData): string {
+  if (node.text) {
+    return node.text;
+  }
+
+  return node.content?.map(textContent).join("") ?? "";
+}
+
+function textLength(node: ProsemirrorData): number {
+  return textContent(node).length;
+}
+
+function textLineWeight(node: ProsemirrorData, charsPerLine = 54): number {
+  const length = textLength(node);
+
+  if (length === 0) {
+    return 0.5;
+  }
+
+  return Math.max(1, Math.ceil(length / charsPerLine));
+}
+
+function estimateNodeWeight(node: ProsemirrorData): number {
+  switch (node.type) {
+    case "heading":
+      return 2.4 + textLineWeight(node, 38) * 0.8;
+
+    case "paragraph":
+      return textLineWeight(node);
+
+    case "blockquote":
+      return 1.5 + estimateContentWeight(node.content ?? []);
+
+    case "bullet_list":
+    case "ordered_list":
+    case "checkbox_list":
+      return 0.5 + estimateContentWeight(node.content ?? []);
+
+    case "list_item":
+    case "checkbox_item":
+      return 0.6 + estimateContentWeight(node.content ?? []);
+
+    case "code_block":
+    case "code_fence":
+      return 2 + Math.max(1, textContent(node).split("\n").length) * 0.85;
+
+    case "math_block":
+      return Math.max(3.5, textLineWeight(node, 36) * 1.6);
+
+    case "image":
+    case "attachment":
+    case "embed":
+      return 7;
+
+    case "table":
+      return 2 + (node.content?.length ?? 1) * 1.5;
+
+    default:
+      return node.content ? estimateContentWeight(node.content) : 1.5;
+  }
+}
+
+function estimateContentWeight(nodes: ProsemirrorData[]): number {
+  return nodes.reduce((acc, node) => acc + estimateNodeWeight(node), 0);
+}
+
+function cloneNodeWithContent(
+  node: ProsemirrorData,
+  content: ProsemirrorData[]
+): ProsemirrorData {
+  return {
+    ...node,
+    content,
+  };
+}
+
+function chunkChildrenByWeight(
+  node: ProsemirrorData,
+  maxWeight: number,
+  splitChildren = true
+): ProsemirrorData[] {
+  const children = node.content ?? [];
+
+  if (children.length <= 1) {
+    return [node];
+  }
+
+  const chunks: ProsemirrorData[] = [];
+  let current: ProsemirrorData[] = [];
+  let currentWeight = 0;
+
+  const chunkableChildren = splitChildren
+    ? children.flatMap((childNode) => splitOversizedNode(childNode, maxWeight))
+    : children;
+
+  for (const child of chunkableChildren) {
+    const childWeight = estimateNodeWeight(child);
+
+    if (current.length > 0 && currentWeight + childWeight > maxWeight) {
+      chunks.push(cloneNodeWithContent(node, current));
+      current = [];
+      currentWeight = 0;
+    }
+
+    current.push(child);
+    currentWeight += childWeight;
+  }
+
+  if (current.length > 0) {
+    chunks.push(cloneNodeWithContent(node, current));
+  }
+
+  return chunks;
+}
+
+function splitOversizedNode(
+  node: ProsemirrorData,
+  maxWeight: number
+): ProsemirrorData[] {
+  if (estimateNodeWeight(node) <= maxWeight) {
+    return [node];
+  }
+
+  switch (node.type) {
+    case "bullet_list":
+    case "ordered_list":
+    case "checkbox_list":
+      return chunkChildrenByWeight(node, maxWeight, false);
+
+    case "blockquote":
+      return chunkChildrenByWeight(node, maxWeight);
+
+    case "table": {
+      const rows = node.content ?? [];
+      const header = rows[0];
+      const bodyRows = rows.slice(1);
+
+      if (!header || bodyRows.length <= 1) {
+        return chunkChildrenByWeight(node, maxWeight);
+      }
+
+      const chunks = chunkChildrenByWeight(
+        cloneNodeWithContent(node, bodyRows),
+        maxWeight - estimateNodeWeight(header),
+        false
+      );
+
+      return chunks.map((chunk) =>
+        cloneNodeWithContent(node, [header, ...(chunk.content ?? [])])
+      );
+    }
+
+    default:
+      return [node];
+  }
+}
+
+function paginateContent(nodes: ProsemirrorData[]): ProsemirrorData[][] {
+  const pages: ProsemirrorData[][] = [];
+  const expandedNodes = nodes.flatMap((node) =>
+    splitOversizedNode(node, maxSlideWeight)
+  );
+  let current: ProsemirrorData[] = [];
+  let currentWeight = 0;
+
+  for (const node of expandedNodes) {
+    const nodeWeight = estimateNodeWeight(node);
+    const currentStartsWithHeading =
+      current.length === 1 && current[0].type === "heading";
+
+    if (
+      current.length > 0 &&
+      !currentStartsWithHeading &&
+      currentWeight + nodeWeight > maxSlideWeight
+    ) {
+      pages.push(current);
+      current = [];
+      currentWeight = 0;
+    }
+
+    current.push(node);
+    currentWeight += nodeWeight;
+  }
+
+  if (current.length > 0) {
+    pages.push(current);
+  }
+
+  return pages;
+}
+
+function appendContentSlides(slides: Slide[], nodes: ProsemirrorData[]): void {
+  for (const page of paginateContent(nodes)) {
+    if (!isContentEmpty(page)) {
+      slides.push({ type: "content", content: page });
+    }
+  }
+}
+
 /**
  * Splits a ProseMirror document into slides based on heading and divider nodes.
  * A dedicated title slide is prepended. Each h1/h2 heading or horizontal rule
- * starts a new content slide. Divider nodes are consumed as separators and not
- * rendered on slides.
+ * starts a new content section. Long sections are further paginated by
+ * estimated block height so list-heavy content does not overflow the viewport.
+ * Divider nodes are consumed as separators and not rendered on slides.
  *
  * @param data the prosemirror document data.
  * @param title the document title.
@@ -97,14 +300,14 @@ function splitIntoSlides(
 
     if (isDivider) {
       if (currentNodes.length > 0) {
-        slides.push({ type: "content", content: currentNodes });
+        appendContentSlides(slides, currentNodes);
         currentNodes = [];
       }
       continue;
     }
 
     if (isHeadingBreak && currentNodes.length > 0) {
-      slides.push({ type: "content", content: currentNodes });
+      appendContentSlides(slides, currentNodes);
       currentNodes = [];
     }
 
@@ -112,7 +315,7 @@ function splitIntoSlides(
   }
 
   if (currentNodes.length > 0) {
-    slides.push({ type: "content", content: currentNodes });
+    appendContentSlides(slides, currentNodes);
   }
 
   return slides;
@@ -143,11 +346,9 @@ function PresentationMode({ title, icon, iconColor, data, onClose }: Props) {
   const slides = React.useMemo(() => {
     const result = splitIntoSlides(strippedData, title, icon, iconColor);
     const contentSlides = result.filter((s) => s.type === "content");
-    const hasContent =
-      contentSlides.length > 0 &&
-      contentSlides.some(
-        (s) => s.type === "content" && !isContentEmpty(s.content)
-      );
+    const hasContent = contentSlides.some(
+      (s) => s.type === "content" && !isContentEmpty(s.content)
+    );
 
     if (!hasContent) {
       return [result[0], { type: "instructions" as const }];
@@ -260,7 +461,7 @@ function PresentationMode({ title, icon, iconColor, data, onClose }: Props) {
       const scaleX = availableWidth / width;
       const scaleY = availableHeight / height;
       const newScale = Math.min(scaleX, scaleY, 1.5);
-      el.style.transform = `scale(${Math.max(newScale, 0.5)})`;
+      el.style.transform = `scale(${Math.max(newScale, minPresentationScale)})`;
     };
 
     // Measure natural size with scale removed, then apply

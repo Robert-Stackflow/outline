@@ -277,14 +277,14 @@ export default function blockMenuItems(
     },
     {
       name: "code_block",
-      title: "Mermaid Diagram",
+      title: t("Mermaid Diagram"),
       icon: <Img src="/images/mermaidjs.png" alt="Mermaid Diagram" />,
       keywords: "diagram flowchart",
       attrs: { language: "mermaid" },
     },
     {
       name: "editDiagram",
-      title: "Diagrams.net Diagram",
+      title: t("Diagrams.net Diagram"),
       icon: <Img src="/images/diagrams.png" alt="Diagrams.net Diagram" />,
       keywords: "diagram flowchart draw.io",
     },

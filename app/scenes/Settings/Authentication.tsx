@@ -172,7 +172,11 @@ function Authentication() {
           <SettingRow
             label={
               <Flex gap={8} align="center">
-                <AuthProviderIcon id={provider.name} brand={provider.icon} />{" "}
+                <AuthProviderIcon
+                  id={provider.name}
+                  brand={provider.icon}
+                  providerId={provider.providerId}
+                />{" "}
                 {provider.displayName}
               </Flex>
             }

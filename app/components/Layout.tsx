@@ -142,6 +142,7 @@ const Content = styled(Flex)<ContentProps>`
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-gutter: stable;
   `};
 `;
 

@@ -11,7 +11,7 @@ import { toError } from "@shared/utils/error";
 import env from "@server/env";
 import { InternalError, ValidationError } from "@server/errors";
 import Logger from "@server/logging/Logger";
-import BaseStorage from "./BaseStorage";
+import BaseStorage, { type SignedUrlOptions } from "./BaseStorage";
 import { CSRF } from "@shared/constants";
 import type { AppContext } from "@server/types";
 
@@ -113,7 +113,8 @@ export default class LocalStorage extends BaseStorage {
 
   public getSignedUrl = async (
     key: string,
-    expiresIn = LocalStorage.defaultSignedUrlExpires
+    expiresIn = LocalStorage.defaultSignedUrlExpires,
+    options?: SignedUrlOptions
   ) => {
     const sig = JWT.sign(
       {
@@ -125,7 +126,14 @@ export default class LocalStorage extends BaseStorage {
         expiresIn,
       }
     );
-    return Promise.resolve(`${env.URL}/api/files.get?sig=${sig}`);
+    const url = new URL("/api/files.get", env.URL);
+    url.searchParams.set("sig", sig);
+    if (options?.disposition === "attachment") {
+      url.searchParams.set("download", "true");
+    } else if (options?.disposition === "inline") {
+      url.searchParams.set("download", "false");
+    }
+    return Promise.resolve(url.toString());
   };
 
   public async getFileHandle(key: string) {

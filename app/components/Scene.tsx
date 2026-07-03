@@ -1,8 +1,13 @@
 import * as React from "react";
+import { useLocation } from "react-router-dom";
 import styled from "styled-components";
 import CenteredContent from "~/components/CenteredContent";
 import Header from "~/components/Header";
 import PageTitle from "~/components/PageTitle";
+import { settingsPath } from "~/utils/routeHelpers";
+
+const WIDE_CONTENT_WIDTH = "1120px";
+const SETTINGS_CONTENT_WIDTH = "1040px";
 
 type Props = {
   /** An icon to display in the header when content has scrolled past the title */
@@ -19,6 +24,8 @@ type Props = {
   centered?: boolean;
   /** Whether to use the full width of the screen (default: false) */
   wide?: boolean;
+  /** The maximum width of centered content. */
+  maxWidth?: string;
   /** The content of the scene */
   children?: React.ReactNode;
 };
@@ -32,32 +39,47 @@ const Scene: React.FC<Props> = ({
   children,
   centered,
   wide,
-}: Props) => (
-  <FillWidth>
-    <PageTitle title={textTitle ?? (typeof title === "string" ? title : "")} />
-    <Header
-      hasSidebar
-      title={
-        icon ? (
-          <>
-            {icon}&nbsp;{title}
-          </>
-        ) : (
-          title
-        )
-      }
-      actions={actions}
-      left={left}
-    />
-    {centered !== false ? (
-      <CenteredContent maxWidth={wide ? "100vw" : undefined} withStickyHeader>
-        {children}
-      </CenteredContent>
-    ) : (
-      children
-    )}
-  </FillWidth>
-);
+  maxWidth,
+}: Props) => {
+  const location = useLocation();
+  const isSettings = location.pathname.startsWith(settingsPath());
+  const resolvedMaxWidth =
+    maxWidth ??
+    (isSettings
+      ? SETTINGS_CONTENT_WIDTH
+      : wide
+        ? WIDE_CONTENT_WIDTH
+        : undefined);
+
+  return (
+    <FillWidth>
+      <PageTitle
+        title={textTitle ?? (typeof title === "string" ? title : "")}
+      />
+      <Header
+        hasSidebar
+        title={
+          icon ? (
+            <>
+              {icon}&nbsp;{title}
+            </>
+          ) : (
+            title
+          )
+        }
+        actions={actions}
+        left={left}
+      />
+      {centered !== false ? (
+        <CenteredContent maxWidth={resolvedMaxWidth} withStickyHeader>
+          {children}
+        </CenteredContent>
+      ) : (
+        children
+      )}
+    </FillWidth>
+  );
+};
 
 const FillWidth = styled.div`
   width: 100%;

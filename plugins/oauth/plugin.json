@@ -1,0 +1,6 @@
+{
+  "id": "oauth",
+  "name": "OAuth",
+  "priority": 10,
+  "description": "Adds configurable OAuth2 authentication providers."
+}

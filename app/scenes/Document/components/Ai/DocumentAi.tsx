@@ -62,7 +62,11 @@ function DocumentAi() {
   }, [input, ai, conversationId, document?.id]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
       event.preventDefault();
       void handleSend();
     }
@@ -88,6 +92,11 @@ function DocumentAi() {
   }, [ai, document, t]);
 
   const notConfigured = ai.config && !ai.config.configured;
+  const notAvailable = ai.config && !ai.config.canManage;
+
+  if (notAvailable) {
+    return null;
+  }
 
   return (
     <Sidebar
@@ -226,7 +235,8 @@ const TabButton = styled.button<{ $active: boolean }>`
   border: 0;
   background: ${(props) =>
     props.$active ? props.theme.listItemHoverBackground : "transparent"};
-  color: ${(props) => (props.$active ? props.theme.text : props.theme.textTertiary)};
+  color: ${(props) =>
+    props.$active ? props.theme.text : props.theme.textTertiary};
   font-size: 14px;
   font-weight: 500;
   padding: 6px 12px;

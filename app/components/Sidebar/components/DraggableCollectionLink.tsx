@@ -8,6 +8,7 @@ import styled from "styled-components";
 import type Collection from "~/models/Collection";
 import type Document from "~/models/Document";
 import CollectionIcon from "~/components/Icons/CollectionIcon";
+import type { CollectionMenuAction } from "~/hooks/useCollectionMenuAction";
 import { useLocationSidebarContext } from "~/hooks/useLocationSidebarContext";
 import useStores from "~/hooks/useStores";
 import type { DragObject } from "../hooks/useDragAndDrop";
@@ -23,12 +24,14 @@ type Props = {
   collection: Collection;
   activeDocument: Document | undefined;
   belowCollection: Collection | void;
+  extraMenuActions?: CollectionMenuAction[];
 };
 
 function DraggableCollectionLink({
   collection,
   activeDocument,
   belowCollection,
+  extraMenuActions,
 }: Props) {
   const locationSidebarContext = useLocationSidebarContext();
   const sidebarContext = useSidebarContext();
@@ -110,6 +113,16 @@ function DraggableCollectionLink({
     [onDisclosureClick]
   );
 
+  const handleExpandAll = useCallback(() => {
+    setExpanded(true);
+    onDisclosureClick(true, true);
+  }, [onDisclosureClick]);
+
+  const handleCollapseAll = useCallback(() => {
+    setExpanded(false);
+    onDisclosureClick(false, true);
+  }, [onDisclosureClick]);
+
   const displayChildDocuments = expanded && !isDragging;
 
   return (
@@ -125,6 +138,9 @@ function DraggableCollectionLink({
           activeDocument={activeDocument}
           onDisclosureClick={handleDisclosureClick}
           isDraggingAnyCollection={isDraggingAnyCollection}
+          extraMenuActions={extraMenuActions}
+          onCollapseAll={handleCollapseAll}
+          onExpandAll={handleExpandAll}
         />
       </Draggable>
       <Relative>

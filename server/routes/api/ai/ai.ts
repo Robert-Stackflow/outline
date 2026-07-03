@@ -1,5 +1,5 @@
 import Router from "koa-router";
-import { InvalidRequestError } from "@server/errors";
+import { AdminRequiredError, InvalidRequestError } from "@server/errors";
 import auth from "@server/middlewares/authentication";
 import { rateLimiter } from "@server/middlewares/rateLimiter";
 import validate from "@server/middlewares/validate";
@@ -98,10 +98,12 @@ router.post(
 
     const { apiKey, ...settings } = ctx.input.body;
 
-    team.aiSettings = {
-      ...(team.aiSettings ?? {}),
-      ...settings,
-    };
+    team.aiSettings = team.aiSettings
+      ? {
+          ...team.aiSettings,
+          ...settings,
+        }
+      : { ...settings };
     if (apiKey !== undefined) {
       team.aiApiKey = apiKey === "" ? null : apiKey;
     }
@@ -133,6 +135,10 @@ router.post(
     const { user } = ctx.state.auth;
     const { message, conversationId, documentId } = ctx.input.body;
     const team = await Team.findByPk(user.teamId, { rejectOnEmpty: true });
+
+    if (!user.isAdmin) {
+      throw AdminRequiredError();
+    }
 
     if (!isAiConfigured(team)) {
       throw InvalidRequestError("AI is not configured for this workspace");
@@ -241,6 +247,10 @@ router.post(
     const { documentId } = ctx.input.body;
     const team = await Team.findByPk(user.teamId, { rejectOnEmpty: true });
 
+    if (!user.isAdmin) {
+      throw AdminRequiredError();
+    }
+
     if (!isAiConfigured(team)) {
       throw InvalidRequestError("AI is not configured for this workspace");
     }
@@ -289,6 +299,10 @@ router.post(
     const { user } = ctx.state.auth;
     const documentId = ctx.input.body?.documentId;
 
+    if (!user.isAdmin) {
+      throw AdminRequiredError();
+    }
+
     const conversations = await AiConversation.findAll({
       where: {
         userId: user.id,
@@ -314,6 +328,10 @@ router.post(
   async (ctx: APIContext<T.AiConversationsInfoReq>) => {
     const { user } = ctx.state.auth;
     const { id } = ctx.input.body;
+
+    if (!user.isAdmin) {
+      throw AdminRequiredError();
+    }
 
     const conversation = await AiConversation.findByPk(id, {
       rejectOnEmpty: true,
@@ -342,6 +360,10 @@ router.post(
   async (ctx: APIContext<T.AiConversationsDeleteReq>) => {
     const { user } = ctx.state.auth;
     const { id } = ctx.input.body;
+
+    if (!user.isAdmin) {
+      throw AdminRequiredError();
+    }
 
     const conversation = await AiConversation.findByPk(id, {
       rejectOnEmpty: true,

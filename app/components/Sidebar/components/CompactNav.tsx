@@ -98,10 +98,14 @@ function CompactNav() {
 }
 
 const Row = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px 0;
+  padding: 6px 10px 8px;
+  background: ${s("sidebarBackground")};
 `;
 
 const Spacer = styled.span`

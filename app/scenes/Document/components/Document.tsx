@@ -360,7 +360,8 @@ function DocumentScene({
         {!isShare &&
           !ui.isReadingMode &&
           ui.rightSidebar !== "ai" &&
-          ai.config?.configured === true && (
+          ai.config?.configured === true &&
+          ai.config.canManage === true && (
             <Tooltip content={t("Ask AI")} placement="left">
               <FloatingAi
                 type="button"

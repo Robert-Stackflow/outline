@@ -52,16 +52,15 @@ const Positioner = styled(KBarPositioner)`
 
 const SearchInput = styled(KBarSearch)`
   position: relative;
-  padding: 16px 12px;
-  margin: 0 8px;
-  width: calc(100% - 16px);
+  padding: 16px 18px;
+  width: 100%;
   outline: none;
   border: none;
   background: ${s("menuBackground")};
   color: ${s("text")};
 
   &:not(:last-child) {
-    border-bottom: 1px solid ${s("inputBorder")};
+    border-bottom: 1px solid ${s("divider")};
   }
 
   &:disabled,
@@ -77,9 +76,16 @@ const Animator = styled(KBarAnimator)`
   width: 90vw;
   background: ${s("menuBackground")};
   color: ${s("text")};
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: rgb(0 0 0 / 40%) 0px 16px 60px;
+  box-shadow:
+    0 0 0 1px ${(props) => props.theme.divider},
+    0 18px 44px
+      ${(props) =>
+        props.theme.isDark ? "rgba(0, 0, 0, 0.42)" : "rgba(17, 24, 39, 0.14)"},
+    0 4px 14px
+      ${(props) =>
+        props.theme.isDark ? "rgba(0, 0, 0, 0.28)" : "rgba(17, 24, 39, 0.08)"};
   transition: max-width 0.2s ease-in-out;
 
   ${breakpoint("desktopLarge")`

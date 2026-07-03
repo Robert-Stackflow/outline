@@ -19,12 +19,12 @@ interface ScrollAreaOptions {
  * Returns whether the AI entry should be visible in primary navigation.
  *
  * @param config the workspace AI configuration, if it has been loaded.
- * @returns true when AI is fully configured for the workspace.
+ * @returns true when AI is configured and the current user can manage it.
  */
 export function shouldShowAiEntry(
-  config: Pick<AiConfig, "configured"> | undefined
+  config: Pick<AiConfig, "configured" | "canManage"> | undefined
 ): boolean {
-  return config?.configured === true;
+  return config?.configured === true && config.canManage === true;
 }
 
 /**

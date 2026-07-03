@@ -301,6 +301,8 @@ const handleAttachmentsRedirect = async (
   ctx: APIContext<T.AttachmentsRedirectReq>
 ) => {
   const id = (ctx.input.body.id ?? ctx.input.query.id) as string;
+  const forceDownload =
+    ctx.input.query.download === "true" || ctx.input.query.download === "1";
 
   const user = ctx.state.auth?.user;
   const attachment = await Attachment.findByPk(id, {
@@ -333,7 +335,18 @@ const handleAttachmentsRedirect = async (
       "Cache-Control",
       `max-age=${BaseStorage.defaultSignedUrlExpires}, immutable`
     );
-    ctx.redirect(await attachment.signedUrl);
+    ctx.redirect(
+      await FileStorage.getSignedUrl(
+        attachment.key,
+        BaseStorage.defaultSignedUrlExpires,
+        {
+          disposition: forceDownload
+            ? "attachment"
+            : FileStorage.getContentDisposition(attachment.contentType),
+          fileName: attachment.name,
+        }
+      )
+    );
   }
 };
 

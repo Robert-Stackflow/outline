@@ -1,6 +1,7 @@
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { QuestionMarkIcon } from "outline-icons";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { s } from "@shared/styles";
 import Text from "~/components/Text";
@@ -81,6 +82,7 @@ type Props = Omit<React.HTMLAttributes<HTMLButtonElement>, "onChange"> & {
 
 export const InputSelect = React.forwardRef<HTMLButtonElement, Props>(
   (props, ref) => {
+    const { t } = useTranslation();
     const {
       options,
       value,
@@ -101,7 +103,9 @@ export const InputSelect = React.forwardRef<HTMLButtonElement, Props>(
 
     const isMobile = useMobile();
 
-    const placeholder = `Select a ${label.toLowerCase()}`;
+    const placeholder = t("Select a {{ label }}", {
+      label: label.toLowerCase(),
+    });
     const optionsHaveIcon = options.some(
       (opt) => opt.type === "item" && !!opt.icon
     );

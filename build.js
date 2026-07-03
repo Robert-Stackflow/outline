@@ -78,6 +78,9 @@ async function build() {
     execAsync(
       "cp ./server/static/error.prod.html ./build/server/error.prod.html"
     ),
+    execAsync(
+      "rm -rf ./build/shared/i18n/locales && mkdir -p ./build/shared/i18n && cp -R ./shared/i18n/locales ./build/shared/i18n/locales"
+    ),
     execAsync("cp package.json ./build"),
     ...d.map(async (plugin) =>
       execAsync(

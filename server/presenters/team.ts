@@ -1,6 +1,20 @@
 import type { Team } from "@server/models";
 
-export default function presentTeam(team: Team) {
+interface PresentTeamOptions {
+  memberCount?: number;
+}
+
+/**
+ * Presents a team for authenticated API responses.
+ *
+ * @param team the team to present.
+ * @param options additional computed fields to include.
+ * @returns the serialized team.
+ */
+export default function presentTeam(
+  team: Team,
+  options: PresentTeamOptions = {}
+) {
   return {
     id: team.id,
     name: team.name,
@@ -21,5 +35,6 @@ export default function presentTeam(team: Team) {
     allowedDomains: team.allowedDomains?.map((d) => d.name),
     preferences: team.preferences,
     guidanceMCP: team.guidanceMCP,
+    memberCount: options.memberCount,
   };
 }

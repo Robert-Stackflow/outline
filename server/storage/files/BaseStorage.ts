@@ -12,6 +12,16 @@ import type { RequestInit } from "@server/utils/fetch";
 import fetch, { chromeUserAgent, Headers } from "@server/utils/fetch";
 import type { AppContext } from "@server/types";
 
+/**
+ * Options that control how a generated signed URL should present the file.
+ */
+export interface SignedUrlOptions {
+  /** Content disposition override for generated URLs. */
+  disposition?: "attachment" | "inline";
+  /** File name to include in content disposition overrides. */
+  fileName?: string;
+}
+
 export default abstract class BaseStorage {
   /** The default number of seconds until a signed URL expires. */
   public static defaultSignedUrlExpires = 300;
@@ -95,7 +105,8 @@ export default abstract class BaseStorage {
    */
   public abstract getSignedUrl(
     key: string,
-    expiresIn?: number
+    expiresIn?: number,
+    options?: SignedUrlOptions
   ): Promise<string>;
 
   /**

@@ -404,11 +404,17 @@ export type PublicTeam = {
   name: string;
   customTheme: Partial<CustomTheme>;
   tocPosition: TOCPosition;
+  sidebarCollectionsStyle: SidebarCollectionsStyle;
 };
 
 export enum TOCPosition {
   Left = "left",
   Right = "right",
+}
+
+export enum SidebarCollectionsStyle {
+  List = "list",
+  Dropdown = "dropdown",
 }
 
 export enum EmailDisplay {
@@ -447,6 +453,8 @@ export enum TeamPreference {
   CustomTheme = "customTheme",
   /** Side to display the document's table of contents in relation to the main content. */
   TocPosition = "tocPosition",
+  /** How collections are displayed in the main sidebar. */
+  SidebarCollectionsStyle = "sidebarCollectionsStyle",
   /** Whether to prevent shared documents from being embedded in iframes on external websites. */
   PreventDocumentEmbedding = "preventDocumentEmbedding",
   /** Who can see user email addresses. */
@@ -468,6 +476,7 @@ export type TeamPreferences = {
   [TeamPreference.Commenting]?: CommentingAccess;
   [TeamPreference.CustomTheme]?: Partial<CustomTheme>;
   [TeamPreference.TocPosition]?: TOCPosition;
+  [TeamPreference.SidebarCollectionsStyle]?: SidebarCollectionsStyle;
   [TeamPreference.PreventDocumentEmbedding]?: boolean;
   [TeamPreference.EmailDisplay]?: EmailDisplay;
   [TeamPreference.MCP]?: boolean;

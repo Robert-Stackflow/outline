@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { s } from "@shared/styles";
+import { depths, s } from "@shared/styles";
 import { undraggableOnDesktop } from "~/styles";
 
 const ResizeBorder = styled.div<{ dir?: "left" | "right" }>`
@@ -9,6 +9,7 @@ const ResizeBorder = styled.div<{ dir?: "left" | "right" }>`
   inset-inline-end: ${(props) => (props.dir !== "right" ? "-1px" : "auto")};
   inset-inline-start: ${(props) => (props.dir === "right" ? "-1px" : "auto")};
   width: 2px;
+  z-index: ${depths.header + 10};
   cursor: col-resize;
   ${undraggableOnDesktop()}
 

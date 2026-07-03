@@ -211,22 +211,24 @@ const PinButton = styled(NudeButton)`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  background: ${s("background")};
-  box-shadow: 0 0 0 1px ${s("divider")};
+  background: transparent;
   color: ${s("textTertiary")};
   transition:
     background 150ms ease,
-    color 150ms ease,
-    box-shadow 150ms ease;
+    color 150ms ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 
   &:${hover},
   &:active {
-    background: ${s("backgroundSecondary")};
+    background: ${s("sidebarControlHoverBackground")};
     color: ${s("text")};
-    box-shadow: 0 0 0 1px ${s("inputBorder")};
   }
 `;
 
@@ -302,9 +304,7 @@ const DocumentLink = styled(Link)<{
   background: ${s("background")};
   border: 1px solid ${s("divider")};
   box-shadow: ${(props) =>
-    props.$isDragging
-      ? "rgba(0, 0, 0, 0.1) 0px 8px 24px"
-      : "rgba(0, 0, 0, 0.03) 0px 1px 2px"};
+    props.$isDragging ? "rgba(0, 0, 0, 0.08) 0px 6px 18px" : "none"};
   transition:
     background 150ms ease,
     border-color 150ms ease,
@@ -318,11 +318,9 @@ const DocumentLink = styled(Link)<{
   &:active,
   &:focus,
   &:focus-within {
-    background: ${s("backgroundSecondary")};
+    background: ${s("listItemHoverBackground")};
     border-color: ${s("inputBorder")};
-    box-shadow:
-      rgba(0, 0, 0, 0.08) 0px 2px 4px,
-      rgba(0, 0, 0, 0.06) 0px 8px 20px;
+    box-shadow: none;
     z-index: 1;
 
     ${Actions} {
@@ -333,9 +331,7 @@ const DocumentLink = styled(Link)<{
   &:focus-visible {
     outline: none;
     border-color: ${s("inputBorderFocused")};
-    box-shadow:
-      0 0 0 2px ${s("inputBorderFocused")},
-      rgba(0, 0, 0, 0.08) 0px 2px 4px;
+    box-shadow: 0 0 0 2px ${s("inputBorderFocused")};
   }
 `;
 

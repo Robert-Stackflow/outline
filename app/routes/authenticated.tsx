@@ -69,7 +69,7 @@ function AuthenticatedRoutes() {
           }
         >
           <Switch>
-            <Route exact path={aiPath()} component={Ai} />
+            {can.update && <Route exact path={aiPath()} component={Ai} />}
             {can.createDocument && (
               <Route exact path={draftsPath()} component={Drafts} />
             )}

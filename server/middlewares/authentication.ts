@@ -2,6 +2,7 @@ import type { Next } from "koa";
 import { capitalize } from "es-toolkit/compat";
 import type { UserRole } from "@shared/types";
 import { UserRoleHelper } from "@shared/utils/UserRoleHelper";
+import Logger from "@server/logging/Logger";
 import tracer, {
   addTags,
   getRootSpanFromRequestContext,
@@ -145,6 +146,22 @@ async function validateAuthentication(
   const { token, transport } = parseAuthentication(ctx);
 
   if (!token) {
+    if (!options.optional) {
+      Logger.warn("Authentication required", {
+        method: ctx.method,
+        path: ctx.originalUrl,
+        hasAuthorizationHeader: !!ctx.request.get("authorization"),
+        hasAccessTokenCookie: !!ctx.cookies.get("accessToken"),
+        hasBodyToken: !!(
+          ctx.request.body &&
+          typeof ctx.request.body === "object" &&
+          "token" in ctx.request.body
+        ),
+        hasQueryToken: !!ctx.request.query?.token,
+        referer: ctx.request.get("referer") || undefined,
+        origin: ctx.request.get("origin") || undefined,
+      });
+    }
     throw AuthenticationError("Authentication required");
   }
 

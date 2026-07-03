@@ -71,6 +71,10 @@ class Team extends Model {
 
   @Field
   @observable
+  memberCount: number | null;
+
+  @Field
+  @observable
   preferences: TeamPreferences | null;
 
   @observable

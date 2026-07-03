@@ -89,6 +89,11 @@ interface EditorGeometry {
   blockRight: number;
 }
 
+interface MermaidBlockMeasure {
+  isEditing: boolean;
+  rect: DOMRect;
+}
+
 /**
  * Adds Notion-style block controls to the editor gutter.
  */
@@ -988,6 +993,17 @@ function targetAtMouse(
 
   let bestTarget: { target: BlockGutterTarget; rect: DOMRect } | null = null;
   for (const probeLeft of probeXs(geometry, left, rtl)) {
+    const diagramTarget = mermaidTargetAtPoint(view, probeLeft, top);
+    if (diagramTarget) {
+      const rect = measureTarget(view, diagramTarget);
+      if (rect && containsY(rect, top)) {
+        bestTarget = betterTarget(bestTarget, {
+          target: diagramTarget,
+          rect,
+        });
+      }
+    }
+
     const result = view.posAtCoords({ left: probeLeft, top });
     if (!result) {
       continue;
@@ -1093,7 +1109,16 @@ function containsY(rect: DOMRect, y: number) {
 
 function measureTarget(view: EditorView, target: BlockGutterTarget) {
   const dom = view.nodeDOM(target.pos);
-  return dom instanceof HTMLElement ? dom.getBoundingClientRect() : null;
+  if (!(dom instanceof HTMLElement)) {
+    return null;
+  }
+
+  const mermaidMeasure = measureMermaidBlock(dom);
+  if (mermaidMeasure) {
+    return mermaidMeasure.rect;
+  }
+
+  return dom.getBoundingClientRect();
 }
 
 function isSameRect(previous: DOMRect | null, next: DOMRect) {
@@ -1147,10 +1172,18 @@ function firstLineOffset(view: EditorView, target: BlockGutterTarget) {
     return 12;
   }
 
+  const mermaidMeasure = measureMermaidBlock(dom);
+  if (mermaidMeasure && !mermaidMeasure.isEditing) {
+    return Math.max(
+      controlSize / 2,
+      Math.min(24, mermaidMeasure.rect.height / 2)
+    );
+  }
+
   const lineElement = firstLineElement(dom);
   const source = lineElement ?? dom;
   const sourceRect = source.getBoundingClientRect();
-  const domRect = dom.getBoundingClientRect();
+  const domRect = mermaidMeasure?.rect ?? dom.getBoundingClientRect();
   const styles = window.getComputedStyle(source);
   const lineHeight = measuredLineHeight(styles);
   const paddingTop = lineElement ? 0 : parseFloat(styles.paddingTop) || 0;
@@ -1183,6 +1216,105 @@ function measuredLineHeight(styles: CSSStyleDeclaration) {
   return (
     parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.4 || 24
   );
+}
+
+function mermaidTargetAtPoint(
+  view: EditorView,
+  left: number,
+  top: number
+): BlockGutterTarget | null {
+  const element = view.dom.ownerDocument.elementFromPoint(left, top);
+  const diagram = mermaidDiagramFromElement(element);
+  if (!diagram) {
+    return null;
+  }
+
+  const codeBlock = previousMermaidCodeBlock(diagram);
+  if (!codeBlock) {
+    return null;
+  }
+
+  return targetFromCodeBlockElement(view, codeBlock);
+}
+
+function targetFromCodeBlockElement(
+  view: EditorView,
+  codeBlock: HTMLElement
+): BlockGutterTarget | null {
+  const pos = view.posAtDOM(codeBlock, 0);
+  const target = resolveBlockGutterTarget(view.state, pos);
+  if (target && isMermaidCodeBlockElement(view.nodeDOM(target.pos))) {
+    return target;
+  }
+
+  const $pos = view.state.doc.resolve(pos);
+  if ($pos.depth === 0) {
+    return null;
+  }
+
+  const parentTarget = resolveBlockGutterTarget(view.state, $pos.before());
+  return parentTarget && isMermaidCodeBlockElement(view.nodeDOM(parentTarget.pos))
+    ? parentTarget
+    : null;
+}
+
+function measureMermaidBlock(codeBlock: HTMLElement): MermaidBlockMeasure | null {
+  if (!isMermaidCodeBlockElement(codeBlock)) {
+    return null;
+  }
+
+  const diagram = nextMermaidDiagram(codeBlock);
+  if (!diagram) {
+    return null;
+  }
+
+  const isEditing = codeBlock.classList.contains("code-active");
+  const diagramRect = diagram.getBoundingClientRect();
+
+  return {
+    isEditing,
+    rect: isEditing
+      ? unionRects([codeBlock.getBoundingClientRect(), diagramRect])
+      : diagramRect,
+  };
+}
+
+function isMermaidCodeBlockElement(
+  element: Element | null
+): element is HTMLElement {
+  return (
+    element instanceof HTMLElement &&
+    element.classList.contains(EditorStyleHelper.codeBlock) &&
+    (element.dataset.language === "mermaid" ||
+      element.dataset.language === "mermaidjs")
+  );
+}
+
+function mermaidDiagramFromElement(element: Element | null): HTMLElement | null {
+  const diagram = element?.closest(".mermaid-diagram-wrapper");
+  return diagram instanceof HTMLElement ? diagram : null;
+}
+
+function nextMermaidDiagram(codeBlock: HTMLElement): HTMLElement | null {
+  const next = codeBlock.nextElementSibling;
+  return next instanceof HTMLElement &&
+    next.classList.contains("mermaid-diagram-wrapper")
+    ? next
+    : null;
+}
+
+function previousMermaidCodeBlock(diagram: HTMLElement): HTMLElement | null {
+  const previous = diagram.previousElementSibling;
+  return isMermaidCodeBlockElement(previous) ? previous : null;
+}
+
+function unionRects(rects: DOMRect[]): DOMRect {
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+
+  return new DOMRect(left, top, right - left, bottom - top);
 }
 
 const GutterControls = styled.div<{ $rtl: boolean }>`

@@ -30,6 +30,7 @@ type Props = ComponentProps & {
 export default function PdfViewer(props: Props) {
   const { node, isEditable, onChangeSize, isSelected } = props;
   const { href, name } = node.attrs;
+  const previewHref = getPdfPreviewHref(href);
   const ref = useRef<HTMLDivElement>(null);
   const embedRef = useRef<HTMLEmbedElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -75,7 +76,7 @@ export default function PdfViewer(props: Props) {
           embedRef.current.src = "";
           requestAnimationFrame(() => {
             if (embedRef.current) {
-              embedRef.current.src = href;
+              embedRef.current.src = previewHref;
             }
           });
         }
@@ -90,7 +91,7 @@ export default function PdfViewer(props: Props) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [dragging, href]);
+  }, [dragging, previewHref]);
 
   return (
     <PDFWrapper
@@ -113,7 +114,7 @@ export default function PdfViewer(props: Props) {
       </Flex>
       <embed
         title={name}
-        src={href}
+        src={previewHref}
         ref={embedRef}
         style={{
           width: "100%",
@@ -138,6 +139,23 @@ export default function PdfViewer(props: Props) {
       )}
     </PDFWrapper>
   );
+}
+
+function getPdfPreviewHref(href: string) {
+  if (!href) {
+    return href;
+  }
+
+  try {
+    const url = new URL(href, window.location.origin);
+    url.searchParams.set("download", "false");
+
+    return href.startsWith("http")
+      ? url.toString()
+      : `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return href;
+  }
 }
 
 const PDFWrapper = styled.div<{ $dragging: boolean }>`

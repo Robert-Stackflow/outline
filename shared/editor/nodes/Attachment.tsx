@@ -222,7 +222,7 @@ export default class Attachment extends Node {
 
         // create a temporary link node and click it
         const link = document.createElement("a");
-        link.href = node.attrs.href;
+        link.href = getDownloadHref(node.attrs.href);
         link.target = "_blank";
         document.body.appendChild(link);
         link.click();
@@ -297,5 +297,22 @@ export default class Attachment extends Node {
         size: tok.attrGet("size"),
       }),
     };
+  }
+}
+
+function getDownloadHref(href: string) {
+  if (!href) {
+    return href;
+  }
+
+  try {
+    const url = new URL(href, window.location.origin);
+    url.searchParams.set("download", "true");
+
+    return href.startsWith("http")
+      ? url.toString()
+      : `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return href;
   }
 }

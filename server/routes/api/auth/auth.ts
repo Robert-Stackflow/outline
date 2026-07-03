@@ -125,18 +125,25 @@ router.post("auth.info", auth(), async (ctx: APIContext<T.AuthInfoReq>) => {
   const sessions = getSessionsInCookie(ctx);
   const signedInTeamIds = Object.keys(sessions);
 
-  const [team, groups, signedInTeams, availableTeams] = await Promise.all([
-    Team.scope("withDomains").findByPk(user.teamId, {
-      rejectOnEmpty: true,
-    }),
-    user.groups(),
-    Team.findAll({
-      where: {
-        id: signedInTeamIds,
-      },
-    }),
-    user.availableTeams(),
-  ]);
+  const [team, groups, signedInTeams, availableTeams, memberCount] =
+    await Promise.all([
+      Team.scope("withDomains").findByPk(user.teamId, {
+        rejectOnEmpty: true,
+      }),
+      user.groups(),
+      Team.findAll({
+        where: {
+          id: signedInTeamIds,
+        },
+      }),
+      user.availableTeams(),
+      User.count({
+        where: {
+          teamId: user.teamId,
+          suspendedAt: null,
+        },
+      }),
+    ]);
 
   // If the user did not _just_ sign in then we need to check if they continue
   // to have access to the workspace they are signed into. This only applies
@@ -167,7 +174,7 @@ router.post("auth.info", auth(), async (ctx: APIContext<T.AuthInfoReq>) => {
       user: presentUser(user, {
         includeDetails: true,
       }),
-      team: presentTeam(team),
+      team: presentTeam(team, { memberCount }),
       groups: await Promise.all(groups.map(presentGroup)),
       groupUsers: groups.map((group) => presentGroupUser(group.groupUsers[0])),
       collaborationToken: user.getCollaborationToken(),

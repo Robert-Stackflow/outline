@@ -107,10 +107,14 @@ export default function useDocumentSidebar() {
   }, [ai]);
 
   React.useEffect(() => {
-    if (ui.rightSidebar === "ai" && ai.config?.configured === false) {
+    if (
+      ui.rightSidebar === "ai" &&
+      ai.config &&
+      (!ai.config.configured || !ai.config.canManage)
+    ) {
       ui.set({ rightSidebar: null });
     }
-  }, [ai.config?.configured, ui]);
+  }, [ai.config, ui]);
 
   // When the sidebar switches away from history while still on a /history URL,
   // update the URL to remove the /history suffix.

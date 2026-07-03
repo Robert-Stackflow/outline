@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   CommentingAccess,
   EmailDisplay,
+  SidebarCollectionsStyle,
   TOCPosition,
   UserRole,
 } from "@shared/types";
@@ -68,6 +69,8 @@ export const TeamsUpdateSchema = BaseSchema.extend({
           .optional(),
         /** Side to display the document's table of contents in relation to the main content. */
         tocPosition: z.enum(TOCPosition).optional(),
+        /** How collections are displayed in the main sidebar. */
+        sidebarCollectionsStyle: z.enum(SidebarCollectionsStyle).optional(),
         emailDisplay: z.enum(EmailDisplay).optional(),
         /** Whether to prevent shared documents from being embedded in iframes on external websites. */
         preventDocumentEmbedding: z.boolean().optional(),

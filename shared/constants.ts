@@ -1,5 +1,6 @@
 import type { TeamPreferences, UserPreferences } from "./types";
 import {
+  SidebarCollectionsStyle,
   TOCPosition,
   TeamPreference,
   UserPreference,
@@ -35,6 +36,7 @@ export const TeamPreferenceDefaults: TeamPreferences = {
   [TeamPreference.Commenting]: CommentingAccess.Members,
   [TeamPreference.CustomTheme]: undefined,
   [TeamPreference.TocPosition]: TOCPosition.Left,
+  [TeamPreference.SidebarCollectionsStyle]: SidebarCollectionsStyle.List,
   [TeamPreference.PreventDocumentEmbedding]: false,
   [TeamPreference.EmailDisplay]: EmailDisplay.Members,
   [TeamPreference.MCP]: true,

@@ -1,13 +1,20 @@
 import { observer } from "mobx-react";
+import { CollapseIcon, ExpandIcon } from "outline-icons";
 import * as React from "react";
 import { useHistory } from "react-router-dom";
 import { UserPreference } from "@shared/types";
 import { ProsemirrorHelper } from "@shared/utils/ProsemirrorHelper";
 import type Collection from "~/models/Collection";
 import type Document from "~/models/Document";
+import { ActionSeparator, createAction } from "~/actions";
+import { createCollection } from "~/actions/definitions/collections";
+import { CollectionSection } from "~/actions/sections";
 import type { RefHandle } from "~/components/EditableTitle";
 import useCurrentUser from "~/hooks/useCurrentUser";
-import { useCollectionMenuAction } from "~/hooks/useCollectionMenuAction";
+import {
+  useCollectionMenuAction,
+  type CollectionMenuAction,
+} from "~/hooks/useCollectionMenuAction";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
 import CollectionMenu from "~/menus/CollectionMenu";
@@ -25,7 +32,10 @@ type Props = {
   activeDocument: Document | undefined;
   isDraggingAnyCollection?: boolean;
   depth?: number;
+  extraMenuActions?: CollectionMenuAction[];
+  onCollapseAll?: () => void;
   onClick?: () => void;
+  onExpandAll?: () => void;
 };
 
 const CollectionLink: React.FC<Props> = ({
@@ -34,7 +44,10 @@ const CollectionLink: React.FC<Props> = ({
   onDisclosureClick,
   isDraggingAnyCollection,
   depth,
+  extraMenuActions,
+  onCollapseAll,
   onClick,
+  onExpandAll,
 }: Props) => {
   const [menuOpen, handleMenuOpen, handleMenuClose] = useBoolean();
   const { documents } = useStores();
@@ -92,14 +105,43 @@ const CollectionLink: React.FC<Props> = ({
     [user, sidebarContext, history, collection, documents]
   );
 
+  const collectionNavigationActions = React.useMemo<
+    CollectionMenuAction[] | undefined
+  >(() => {
+    if (!onCollapseAll || !onExpandAll) {
+      return extraMenuActions;
+    }
+
+    return [
+      createCollection,
+      ActionSeparator,
+      createAction({
+        name: ({ t }) => t("Collapse all"),
+        analyticsName: "Collapse all collection documents",
+        section: CollectionSection,
+        icon: <CollapseIcon />,
+        perform: onCollapseAll,
+      }),
+      createAction({
+        name: ({ t }) => t("Expand all"),
+        analyticsName: "Expand all collection documents",
+        section: CollectionSection,
+        icon: <ExpandIcon />,
+        perform: onExpandAll,
+      }),
+    ];
+  }, [extraMenuActions, onCollapseAll, onExpandAll]);
+
   const contextMenuAction = useCollectionMenuAction({
     collectionId: collection.id,
+    extraActions: collectionNavigationActions,
     onRename: handleRename,
   });
 
   const menu = !isDraggingAnyCollection ? (
     <CollectionMenu
       collection={collection}
+      extraActions={collectionNavigationActions}
       onRename={handleRename}
       onOpen={handleMenuOpen}
       onClose={handleMenuClose}

@@ -8,11 +8,13 @@ import { OverflowMenuButton } from "~/components/Menu/OverflowMenuButton";
 import { ActionContextProvider } from "~/hooks/useActionContext";
 import useRequest from "~/hooks/useRequest";
 import useStores from "~/hooks/useStores";
+import type { CollectionMenuAction } from "~/hooks/useCollectionMenuAction";
 import { useCollectionMenuAction } from "~/hooks/useCollectionMenuAction";
 
 type Props = {
   collection: Collection;
   align?: "start" | "end";
+  extraActions?: CollectionMenuAction[];
   neutral?: boolean;
   onRename?: () => void;
   onOpen?: () => void;
@@ -22,6 +24,7 @@ type Props = {
 function CollectionMenu({
   collection,
   align,
+  extraActions,
   neutral,
   onRename,
   onOpen,
@@ -49,6 +52,7 @@ function CollectionMenu({
 
   const rootAction = useCollectionMenuAction({
     collectionId: collection.id,
+    extraActions,
     onRename,
   });
 

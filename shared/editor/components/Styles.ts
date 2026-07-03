@@ -278,6 +278,34 @@ const mathStyle = (props: Props) => css`
   math-block.ProseMirror-selectednode .math-src,
   math-display.ProseMirror-selectednode .math-src {
     display: block;
+    box-sizing: border-box;
+    height: max(var(--math-render-height, 1.6em), 1.6em);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: ${props.theme.scrollbarThumb} transparent;
+  }
+
+  math-block.ProseMirror-selectednode .math-src::-webkit-scrollbar,
+  math-display.ProseMirror-selectednode .math-src::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  math-block.ProseMirror-selectednode .math-src::-webkit-scrollbar-track,
+  math-display.ProseMirror-selectednode .math-src::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  math-block.ProseMirror-selectednode .math-src::-webkit-scrollbar-thumb,
+  math-display.ProseMirror-selectednode .math-src::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: ${props.theme.scrollbarThumb};
+  }
+
+  math-block.ProseMirror-selectednode .math-src .ProseMirror,
+  math-display.ProseMirror-selectednode .math-src .ProseMirror {
+    min-height: 100%;
   }
 
   math-block .katex-display,
@@ -1379,17 +1407,23 @@ ${
 }
 
 .notice-block {
+  --notice-accent: ${props.theme.noticeInfoBackground};
+  --notice-text: ${props.theme.noticeInfoText};
+  --notice-background: ${transparentize(0.9, props.theme.noticeInfoBackground)};
+
   display: flex;
   align-items: center;
-  background: ${transparentize(0.9, props.theme.noticeInfoBackground)};
-  border-left: 4px solid ${props.theme.noticeInfoBackground};
-  color: ${props.theme.noticeInfoText};
-  border-radius: 4px;
-  padding: 8px 10px 8px 8px;
+  gap: 8px;
+  background: var(--notice-background);
+  color: var(--notice-text);
+  border-left: 0;
+  border-radius: 8px;
+  box-shadow: inset 3px 0 0 var(--notice-accent);
+  padding: 10px 12px 10px 14px;
   margin: 8px 0;
 
   a {
-    color: ${props.theme.noticeInfoText};
+    color: var(--notice-text);
     text-decoration: underline;
   }
 
@@ -1409,71 +1443,94 @@ ${
 
 .notice-block {
   .icon {
-    width: 24px;
-    height: 24px;
-    align-self: flex-start;
-    margin-right: 4px;
-    color: ${props.theme.noticeInfoBackground};
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    color: var(--notice-accent);
   }
 
-  &:dir(rtl) .icon {
-    margin-right: 0;
-    margin-left: 4px;
+  .icon svg {
+    display: block;
+    width: 20px;
+    height: 20px;
   }
 }
 
 .notice-block.${EditorStyleHelper.blockView} {
   --notice-accent: ${props.theme.noticeInfoBackground};
   --notice-text: ${props.theme.noticeInfoText};
+  --notice-background: ${transparentize(0.9, props.theme.noticeInfoBackground)};
   --block-view-background: ${transparentize(
     0.9,
     props.theme.noticeInfoBackground
   )};
+  --block-view-inline-padding: 0;
 
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  column-gap: 8px;
-  align-items: start;
+  grid-template-columns: 36px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: stretch;
   background: transparent;
   border-left: 0;
+  box-shadow: none;
   color: var(--notice-text);
-  padding: 6px;
+  padding: 0;
+  margin: 8px 0;
 
   > .${EditorStyleHelper.blockChrome} {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     justify-content: center;
-    min-height: 28px;
+    min-height: 44px;
     user-select: none;
   }
 
   > .${EditorStyleHelper.blockContent} {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     min-width: 0;
-    padding: 2px 0;
+    min-height: 44px;
+    padding: 8px 12px 8px 0;
   }
 
   .notice-indicator {
     display: grid;
-    grid-template-columns: 3px 20px;
-    column-gap: 5px;
-    align-items: start;
-    min-height: 28px;
-    width: 28px;
+    grid-template-columns: 3px 22px;
+    column-gap: 9px;
+    align-items: center;
+    align-self: stretch;
+    min-height: 44px;
+    width: 34px;
+    padding-left: 8px;
   }
 
   .notice-bar {
     display: block;
     width: 3px;
-    min-height: 100%;
-    border-radius: 2px;
+    height: calc(100% - 12px);
+    min-height: 24px;
+    border-radius: 999px;
     background: var(--notice-accent);
   }
 
   .icon {
-    width: 18px;
-    height: 18px;
-    margin: 1px 0 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin: 0;
     color: var(--notice-accent);
+  }
+
+  .icon svg {
+    display: block;
+    width: 20px;
+    height: 20px;
   }
 
   a {
@@ -1481,23 +1538,21 @@ ${
   }
 }
 
+.notice-block.${EditorStyleHelper.blockView}:not(li):not(blockquote):not(.${EditorStyleHelper.toggleBlock}) {
+  margin-inline: 0;
+  padding: 0;
+}
+
 .notice-block.tip {
-  background: ${transparentize(0.9, props.theme.noticeTipBackground)};
-  border-left: 4px solid ${props.theme.noticeTipBackground};
-  color: ${props.theme.noticeTipText};
-
-  .icon {
-    color: ${props.theme.noticeTipBackground};
-  }
-
-  a {
-    color: ${props.theme.noticeTipText};
-  }
+  --notice-accent: ${props.theme.noticeTipBackground};
+  --notice-text: ${props.theme.noticeTipText};
+  --notice-background: ${transparentize(0.9, props.theme.noticeTipBackground)};
 }
 
 .notice-block.${EditorStyleHelper.blockView}.tip {
   --notice-accent: ${props.theme.noticeTipBackground};
   --notice-text: ${props.theme.noticeTipText};
+  --notice-background: ${transparentize(0.9, props.theme.noticeTipBackground)};
   --block-view-background: ${transparentize(
     0.9,
     props.theme.noticeTipBackground
@@ -1507,22 +1562,21 @@ ${
 }
 
 .notice-block.warning {
-  background: ${transparentize(0.9, props.theme.noticeWarningBackground)};
-  border-left: 4px solid ${props.theme.noticeWarningBackground};
-  color: ${props.theme.noticeWarningText};
-
-  .icon {
-    color: ${props.theme.noticeWarningBackground};
-  }
-
-  a {
-    color: ${props.theme.noticeWarningText};
-  }
+  --notice-accent: ${props.theme.noticeWarningBackground};
+  --notice-text: ${props.theme.noticeWarningText};
+  --notice-background: ${transparentize(
+    0.9,
+    props.theme.noticeWarningBackground
+  )};
 }
 
 .notice-block.${EditorStyleHelper.blockView}.warning {
   --notice-accent: ${props.theme.noticeWarningBackground};
   --notice-text: ${props.theme.noticeWarningText};
+  --notice-background: ${transparentize(
+    0.9,
+    props.theme.noticeWarningBackground
+  )};
   --block-view-background: ${transparentize(
     0.9,
     props.theme.noticeWarningBackground
@@ -1532,22 +1586,21 @@ ${
 }
 
 .notice-block.success {
-  background: ${transparentize(0.9, props.theme.noticeSuccessBackground)};
-  border-left: 4px solid ${props.theme.noticeSuccessBackground};
-  color: ${props.theme.noticeSuccessText};
-
-  .icon {
-    color: ${props.theme.noticeSuccessBackground};
-  }
-
-  a {
-    color: ${props.theme.noticeSuccessText};
-  }
+  --notice-accent: ${props.theme.noticeSuccessBackground};
+  --notice-text: ${props.theme.noticeSuccessText};
+  --notice-background: ${transparentize(
+    0.9,
+    props.theme.noticeSuccessBackground
+  )};
 }
 
 .notice-block.${EditorStyleHelper.blockView}.success {
   --notice-accent: ${props.theme.noticeSuccessBackground};
   --notice-text: ${props.theme.noticeSuccessText};
+  --notice-background: ${transparentize(
+    0.9,
+    props.theme.noticeSuccessBackground
+  )};
   --block-view-background: ${transparentize(
     0.9,
     props.theme.noticeSuccessBackground
@@ -1763,8 +1816,8 @@ ul > li.${EditorStyleHelper.blockView},
 ol > li.${EditorStyleHelper.blockView} {
   --block-view-halo-inset-block-start: 1px;
   --block-view-halo-inset-block-end: 1px;
-  --block-list-marker-line-height: calc(var(--font-size-p) * 1.6);
-  --block-list-bullet-size: 7px;
+  --block-list-marker-line-height: 1.6em;
+  --block-list-bullet-size: 0.38em;
 
   display: grid;
   grid-template-columns: var(--block-chrome-width) minmax(0, 1fr);
@@ -1815,7 +1868,7 @@ ol > li.${EditorStyleHelper.blockView} {
   position: relative;
   overflow: hidden;
   color: transparent;
-  font-size: var(--font-size-p);
+  font-size: 1em;
   font-weight: 400;
 }
 
@@ -1842,7 +1895,7 @@ ol > li.${EditorStyleHelper.blockView} {
 }
 
 .${EditorStyleHelper.blockListMarker}[data-list-kind="bullet"][data-list-depth="1"] {
-  --block-list-bullet-size: 6px;
+  --block-list-bullet-size: 0.32em;
 }
 
 .${EditorStyleHelper.blockListMarker}[data-list-kind="bullet"][data-list-depth="1"]::before {
@@ -1851,7 +1904,7 @@ ol > li.${EditorStyleHelper.blockView} {
 }
 
 .${EditorStyleHelper.blockListMarker}[data-list-kind="bullet"][data-list-depth="2"] {
-  --block-list-bullet-size: 5.5px;
+  --block-list-bullet-size: 0.3em;
 }
 
 .${EditorStyleHelper.blockListMarker}[data-list-kind="bullet"][data-list-depth="2"]::before {
@@ -1942,19 +1995,30 @@ ul.checkbox_list > li.checked > .${EditorStyleHelper.blockContent} {
 
 ul.checkbox_list {
   & > li.${EditorStyleHelper.blockView} > .${EditorStyleHelper.blockChrome} {
+    align-items: center;
     cursor: text;
+    height: var(--block-list-marker-line-height);
+    min-height: var(--block-list-marker-line-height);
+  }
+
+  & > li.${EditorStyleHelper.blockView} > .${EditorStyleHelper.blockChrome} > .${EditorStyleHelper.blockIndicator} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--block-chrome-width);
+    height: var(--block-list-marker-line-height);
   }
 
   .checkbox {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: var(--pointer);
     pointer-events: ${
       props.readOnly && !props.readOnlyWriteCheckboxes ? "none" : "initial"
     };
     width: 14px;
     height: 14px;
-    position: relative;
-    top: 0.32em;
     transition: transform 100ms ease-in-out;
     opacity: .8;
     margin: 0;
@@ -2189,26 +2253,83 @@ mark {
     `
   }
 
-  &:is(.code-active) + .mermaid-diagram-wrapper {
-    cursor: zoom-in;
-  }
-
   // Hide code without display none so toolbar can still be positioned against it
   &:not(.code-active) {
+    --block-view-background: transparent;
+
     height: ${props.staticHTML || props.readOnly ? "auto" : "0"};
     margin: 0.5em 0 -0.75em 0px;
     overflow: hidden;
+    padding-block: 0;
     position: relative;
   }
 
-  &.ProseMirror-selectednode {
+  &:not(.code-active).block-gutter-active,
+  &:not(.code-active).ProseMirror-selectednode {
+    --block-view-background: transparent;
     outline: none;
 
-    & + .mermaid-diagram-wrapper {
-      &:not(.empty) {
-        cursor: zoom-in;
-      }
+    > .${EditorStyleHelper.blockHalo} {
+      background: transparent;
     }
+  }
+
+  &:not(.code-active).block-gutter-active + .mermaid-diagram-wrapper,
+  &:not(.code-active).ProseMirror-selectednode + .mermaid-diagram-wrapper {
+    --mermaid-diagram-background: ${transparentize(0.88, props.theme.accent)};
+  }
+
+  &.ProseMirror-selectednode:not(.code-active) + .mermaid-diagram-wrapper {
+    box-shadow: 0 0 0 2px ${props.theme.selected};
+
+    &:not(.empty) {
+      cursor: zoom-in;
+    }
+  }
+
+  &.code-active {
+    margin-bottom: 0;
+    padding-bottom: 0;
+
+    > .${EditorStyleHelper.blockHalo} {
+      inset-block-end: -0.75em;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    pre {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+
+  &.code-active.ProseMirror-selectednode {
+    outline: none;
+    box-shadow:
+      inset 2px 0 0 ${props.theme.selected},
+      inset -2px 0 0 ${props.theme.selected},
+      inset 0 2px 0 ${props.theme.selected};
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  &.code-active + .mermaid-diagram-wrapper {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    cursor: zoom-in;
+  }
+
+  &.code-active.block-gutter-active + .mermaid-diagram-wrapper,
+  &.code-active.ProseMirror-selectednode + .mermaid-diagram-wrapper {
+    --mermaid-diagram-background: ${transparentize(0.88, props.theme.accent)};
+  }
+
+  &.code-active.ProseMirror-selectednode + .mermaid-diagram-wrapper {
+    box-shadow:
+      inset 2px 0 0 ${props.theme.selected},
+      inset -2px 0 0 ${props.theme.selected},
+      inset 0 -2px 0 ${props.theme.selected};
   }
 }
 
@@ -2348,17 +2469,39 @@ mark {
 }
 
 .mermaid-diagram-wrapper {
+  --mermaid-diagram-background: ${props.theme.codeBackground};
+
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0.75em 0;
   min-height: 1.6em;
-  background: ${props.theme.codeBackground};
+  background: var(--mermaid-diagram-background);
   border-radius: ${EditorStyleHelper.blockRadius};
-  border: 1px solid ${props.theme.codeBorder};
+  border: 0;
   padding: 8px;
   user-select: none;
   cursor: default;
+  transition: box-shadow 120ms ease;
+
+  &.mermaid-code-active {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    cursor: zoom-in;
+  }
+
+  &.ProseMirror-selectednode {
+    outline: none;
+    box-shadow: 0 0 0 2px ${props.theme.selected};
+  }
+
+  &.mermaid-code-active.ProseMirror-selectednode {
+    box-shadow:
+      inset 2px 0 0 ${props.theme.selected},
+      inset -2px 0 0 ${props.theme.selected},
+      inset 0 -2px 0 ${props.theme.selected};
+  }
 
   * {
     font-family: ${props.theme.fontFamily};

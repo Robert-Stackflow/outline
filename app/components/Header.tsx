@@ -186,7 +186,6 @@ const Actions = styled(Flex)`
       color: ${s("textTertiary")};
       opacity: 0.6;
     }
-
   }
 
   /* Slightly more breathing room around the divider that separates the
@@ -221,7 +220,6 @@ const Wrapper = styled(Flex)<WrapperProps>`
       `
       : `
       background: ${props.theme.background};
-      box-shadow: inset 0 -1px 0 ${props.theme.divider};
       `};
 
   padding: 12px 16px;

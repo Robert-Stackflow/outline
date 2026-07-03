@@ -17,11 +17,12 @@ import { getSignedUrl as getCloudFrontSignedUrl } from "@aws-sdk/cloudfront-sign
 import fs from "fs-extra";
 import invariant from "invariant";
 import { compact } from "es-toolkit/compat";
+import contentDisposition from "content-disposition";
 import tmp from "tmp";
 import { toError } from "@shared/utils/error";
 import env from "@server/env";
 import Logger from "@server/logging/Logger";
-import BaseStorage from "./BaseStorage";
+import BaseStorage, { type SignedUrlOptions } from "./BaseStorage";
 import type { AppContext } from "@server/types";
 
 export default class S3Storage extends BaseStorage {
@@ -206,8 +207,13 @@ export default class S3Storage extends BaseStorage {
 
   public getSignedUrl = async (
     key: string,
-    expiresIn = S3Storage.defaultSignedUrlExpires
+    expiresIn = S3Storage.defaultSignedUrlExpires,
+    options?: SignedUrlOptions
   ) => {
+    if (options?.disposition) {
+      return this.getS3PresignedUrl(key, expiresIn, options);
+    }
+
     if (env.AWS_CLOUDFRONT_URL) {
       const privateKey = this.getCloudFrontPrivateKey();
       if (!env.AWS_CLOUDFRONT_KEY_PAIR_ID || !privateKey) {
@@ -356,7 +362,8 @@ export default class S3Storage extends BaseStorage {
 
   private getS3PresignedUrl = async (
     key: string,
-    expiresIn = S3Storage.defaultSignedUrlExpires
+    expiresIn = S3Storage.defaultSignedUrlExpires,
+    options?: SignedUrlOptions
   ) => {
     const isDocker = env.AWS_S3_UPLOAD_BUCKET_URL.match(/http:\/\/s3:/);
     const params = {
@@ -371,7 +378,17 @@ export default class S3Storage extends BaseStorage {
     // Ensure expiration does not exceed AWS S3 Signature V4 limit of 7 days
     const clampedExpiresIn = Math.min(expiresIn, S3Storage.maxSignedUrlExpires);
 
-    const command = new GetObjectCommand(params);
+    const command = new GetObjectCommand({
+      ...params,
+      ...(options?.disposition && {
+        ResponseContentDisposition: contentDisposition(
+          options.fileName ?? path.basename(key),
+          {
+            type: options.disposition,
+          }
+        ),
+      }),
+    });
     const url = await getSignedUrl(this.client, command, {
       expiresIn: clampedExpiresIn,
     });

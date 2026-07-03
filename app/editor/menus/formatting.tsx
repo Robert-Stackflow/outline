@@ -195,7 +195,7 @@ export default function formattingMenuItems(ctx: SelectionContext): MenuItem[] {
           })),
           {
             icon: <CircleIcon retainColor color="rainbow" />,
-            label: "Custom",
+            label: t("Custom"),
             children: [
               {
                 content: (
@@ -291,7 +291,7 @@ export default function formattingMenuItems(ctx: SelectionContext): MenuItem[] {
           })),
           {
             icon: <CircleIcon retainColor color="rainbow" />,
-            label: "Custom",
+            label: t("Custom"),
             children: [
               {
                 content: (

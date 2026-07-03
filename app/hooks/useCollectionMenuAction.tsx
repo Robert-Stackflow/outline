@@ -23,15 +23,31 @@ import { InputIcon } from "outline-icons";
 import usePolicy from "./usePolicy";
 import useStores from "./useStores";
 import { useTranslation } from "react-i18next";
+import type {
+  ActionGroup,
+  ActionSeparator as TActionSeparator,
+  ActionVariant,
+} from "~/types";
+
+export type CollectionMenuAction =
+  | ActionVariant
+  | ActionGroup
+  | TActionSeparator;
 
 type Props = {
   /** Collection ID for which the actions are generated */
   collectionId: string;
   /** Invoked when the "Rename" menu item is clicked */
   onRename?: () => void;
+  /** Additional actions to render in the collection options menu. */
+  extraActions?: CollectionMenuAction[];
 };
 
-export function useCollectionMenuAction({ collectionId, onRename }: Props) {
+export function useCollectionMenuAction({
+  collectionId,
+  extraActions,
+  onRename,
+}: Props) {
   const { collections } = useStores();
   const { t } = useTranslation();
   const collection = collections.get(collectionId);
@@ -39,6 +55,7 @@ export function useCollectionMenuAction({ collectionId, onRename }: Props) {
 
   const actions = useMemo(
     () => [
+      ...(extraActions?.length ? [...extraActions, ActionSeparator] : []),
       restoreCollection,
       starCollection,
       unstarCollection,
@@ -65,7 +82,7 @@ export function useCollectionMenuAction({ collectionId, onRename }: Props) {
       ActionSeparator,
       deleteCollection,
     ],
-    [t, can.update, onRename]
+    [t, can.update, extraActions, onRename]
   );
 
   return useMenuAction(actions);

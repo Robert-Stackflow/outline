@@ -20,6 +20,8 @@ export enum AvatarVariant {
   Square = "square",
 }
 
+type AvatarSizeValue = AvatarSize | number;
+
 export interface IAvatar {
   avatarUrl: string | null;
   color?: string;
@@ -30,7 +32,7 @@ export interface IAvatar {
 
 type Props = {
   /** The size of the avatar */
-  size: AvatarSize;
+  size: AvatarSizeValue;
   /** The variant of the avatar */
   variant?: AvatarVariant;
   /** The source of the avatar image, if not passing a model. */
@@ -93,7 +95,10 @@ Avatar.defaultProps = {
   size: AvatarSize.Medium,
 };
 
-const Relative = styled.div<{ $variant: AvatarVariant; $size: AvatarSize }>`
+const Relative = styled.div<{
+  $variant: AvatarVariant;
+  $size: AvatarSizeValue;
+}>`
   position: relative;
   user-select: none;
   flex-shrink: 0;

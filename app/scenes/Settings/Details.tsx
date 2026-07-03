@@ -10,7 +10,7 @@ import { ThemeProvider, useTheme } from "styled-components";
 import { errToString } from "@shared/utils/error";
 import { buildDarkTheme, buildLightTheme } from "@shared/styles/theme";
 import type { CustomTheme } from "@shared/types";
-import { TOCPosition, TeamPreference } from "@shared/types";
+import { SidebarCollectionsStyle, TeamPreference } from "@shared/types";
 import { getBaseDomain } from "@shared/utils/domains";
 import { TeamValidation } from "@shared/validations";
 import Button from "~/components/Button";
@@ -65,30 +65,35 @@ function Details() {
     isHexColor
   );
 
-  const [tocPosition, setTocPosition] = useState(
-    team.getPreference(TeamPreference.TocPosition) as TOCPosition
+  const [sidebarCollectionsStyle, setSidebarCollectionsStyle] = useState(
+    team.getPreference(
+      TeamPreference.SidebarCollectionsStyle
+    ) as SidebarCollectionsStyle
   );
 
-  const tocPositionOptions: Option[] = React.useMemo(
+  const sidebarCollectionsStyleOptions: Option[] = React.useMemo(
     () =>
       [
         {
           type: "item",
-          label: t("Left"),
-          value: TOCPosition.Left,
+          label: t("List"),
+          value: SidebarCollectionsStyle.List,
         },
         {
           type: "item",
-          label: t("Right"),
-          value: TOCPosition.Right,
+          label: t("Dropdown"),
+          value: SidebarCollectionsStyle.Dropdown,
         },
       ] satisfies Option[],
     [t]
   );
 
-  const handleTocPositionChange = React.useCallback((position: string) => {
-    setTocPosition(position as TOCPosition);
-  }, []);
+  const handleSidebarCollectionsStyleChange = React.useCallback(
+    (style: string) => {
+      setSidebarCollectionsStyle(style as SidebarCollectionsStyle);
+    },
+    []
+  );
 
   const handleSubmit = React.useCallback(
     async (event?: React.SyntheticEvent) => {
@@ -106,7 +111,7 @@ function Details() {
             ...team.preferences,
             publicBranding,
             customTheme,
-            tocPosition,
+            sidebarCollectionsStyle,
           },
         });
         toast.success(t("Settings saved"));
@@ -115,7 +120,7 @@ function Details() {
       }
     },
     [
-      tocPosition,
+      sidebarCollectionsStyle,
       team,
       name,
       description,
@@ -298,17 +303,17 @@ function Details() {
           )}
           <SettingRow
             border={false}
-            label={t("Table of contents position")}
-            name="tocPosition"
+            label={t("Sidebar collections")}
+            name="sidebarCollectionsStyle"
             description={t(
-              "The side to display the table of contents in relation to the main content."
+              "Choose how collections are shown in the main sidebar."
             )}
           >
             <InputSelect
-              options={tocPositionOptions}
-              value={tocPosition}
-              onChange={handleTocPositionChange}
-              label={t("Table of contents position")}
+              options={sidebarCollectionsStyleOptions}
+              value={sidebarCollectionsStyle}
+              onChange={handleSidebarCollectionsStyleChange}
+              label={t("Sidebar collections")}
               labelHidden
             />
           </SettingRow>

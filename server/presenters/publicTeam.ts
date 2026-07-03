@@ -1,4 +1,4 @@
-import type { TOCPosition } from "@shared/types";
+import type { SidebarCollectionsStyle, TOCPosition } from "@shared/types";
 import { TeamPreference } from "@shared/types";
 import type { Team } from "@server/models";
 
@@ -17,5 +17,8 @@ export default function presentPublicTeam(
         }
       : {}),
     tocPosition: team.getPreference(TeamPreference.TocPosition) as TOCPosition,
+    sidebarCollectionsStyle: team.getPreference(
+      TeamPreference.SidebarCollectionsStyle
+    ) as SidebarCollectionsStyle,
   };
 }

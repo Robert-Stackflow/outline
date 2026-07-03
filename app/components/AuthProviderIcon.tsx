@@ -18,6 +18,8 @@ type Props = {
   id: string;
   /** Optional brand icon key (e.g. "github", "gitlab"). */
   brand?: string;
+  /** External provider id, used to infer the brand for connected providers. */
+  providerId?: string;
   /** The size of the icon. */
   size?: number;
 };
@@ -32,18 +34,59 @@ const brands: Record<string, IconDefinition> = {
   discord: faDiscord,
 };
 
+const brandAliases: Array<[string, keyof typeof brands]> = [
+  ["github", "github"],
+  ["gitlab", "gitlab"],
+  ["google", "google"],
+  ["microsoftonline", "microsoft"],
+  ["microsoft", "microsoft"],
+  ["azure", "microsoft"],
+  ["bitbucket", "bitbucket"],
+  ["slack", "slack"],
+  ["discord", "discord"],
+];
+
+function getBrandIcon(
+  ...values: Array<string | undefined>
+): IconDefinition | undefined {
+  for (const value of values) {
+    const normalized = value?.toLowerCase();
+
+    if (!normalized) {
+      continue;
+    }
+
+    if (brands[normalized]) {
+      return brands[normalized];
+    }
+
+    const brand = brandAliases.find(([needle]) =>
+      normalized.includes(needle)
+    )?.[1];
+
+    if (brand) {
+      return brands[brand];
+    }
+  }
+
+  return undefined;
+}
+
 /**
  * Renders a sign-in provider icon. When a known brand key is supplied a
  * FontAwesome brand glyph is used, otherwise it falls back to the plugin's
  * registered icon.
  */
-function AuthProviderIcon({ id, brand, size = 24 }: Props) {
-  const icon = brand ? brands[brand] : undefined;
+function AuthProviderIcon({ id, brand, providerId, size = 24 }: Props) {
+  const icon = getBrandIcon(brand, id, providerId);
 
   if (icon) {
     return (
       <Wrapper $size={size}>
-        <FontAwesomeIcon icon={icon} style={{ width: size * 0.8, height: size * 0.8 }} />
+        <FontAwesomeIcon
+          icon={icon}
+          style={{ width: size * 0.8, height: size * 0.8 }}
+        />
       </Wrapper>
     );
   }

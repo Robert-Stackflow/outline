@@ -15,6 +15,7 @@ import useCurrentTeam from "~/hooks/useCurrentTeam";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
 import { ActionRow } from "./components/ActionRow";
+import { MCPSettings } from "./components/MCPSettings";
 import SettingRow from "./components/SettingRow";
 
 /**
@@ -114,9 +115,21 @@ function AiSettings() {
             onChange={setApiFormat}
             disabled={!can.update}
             options={[
-              { type: "item", label: "Chat Completions (OpenAI)", value: AiApiFormat.ChatCompletions },
-              { type: "item", label: "Messages (Anthropic)", value: AiApiFormat.Messages },
-              { type: "item", label: "Responses (OpenAI)", value: AiApiFormat.Responses },
+              {
+                type: "item",
+                label: t("Chat Completions (OpenAI)"),
+                value: AiApiFormat.ChatCompletions,
+              },
+              {
+                type: "item",
+                label: t("Messages (Anthropic)"),
+                value: AiApiFormat.Messages,
+              },
+              {
+                type: "item",
+                label: t("Responses (OpenAI)"),
+                value: AiApiFormat.Responses,
+              },
             ]}
           />
         </SettingRow>
@@ -208,6 +221,8 @@ function AiSettings() {
           </ActionRow>
         )}
       </form>
+
+      <MCPSettings />
     </Scene>
   );
 }

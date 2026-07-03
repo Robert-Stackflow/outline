@@ -9,10 +9,7 @@ import { getCookieDomain, slugifyDomain } from "@shared/utils/domains";
 import { parseEmail } from "@shared/utils/email";
 import { isBase64Url } from "@shared/utils/urls";
 import accountProvisioner from "@server/commands/accountProvisioner";
-import {
-  OIDCMalformedUserInfoError,
-  AuthenticationError,
-} from "@server/errors";
+import { OIDCMalformedUserInfoError } from "@server/errors";
 import Logger from "@server/logging/Logger";
 import passportMiddleware from "@server/middlewares/passport";
 import type { User } from "@server/models";
@@ -37,6 +34,27 @@ export interface OIDCEndpoints {
   userInfoURL: string;
   logoutURL?: string;
   pkce?: boolean;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function getString(value: Record<string, unknown>, key: string) {
+  const field = value[key];
+  return typeof field === "string" && field ? field : undefined;
+}
+
+function getNullableString(value: Record<string, unknown>, key: string) {
+  const field = value[key];
+  return typeof field === "string" ? field : null;
+}
+
+function getStringOrNumber(value: Record<string, unknown>, key: string) {
+  const field = value[key];
+  return typeof field === "string" || typeof field === "number"
+    ? field
+    : undefined;
 }
 
 /**
@@ -95,11 +113,16 @@ export function createOIDCRouter(
             "https://api.dropboxapi.com/2/openid/userinfo",
           ];
 
-          const profile = await request(
+          const profileResponse = await request(
             usePostMethod.includes(endpoints.userInfoURL) ? "POST" : "GET",
             endpoints.userInfoURL,
             accessToken
           );
+
+          if (!isObject(profileResponse)) {
+            throw OIDCMalformedUserInfoError();
+          }
+          const profile = profileResponse;
 
           // Some providers, namely ADFS, don't provide anything more than the `sub` claim in the userinfo endpoint
           // So, we'll decode the params.id_token and see if that contains what we need.
@@ -112,24 +135,18 @@ export function createOIDCRouter(
                 return {};
               }
 
-              return decoded as {
-                email?: string;
-                email_verified?: boolean | string;
-                preferred_username?: string;
-                sub?: string;
-              };
+              return decoded as Record<string, unknown>;
             } catch (err) {
               Logger.error("id_token decode threw error: ", toError(err));
               return {};
             }
           })();
 
-          const email = profile.email ?? token.email ?? null;
+          const email =
+            getString(profile, "email") ?? getString(token, "email") ?? null;
 
           if (!email) {
-            throw AuthenticationError(
-              `An email field was not returned in the profile or id_token parameter, but is required.`
-            );
+            throw OIDCMalformedUserInfoError();
           }
 
           // The email_verified claim is part of the OIDC standard claims.
@@ -179,27 +196,36 @@ export function createOIDCRouter(
           // Claim name can be overriden using an env variable.
           // Default is 'preferred_username' as per OIDC spec.
           // This will default to the profile.preferred_username, but will fall back to preferred_username from the id_token
-          const username =
+          const usernameClaim =
             get(profile, provider.usernameClaim) ??
             get(token, provider.usernameClaim);
-          const name = profile.name || username || profile.username;
-          const profileId = profile.sub ?? token.sub ?? profile.id;
+          const username =
+            typeof usernameClaim === "string" && usernameClaim
+              ? usernameClaim
+              : undefined;
+          const name =
+            getString(profile, "name") ??
+            username ??
+            getString(profile, "username") ??
+            getString(profile, "login");
+          const profileId =
+            getStringOrNumber(profile, "sub") ??
+            getStringOrNumber(token, "sub") ??
+            getStringOrNumber(profile, "id");
 
           if (!name) {
-            throw AuthenticationError(
-              `Neither a ${provider.usernameClaim}, "name" or "username" was returned in the profile loaded from ${endpoints.userInfoURL}, but at least one is required.`
-            );
+            throw OIDCMalformedUserInfoError();
           }
           if (!profileId) {
-            throw AuthenticationError(
-              `A user id was not returned in the profile loaded from ${endpoints.userInfoURL}, searched in "sub" and "id" fields.`
-            );
+            throw OIDCMalformedUserInfoError();
           }
 
           // Check if the picture field is a Base64 data URL and filter it out
           // to avoid validation errors in the User model
-          let avatarUrl = profile.picture;
-          if (profile.picture && isBase64Url(profile.picture)) {
+          let avatarUrl =
+            getNullableString(profile, "picture") ??
+            getNullableString(profile, "avatar_url");
+          if (avatarUrl && isBase64Url(avatarUrl)) {
             Logger.debug(
               "authentication",
               "Filtering out Base64 data URL from avatar",
@@ -233,7 +259,7 @@ export function createOIDCRouter(
               providerId,
             },
             authentication: {
-              providerId: profileId,
+              providerId: String(profileId),
               accessToken,
               refreshToken,
               expiresIn: params.expires_in,

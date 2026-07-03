@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import type MermaidUnsafe from "mermaid";
 import type { IconPack } from "@fortawesome/fontawesome-common-types";
 import type { Node } from "prosemirror-model";
-import type { Transaction } from "prosemirror-state";
+import type { EditorState, Transaction } from "prosemirror-state";
 import { NodeSelection, Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { toast } from "sonner";
@@ -143,6 +143,7 @@ class MermaidRenderer {
     this.element =
       document.getElementById(this.elementId) || document.createElement("div");
     this.element.id = this.elementId;
+    this.element.dataset.mermaidId = this.diagramId;
     this.element.classList.add("mermaid-diagram-wrapper");
     this.editor = editor;
   }
@@ -304,6 +305,79 @@ function findBestOverlapDecoration(
   );
 }
 
+function findMermaidBlockByDiagramId(
+  state: EditorState,
+  diagramId: string
+): NodeWithPos | undefined {
+  const mermaidState = pluginKey.getState(state) as MermaidState | undefined;
+  const decoration = mermaidState?.decorationSet
+    .find(
+      undefined,
+      undefined,
+      (spec: { diagramId?: string }) => spec.diagramId === diagramId
+    )
+    .find((item) => item.from < item.to);
+
+  if (!decoration) {
+    return undefined;
+  }
+
+  const node = state.doc.nodeAt(decoration.from);
+  if (!node || !isMermaid(node)) {
+    return undefined;
+  }
+
+  return { node, pos: decoration.from };
+}
+
+function syncMermaidDiagramClasses(view: {
+  state: EditorState;
+  dom: HTMLElement;
+}) {
+  const mermaidState = pluginKey.getState(view.state) as MermaidState | undefined;
+  const selectedPos =
+    view.state.selection instanceof NodeSelection
+      ? view.state.selection.from
+      : undefined;
+
+  view.dom
+    .querySelectorAll<HTMLElement>(".mermaid-diagram-wrapper")
+    .forEach((diagram) => {
+      const diagramId = diagram.dataset.mermaidId;
+      if (!diagramId) {
+        diagram.classList.remove(
+          "ProseMirror-selectednode",
+          "mermaid-code-active"
+        );
+        return;
+      }
+
+      const block = findMermaidBlockByDiagramId(view.state, diagramId);
+      const isSelected = block?.pos === selectedPos;
+      const isEditing = mermaidState?.editingId === diagramId;
+
+      diagram.classList.toggle("ProseMirror-selectednode", isSelected);
+      diagram.classList.toggle("mermaid-code-active", isEditing);
+    });
+}
+
+function selectedMermaidBlock(state: EditorState): NodeWithPos | undefined {
+  if (
+    state.selection instanceof NodeSelection &&
+    isMermaid(state.selection.node)
+  ) {
+    return {
+      node: state.selection.node,
+      pos: state.selection.from,
+    };
+  }
+
+  const codeBlock = findParentNode(isCode)(state.selection);
+  return codeBlock && isMermaid(codeBlock.node)
+    ? { node: codeBlock.node, pos: codeBlock.pos }
+    : undefined;
+}
+
 function getNewState({
   doc,
   pluginState,
@@ -431,8 +505,8 @@ export default function Mermaid({
           nextPluginState.editingId &&
           !mermaidMeta
         ) {
-          const codeBlock = findParentNode(isCode)(state.selection);
-          let isEditing = codeBlock && isMermaid(codeBlock.node);
+          const codeBlock = selectedMermaidBlock(state);
+          let isEditing = !!codeBlock;
 
           if (isEditing && codeBlock && !transaction.docChanged) {
             const decorations = nextPluginState.decorationSet.find(
@@ -516,7 +590,22 @@ export default function Mermaid({
     },
     view: (view) => {
       view.dispatch(view.state.tr.setMeta(pluginKey, { loaded: true }));
-      return {};
+      syncMermaidDiagramClasses(view);
+      return {
+        update: (updatedView) => {
+          syncMermaidDiagramClasses(updatedView);
+        },
+        destroy: () => {
+          view.dom
+            .querySelectorAll<HTMLElement>(".mermaid-diagram-wrapper")
+            .forEach((diagram) => {
+              diagram.classList.remove(
+                "ProseMirror-selectednode",
+                "mermaid-code-active"
+              );
+            });
+        },
+      };
     },
     props: {
       decorations(state) {
@@ -567,34 +656,36 @@ export default function Mermaid({
             return false;
           }
 
-          const codeBlock = diagram.previousElementSibling;
-          if (!codeBlock) {
+          if (!(diagram instanceof HTMLElement) || !diagram.dataset.mermaidId) {
             return false;
           }
 
-          const pos = view.posAtDOM(codeBlock, 0);
-          const $pos = view.state.doc.resolve(pos);
-          const nodePos = $pos.before();
-          const node = view.state.doc.nodeAt(nodePos);
+          const block = findMermaidBlockByDiagramId(
+            view.state,
+            diagram.dataset.mermaidId
+          );
+          if (!block) {
+            return false;
+          }
 
           const isSelected =
             view.state.selection instanceof NodeSelection &&
-            view.state.selection.from === nodePos;
+            view.state.selection.from === block.pos;
 
           event.preventDefault();
 
           if (isSelected || editor.props.readOnly) {
             // Already selected or read-only, open lightbox
-            if (node && node.textContent.trim().length > 0) {
+            if (block.node.textContent.trim().length > 0) {
               editor.updateActiveLightboxImage(
-                LightboxImageFactory.createLightboxImage(view, nodePos)
+                LightboxImageFactory.createLightboxImage(view, block.pos)
               );
             }
           } else {
             // First click, select the node
             view.dispatch(
               view.state.tr
-                .setSelection(NodeSelection.create(view.state.doc, nodePos))
+                .setSelection(NodeSelection.create(view.state.doc, block.pos))
                 .scrollIntoView()
             );
           }

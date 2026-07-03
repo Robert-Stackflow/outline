@@ -31,6 +31,8 @@ type Props = {
   collection: Collection;
   /** Whether the children are shown in an expanded state. */
   expanded: boolean;
+  /** The indentation depth for root documents in this collection. */
+  depth?: number;
   /** Function to prefetch a document by ID. */
   prefetchDocument?: (documentId: string) => Promise<Document | void>;
   /** Element to display above the child documents */
@@ -40,6 +42,7 @@ type Props = {
 function CollectionLinkChildren({
   collection,
   expanded,
+  depth = 2,
   prefetchDocument,
   children,
 }: Props) {
@@ -101,7 +104,7 @@ function CollectionLinkChildren({
           {children}
           {!childDocuments && (
             <ResizingHeightContainer hideOverflow>
-              <Loading />
+              <Loading $depth={depth} />
             </ResizingHeightContainer>
           )}
           {childDocuments?.slice(0, showing).map((node, index) => (
@@ -112,7 +115,7 @@ function CollectionLinkChildren({
               activeDocument={activeDocument}
               prefetchDocument={prefetchDocument}
               isDraft={node.isDraft}
-              depth={2}
+              depth={depth}
               index={index}
             />
           ))}
@@ -124,7 +127,7 @@ function CollectionLinkChildren({
                 </Text>
               }
               onClick={() => history.push(collection.url)}
-              depth={2}
+              depth={depth}
             />
           )}
           {childDocuments && (
@@ -155,8 +158,8 @@ const DynamicDropCursor = observer(
   }
 );
 
-const Loading = styled(PlaceholderCollections)`
-  margin-inline-start: 44px;
+const Loading = styled(PlaceholderCollections)<{ $depth: number }>`
+  margin-inline-start: ${(props) => props.$depth * 16 + 12}px;
   min-height: 90px;
 `;
 

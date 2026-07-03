@@ -37,6 +37,7 @@ const APIAndAccess = lazy(() => import("~/scenes/Settings/APIAndAccess"));
 const Authentication = lazy(() => import("~/scenes/Settings/Authentication"));
 const Details = lazy(() => import("~/scenes/Settings/Details"));
 const Export = lazy(() => import("~/scenes/Settings/Export"));
+const Features = lazy(() => import("~/scenes/Settings/Features"));
 const Groups = lazy(() => import("~/scenes/Settings/Groups"));
 const Import = lazy(() => import("~/scenes/Settings/Import"));
 const Integrations = lazy(() => import("~/scenes/Settings/Integrations"));
@@ -53,11 +54,16 @@ const Embeds = lazy(() => import("~/scenes/Settings/Embeds"));
 export type ConfigItem = {
   name: string;
   path: string;
-  icon: React.FC<{
-    size?: number;
-    fill?: string;
-    monochrome?: boolean;
-  }>;
+  icon: React.ComponentType<
+    React.SVGAttributes<SVGSVGElement> & {
+      size?: number | string;
+      color?: string;
+      fill?: string;
+      strokeWidth?: number | string;
+      expanded?: boolean;
+      monochrome?: boolean;
+    }
+  >;
   component: React.ComponentType;
   description?: string;
   preload?: () => void;
@@ -149,9 +155,18 @@ const useSettingsConfig = () => {
         path: settingsPath("ai"),
         component: AiSettings.Component,
         preload: AiSettings.preload,
-        enabled: true,
+        enabled: can.update,
         group: t("Workspace"),
         icon: SparklesIcon,
+      },
+      {
+        name: t("Features"),
+        path: settingsPath("features"),
+        component: Features.Component,
+        preload: Features.preload,
+        enabled: can.update,
+        group: t("Workspace"),
+        icon: SettingsIcon,
       },
       {
         name: t("Members"),

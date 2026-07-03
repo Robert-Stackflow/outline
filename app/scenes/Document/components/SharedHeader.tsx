@@ -27,6 +27,7 @@ import { useLocationSidebarContext } from "~/hooks/useLocationSidebarContext";
 import useMobile from "~/hooks/useMobile";
 import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
+import SharedDocumentMenu from "~/menus/SharedDocumentMenu";
 import TableOfContentsMenu from "~/menus/TableOfContentsMenu";
 import type Document from "~/models/Document";
 import { documentEditPath } from "~/utils/routeHelpers";
@@ -51,7 +52,7 @@ function SharedDocumentHeader({ document }: Props) {
     );
   }, [isEditingFocus]);
 
-  const { hasHeadings } = useDocumentContext();
+  const { editor, hasHeadings } = useDocumentContext();
   const sidebarContext = useLocationSidebarContext();
   const [measureRef, size] = useMeasure();
   const { shareId, sharedTree, allowSubscriptions } = useShare();
@@ -146,6 +147,14 @@ function SharedDocumentHeader({ document }: Props) {
             <SubscribeAction shareId={shareId} documentId={document.id} />
           )}
           <AppearanceAction />
+          <Action>
+            <SharedDocumentMenu
+              document={document}
+              align="end"
+              neutral
+              onFindAndReplace={editor?.commands.openFindAndReplace}
+            />
+          </Action>
           {can.update && share && (
             <Action>
               <ShareSettingsPopover share={share}>

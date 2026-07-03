@@ -24,17 +24,21 @@ interface PreviewBounds {
 
 class PreviewMathView extends MathView {
   private previewElement?: HTMLElement;
-  private positionFrame?: number;
+  private positionFrame: number | undefined;
+  private blockHeightFrame: number | undefined;
   private isTrackingPosition = false;
 
   public destroy() {
+    this.cancelBlockHeightSync();
     this.destroyPreview();
     super.destroy();
   }
 
   public selectNode() {
+    this.syncBlockEditorHeight();
     super.selectNode();
     this.showPreview();
+    this.scheduleBlockHeightSync();
   }
 
   public deselectNode() {
@@ -44,6 +48,7 @@ class PreviewMathView extends MathView {
 
   public renderMath() {
     super.renderMath();
+    this.scheduleBlockHeightSync();
     this.syncPreview();
   }
 
@@ -59,6 +64,87 @@ class PreviewMathView extends MathView {
     this.syncPreview();
     this.startTrackingPosition();
     this.schedulePreviewPosition();
+  }
+
+  private scheduleBlockHeightSync() {
+    if (!this.isBlockMath()) {
+      return;
+    }
+
+    const previewWindow = this.dom.ownerDocument.defaultView;
+    if (!previewWindow) {
+      this.syncBlockEditorHeight();
+      return;
+    }
+
+    if (this.blockHeightFrame !== undefined) {
+      return;
+    }
+
+    this.blockHeightFrame = previewWindow.requestAnimationFrame(() => {
+      this.blockHeightFrame = undefined;
+      this.syncBlockEditorHeight();
+    });
+  }
+
+  private syncBlockEditorHeight() {
+    if (!this.isBlockMath()) {
+      return;
+    }
+
+    const renderElement = this.dom.querySelector<HTMLElement>(
+      ":scope > .math-render"
+    );
+    if (!renderElement) {
+      return;
+    }
+
+    const height = this.measureRenderHeight(renderElement);
+    if (height <= 0) {
+      return;
+    }
+
+    this.dom.style.setProperty("--math-render-height", `${height}px`);
+  }
+
+  private measureRenderHeight(renderElement: HTMLElement) {
+    const visibleHeight = Math.ceil(
+      renderElement.getBoundingClientRect().height
+    );
+    if (visibleHeight > 0) {
+      return visibleHeight;
+    }
+
+    const ownerDocument = this.dom.ownerDocument;
+    const host = this.dom.cloneNode(false);
+    const clonedRenderElement = renderElement.cloneNode(true);
+    if (
+      !(host instanceof HTMLElement) ||
+      !(clonedRenderElement instanceof HTMLElement) ||
+      !ownerDocument.body
+    ) {
+      return 0;
+    }
+
+    host.classList.remove("ProseMirror-selectednode");
+    host.style.position = "absolute";
+    host.style.visibility = "hidden";
+    host.style.pointerEvents = "none";
+    host.style.inset = "0 auto auto -10000px";
+    host.style.width = `${Math.ceil(this.dom.getBoundingClientRect().width)}px`;
+    host.appendChild(clonedRenderElement);
+    ownerDocument.body.appendChild(host);
+
+    const measuredHeight = Math.ceil(
+      clonedRenderElement.getBoundingClientRect().height
+    );
+    host.remove();
+    return measuredHeight;
+  }
+
+  private isBlockMath() {
+    const tagName = this.dom.tagName.toLowerCase();
+    return tagName === "math-block" || tagName === "math-display";
   }
 
   private hidePreview() {
@@ -306,6 +392,16 @@ class PreviewMathView extends MathView {
 
     previewWindow.cancelAnimationFrame(this.positionFrame);
     this.positionFrame = undefined;
+  }
+
+  private cancelBlockHeightSync() {
+    const previewWindow = this.dom.ownerDocument.defaultView;
+    if (!previewWindow || this.blockHeightFrame === undefined) {
+      return;
+    }
+
+    previewWindow.cancelAnimationFrame(this.blockHeightFrame);
+    this.blockHeightFrame = undefined;
   }
 
   private destroyPreview() {
