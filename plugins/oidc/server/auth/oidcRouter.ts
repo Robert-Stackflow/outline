@@ -57,6 +57,58 @@ function getStringOrNumber(value: Record<string, unknown>, key: string) {
     : undefined;
 }
 
+function getClaim(
+  profile: Record<string, unknown>,
+  token: Record<string, unknown>,
+  claim: string | undefined
+) {
+  return claim ? (get(profile, claim) ?? get(token, claim)) : undefined;
+}
+
+function getClaimString(
+  profile: Record<string, unknown>,
+  token: Record<string, unknown>,
+  claim: string | undefined
+) {
+  const field = getClaim(profile, token, claim);
+  return typeof field === "string" && field ? field : undefined;
+}
+
+function getClaimNullableString(
+  profile: Record<string, unknown>,
+  token: Record<string, unknown>,
+  claim: string | undefined
+) {
+  const field = getClaim(profile, token, claim);
+  return typeof field === "string" ? field : null;
+}
+
+function getClaimStringOrNumber(
+  profile: Record<string, unknown>,
+  token: Record<string, unknown>,
+  claim: string | undefined
+) {
+  const field = getClaim(profile, token, claim);
+  return typeof field === "string" || typeof field === "number"
+    ? field
+    : undefined;
+}
+
+function getBoolean(value: unknown) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    if (value === "true") {
+      return true;
+    }
+    if (value === "false") {
+      return false;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Creates OIDC routes for a single provider and mounts them into the router.
  *
@@ -143,7 +195,10 @@ export function createOIDCRouter(
           })();
 
           const email =
-            getString(profile, "email") ?? getString(token, "email") ?? null;
+            getClaimString(profile, token, provider.emailClaim) ??
+            getString(profile, "email") ??
+            getString(token, "email") ??
+            null;
 
           if (!email) {
             throw OIDCMalformedUserInfoError();
@@ -151,12 +206,11 @@ export function createOIDCRouter(
 
           // The email_verified claim is part of the OIDC standard claims.
           // https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
-          const emailVerifiedClaim =
-            profile.email_verified ?? token.email_verified;
-          const emailVerified =
-            emailVerifiedClaim === undefined
-              ? undefined
-              : emailVerifiedClaim === true || emailVerifiedClaim === "true";
+          const emailVerified = getBoolean(
+            getClaim(profile, token, provider.emailVerifiedClaim) ??
+              profile.email_verified ??
+              token.email_verified
+          );
 
           const team = await getTeamFromContext(context);
           const client = getClientFromOAuthState(context);
@@ -196,19 +250,20 @@ export function createOIDCRouter(
           // Claim name can be overriden using an env variable.
           // Default is 'preferred_username' as per OIDC spec.
           // This will default to the profile.preferred_username, but will fall back to preferred_username from the id_token
-          const usernameClaim =
-            get(profile, provider.usernameClaim) ??
-            get(token, provider.usernameClaim);
-          const username =
-            typeof usernameClaim === "string" && usernameClaim
-              ? usernameClaim
-              : undefined;
+          const username = getClaimString(
+            profile,
+            token,
+            provider.usernameClaim
+          );
           const name =
+            getClaimString(profile, token, provider.nameClaim) ??
             getString(profile, "name") ??
             username ??
             getString(profile, "username") ??
-            getString(profile, "login");
+            getString(profile, "login") ??
+            email;
           const profileId =
+            getClaimStringOrNumber(profile, token, provider.idClaim) ??
             getStringOrNumber(profile, "sub") ??
             getStringOrNumber(token, "sub") ??
             getStringOrNumber(profile, "id");
@@ -223,6 +278,7 @@ export function createOIDCRouter(
           // Check if the picture field is a Base64 data URL and filter it out
           // to avoid validation errors in the User model
           let avatarUrl =
+            getClaimNullableString(profile, token, provider.avatarUrlClaim) ??
             getNullableString(profile, "picture") ??
             getNullableString(profile, "avatar_url");
           if (avatarUrl && isBase64Url(avatarUrl)) {

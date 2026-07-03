@@ -23,8 +23,18 @@ export interface OIDCProviderConfig {
   logoutUri?: string;
   /** Space separated OIDC scopes. */
   scopes: string;
+  /** Profile claim to use as the user email. */
+  emailClaim: string;
+  /** Profile claim to use as the email verification status. */
+  emailVerifiedClaim?: string;
+  /** Profile claim to use as the display name. */
+  nameClaim: string;
+  /** Profile claim to use as the stable user id. */
+  idClaim: string;
   /** Profile claim to use as the username. */
   usernameClaim: string;
+  /** Profile claim to use as the avatar URL. */
+  avatarUrlClaim: string;
   /** Disable auto-redirect when this is the only provider. */
   disableRedirect?: boolean;
   /** Brand icon key (e.g. "github", "gitlab") for the sign-in button. */
@@ -32,7 +42,12 @@ export interface OIDCProviderConfig {
 }
 
 const DEFAULT_SCOPES = "openid profile email";
+const DEFAULT_EMAIL_CLAIM = "email";
+const DEFAULT_EMAIL_VERIFIED_CLAIM = "email_verified";
+const DEFAULT_NAME_CLAIM = "name";
+const DEFAULT_ID_CLAIM = "sub";
 const DEFAULT_USERNAME_CLAIM = "preferred_username";
+const DEFAULT_AVATAR_URL_CLAIM = "picture";
 
 /**
  * Convert an arbitrary string into a url/route-safe slug.
@@ -179,7 +194,14 @@ function parseJsonProviders(usedIds: Set<string>): OIDCProviderConfig[] {
       userInfoUri,
       logoutUri: raw.logoutUri as string | undefined,
       scopes: (raw.scopes as string) || DEFAULT_SCOPES,
+      emailClaim: (raw.emailClaim as string) || DEFAULT_EMAIL_CLAIM,
+      emailVerifiedClaim:
+        (raw.emailVerifiedClaim as string) || DEFAULT_EMAIL_VERIFIED_CLAIM,
+      nameClaim: (raw.nameClaim as string) || DEFAULT_NAME_CLAIM,
+      idClaim: (raw.idClaim as string) || DEFAULT_ID_CLAIM,
       usernameClaim: (raw.usernameClaim as string) || DEFAULT_USERNAME_CLAIM,
+      avatarUrlClaim:
+        (raw.avatarUrlClaim as string) || DEFAULT_AVATAR_URL_CLAIM,
       disableRedirect: raw.disableRedirect as boolean | undefined,
       icon: deriveIcon(raw.icon as string | undefined, issuerUrl || authUri),
     });
@@ -212,7 +234,12 @@ export function getOIDCProviders(): OIDCProviderConfig[] {
       userInfoUri: env.OIDC_USERINFO_URI,
       logoutUri: env.OIDC_LOGOUT_URI,
       scopes: env.OIDC_SCOPES,
+      emailClaim: DEFAULT_EMAIL_CLAIM,
+      emailVerifiedClaim: DEFAULT_EMAIL_VERIFIED_CLAIM,
+      nameClaim: DEFAULT_NAME_CLAIM,
+      idClaim: DEFAULT_ID_CLAIM,
       usernameClaim: env.OIDC_USERNAME_CLAIM,
+      avatarUrlClaim: DEFAULT_AVATAR_URL_CLAIM,
       disableRedirect: env.OIDC_DISABLE_REDIRECT ?? undefined,
       icon: deriveIcon(undefined, env.OIDC_ISSUER_URL || env.OIDC_AUTH_URI),
     });
